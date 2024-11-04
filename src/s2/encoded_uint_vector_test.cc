@@ -17,9 +17,8 @@
 
 #include "s2/encoded_uint_vector.h"
 
-#include <cstddef>
-
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>

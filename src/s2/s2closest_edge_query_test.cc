@@ -33,6 +33,7 @@
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_s2shape_index.h"
 #include "s2/mutable_s2shape_index.h"
@@ -614,7 +615,7 @@ using TestingResult = pair<S2MinDistance, ShapeEdgeId>;
 
 // Converts to the format required by CheckDistanceResults() in s2testing.h.
 vector<TestingResult> ConvertResults(
-    const vector<S2ClosestEdgeQuery::Result>& results) {
+    absl::Span<const S2ClosestEdgeQuery::Result> results) {
   vector<TestingResult> testing_results;
   for (const auto& result : results) {
     testing_results.push_back(

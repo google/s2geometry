@@ -16,7 +16,6 @@
 #include "s2/s2text_format.h"
 
 #include <cmath>
-
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -144,10 +143,10 @@ TEST(ToString, MinimalDigitsDoubleConstants) {
   // number of digits.
   for (int iter = 0; iter < kIters; ++iter) {
     int max_digits = absl::Uniform(bitgen, 0, 11);
-    int64_t scale = MathUtil::FastInt64Round(pow(10, max_digits));
-    int64_t lat = MathUtil::FastInt64Round(
+    int64_t scale = pow(int64_t{10}, int64_t{max_digits});
+    int64_t lat = MathUtil::Round<int64_t>(
         absl::Uniform(bitgen, -90.0 * scale, 90.0 * scale));
-    int64_t lng = MathUtil::FastInt64Round(
+    int64_t lng = MathUtil::Round<int64_t>(
         absl::Uniform(bitgen, -180.0 * scale, 180.0 * scale));
     S2LatLng ll = S2LatLng::FromDegrees(lat / static_cast<double>(scale),
                                         lng / static_cast<double>(scale));
@@ -483,7 +482,7 @@ TEST(SafeMakeLaxPolygon, ValidInput) {
   EXPECT_TRUE(
       s2textformat::MakeLaxPolygon("-20:150, -20:151, -19:150", &lax_polygon));
 
-  // One loop of three verticies & three edges, in one chain starting at edge 0
+  // One loop of three vertices & three edges, in one chain starting at edge 0
   // and three edges long.
   ASSERT_EQ(1, lax_polygon->num_loops());
   ASSERT_EQ(3, lax_polygon->num_vertices());

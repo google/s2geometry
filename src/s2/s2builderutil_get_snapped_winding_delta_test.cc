@@ -18,7 +18,6 @@
 #include "s2/s2builderutil_get_snapped_winding_delta.h"
 
 #include <cmath>
-
 #include <iostream>
 #include <memory>
 #include <string>
@@ -392,7 +391,7 @@ void WindingNumberCheckingLayer::Build(const Graph& g, S2Error* error) {
   Graph::VertexOutMap out_map(g);
   if (out_map.degree(iso_v) != 1 ||
       g.input_edge_ids(*out_map.edge_ids(iso_v).begin()).size() != 1) {
-    error->Init(S2Error::FAILED_PRECONDITION, "Isolated vertex not isolated");
+    *error = S2Error::FailedPrecondition("Isolated vertex not isolated");
     return;
   }
 

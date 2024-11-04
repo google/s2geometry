@@ -18,12 +18,10 @@
 #include "s2/s1angle.h"
 
 #include <cmath>
-
 #include <cstdint>
 #include <sstream>
 
 #include <gtest/gtest.h>
-#include "absl/flags/flag.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
 #include "s2/util/coding/coder.h"
@@ -129,6 +127,15 @@ TEST(S1Angle, Trigonometry) {
   EXPECT_DOUBLE_EQ(1, cos(S1Angle::Degrees(0)));
   EXPECT_DOUBLE_EQ(1, sin(S1Angle::Degrees(90)));
   EXPECT_DOUBLE_EQ(1, tan(S1Angle::Degrees(45)));
+
+  // Expect that SinCos is exactly [sin, cos].
+  for (int k = -1000; k <= 1000; ++k) {
+    const S1Angle angle = S1Angle::Degrees(k);
+    const S1Angle::SinCosPair sin_cos = angle.SinCos();
+    // If this fails once, it will likely fail many times.
+    ASSERT_EQ(sin_cos.sin, sin(angle));
+    ASSERT_EQ(sin_cos.cos, cos(angle));
+  }
 }
 
 TEST(S1Angle, ConstructorsThatMeasureAngles) {

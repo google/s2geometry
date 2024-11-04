@@ -17,10 +17,9 @@
 
 #include "s2/s2cell_id.h"
 
-#include <cstdint>
-
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <ios>
 #include <sstream>
 #include <string>
@@ -35,6 +34,7 @@
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"

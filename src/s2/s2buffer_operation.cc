@@ -762,8 +762,8 @@ void S2BufferOperation::AddShapeIndex(const S2ShapeIndex& index) {
 
 bool S2BufferOperation::Build(S2Error* error) {
   if (buffer_sign_ < 0 && num_polygon_layers_ > 1) {
-    error->Init(S2Error::FAILED_PRECONDITION,
-                "Negative buffer radius requires at most one polygon layer");
+    *error = S2Error::FailedPrecondition(
+        "Negative buffer radius requires at most one polygon layer");
     return false;
   }
   return op_.Build(ref_point_, ref_winding_,

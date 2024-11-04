@@ -24,12 +24,11 @@
 
 #include "s2/s2builderutil_snap_functions.h"
 
-#include <cstdlib>
-
 #include <algorithm>
 #include <cinttypes>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <utility>
 #include <vector>
@@ -494,8 +493,8 @@ static bool HasValidVertices(const IntLatLng& ll, int64_t scale) {
 }
 
 static IntLatLng Rescale(const IntLatLng&ll, double scale_factor) {
-  return IntLatLng(MathUtil::FastInt64Round(scale_factor * ll[0]),
-                   MathUtil::FastInt64Round(scale_factor * ll[1]));
+  return IntLatLng(MathUtil::Round<int64_t>(scale_factor * ll[0]),
+                   MathUtil::Round<int64_t>(scale_factor * ll[1]));
 }
 
 static S2Point ToPoint(const IntLatLng& ll, int64_t scale) {

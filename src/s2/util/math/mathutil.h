@@ -24,9 +24,6 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "absl/log/absl_check.h"
-#include "s2/util/bits/bits.h"
-
 // Returns the sign of x:
 //   -1 if x < 0,
 //   +1 if x > 0,
@@ -165,56 +162,6 @@ class MathUtil {
 #else
     return Round<int64_t, double>(x);
 #endif  // if defined __GNUC__ && ...
-  }
-
-  // Computes v^i, where i is a non-negative integer.
-  // When T is a floating point type, this has the same semantics as pow(), but
-  // is much faster.
-  // T can also be any integral type, in which case computations will be
-  // performed in the value domain of this integral type, and overflow semantics
-  // will be those of T.
-  // You can also use any type for which operator*= is defined.
-  template <typename T>
-  static T IPow(T base, int exp) {
-    ABSL_DCHECK_GE(exp, 0);
-    uint32_t uexp = static_cast<uint32_t>(exp);
-
-    if (uexp < 16) {
-      T result = (uexp & 1) ? base : static_cast<T>(1);
-      if (uexp >= 2) {
-        base *= base;
-        if (uexp & 2) {
-          result *= base;
-        }
-        if (uexp >= 4) {
-          base *= base;
-          if (uexp & 4) {
-            result *= base;
-          }
-          if (uexp >= 8) {
-            base *= base;
-            result *= base;
-          }
-        }
-      }
-      return result;
-    }
-
-    T result = base;
-    int count = 31 ^ Bits::Log2FloorNonZero(uexp);
-
-    uexp <<= count;
-    count ^= 31;
-
-    while (count--) {
-      uexp <<= 1;
-      result *= result;
-      if (uexp >= 0x80000000) {
-        result *= base;
-      }
-    }
-
-    return result;
   }
 };
 

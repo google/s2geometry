@@ -109,7 +109,7 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
  private:
   S1ChordAngle radius_;
 
-  // In order to handle (radius_ == 0) corectly, we need to test whether
+  // In order to handle (radius_ == 0) correctly, we need to test whether
   // distances are less than or equal to "radius_".  This is done by testing
   // whether distances are less than radius_.Successor().
   S1ChordAngle radius_successor_;

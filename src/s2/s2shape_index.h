@@ -101,7 +101,7 @@ class S2ClippedShape {
   friend class S2Stats;
 
   // Internal methods are documented with their definition.
-  void Init(int32_t shape_id, int32_t num_edges);
+  void Init(int32_t shape_id, uint32_t num_edges);
   void Destruct();
   bool is_inline() const;
   void set_contains_center(bool contains_center);
@@ -548,7 +548,7 @@ inline int S2ClippedShape::edge(int i) const {
 }
 
 // Initialize an S2ClippedShape to hold the given number of edges.
-inline void S2ClippedShape::Init(int32_t shape_id, int32_t num_edges) {
+inline void S2ClippedShape::Init(int32_t shape_id, uint32_t num_edges) {
   shape_id_ = shape_id;
   num_edges_ = num_edges;
   contains_center_ = false;

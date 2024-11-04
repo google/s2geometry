@@ -608,4 +608,13 @@ TEST(S2, GetIntersectionInvariants) {
   }
 }
 
+TEST(S2, CompareEdgesOrderInvariant) {
+  const S2Point v0(0, 1, 0);
+  const S2Point v1(1, 0, 0);
+  EXPECT_FALSE(S2::internal::CompareEdges(v0, v1, v0, v1));
+  EXPECT_FALSE(S2::internal::CompareEdges(v1, v0, v0, v1));
+  EXPECT_FALSE(S2::internal::CompareEdges(v0, v1, v1, v0));
+  EXPECT_FALSE(S2::internal::CompareEdges(v1, v0, v1, v0));
+}
+
 }  // namespace

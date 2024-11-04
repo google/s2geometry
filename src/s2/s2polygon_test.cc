@@ -1027,7 +1027,7 @@ TEST(S2Polygon, LoopPointers) {
 }
 
 static vector<unique_ptr<S2Loop>> MakeLoops(
-    const vector<vector<S2Point>>& loop_vertices) {
+    absl::Span<const vector<S2Point>> loop_vertices) {
   vector<unique_ptr<S2Loop>> result;
   for (const auto& vertices : loop_vertices) {
     result.emplace_back(new S2Loop(vertices));
@@ -1658,7 +1658,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
     PolylineIntersectionSharedEdgeTest(*cross1_side_hole_, v + 1, -1);
   }
 
-  // See comments in TestOperations about the vlue of this constant.
+  // See comments in TestOperations about the value of this constant.
   static const S1Angle kMaxError = S1Angle::Radians(1e-4);
 
   // This duplicates some of the tests in TestOperations by
@@ -1712,7 +1712,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
 }
 
 static void CheckCoveringIsConservative(const S2Polygon& polygon,
-                                        const vector<S2CellId>& cells) {
+                                        absl::Span<const S2CellId> cells) {
   // Check that Contains(S2Cell) and MayIntersect(S2Cell) are implemented
   // conservatively, by comparing against the Contains/Intersect result with
   // the "cell polygon" defined by the four cell vertices.  Please note that
@@ -2845,8 +2845,8 @@ TEST_F(S2PolygonSimplifierTest, EdgesOverlap) {
 // Creates a polygon from loops specified as a comma separated list of u:v
 // coordinates relative to a cell. The loop "0:0, 1:0, 1:1, 0:1" is
 // counter-clockwise.
-unique_ptr<S2Polygon> MakeCellPolygon(
-    const S2Cell& cell, const vector<string_view>& strs) {
+unique_ptr<S2Polygon> MakeCellPolygon(const S2Cell& cell,
+                                      absl::Span<const string_view> strs) {
   vector<unique_ptr<S2Loop>> loops;
   for (auto str : strs) {
     vector<S2LatLng> points = s2textformat::ParseLatLngsOrDie(str);

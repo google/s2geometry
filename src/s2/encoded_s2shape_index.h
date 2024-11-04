@@ -18,9 +18,8 @@
 #ifndef S2_ENCODED_S2SHAPE_INDEX_H_
 #define S2_ENCODED_S2SHAPE_INDEX_H_
 
-#include <cstddef>
-
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -364,6 +363,7 @@ inline bool EncodedS2ShapeIndex::cell_decoded(int i) const {
 // Marks the given cell as having been decoded.
 // REQUIRES: cells_lock_ is held
 inline void EncodedS2ShapeIndex::set_cell_decoded(int i) const {
+  ABSL_DCHECK(cells_lock_.IsHeld());
   // We use memory_order_release for the store operation below to ensure that
   // cells_decoded(i) sees the most recent value, however we can use
   // memory_order_relaxed for the load because cells_lock_ is held.

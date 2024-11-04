@@ -240,7 +240,7 @@ class S2RegionTermIndexer {
   S2RegionTermIndexer(S2RegionTermIndexer&&) noexcept;
   S2RegionTermIndexer& operator=(S2RegionTermIndexer&&) noexcept;
 
-  // Returns the current options.  Options can be modifed between calls.
+  // Returns the current options.  Options can be modified between calls.
   const Options& options() const { return options_; }
   Options* mutable_options() { return &options_; }
 

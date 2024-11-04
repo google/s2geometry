@@ -16,7 +16,6 @@
 #include "s2/s2max_distance_targets.h"
 
 #include <cmath>
-
 #include <memory>
 
 #include "absl/functional/function_ref.h"

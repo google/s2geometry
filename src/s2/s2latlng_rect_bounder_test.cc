@@ -17,9 +17,8 @@
 
 #include "s2/s2latlng_rect_bounder.h"
 
-#include <cmath>
-
 #include <cfloat>
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>

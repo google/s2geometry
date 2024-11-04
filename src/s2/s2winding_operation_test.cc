@@ -18,7 +18,6 @@
 #include "s2/s2winding_operation.h"
 
 #include <cmath>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -32,6 +31,7 @@
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2boolean_operation.h"
@@ -72,7 +72,7 @@ namespace {
 // distinguish empty from full polygons, and we don't need its ability to
 // match edge multiplicities here.)
 void ExpectWindingResult(const S2WindingOperation::Options& options,
-                         const vector<string>& loop_strs,
+                         absl::Span<const string> loop_strs,
                          string_view ref_point_str, int ref_winding,
                          S2WindingOperation::WindingRule rule,
                          string_view expected_str) {

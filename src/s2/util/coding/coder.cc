@@ -28,6 +28,7 @@
 #include "s2/base/types.h"
 #include "absl/log/absl_check.h"
 #include "absl/utility/utility.h"
+#include "s2/base/malloc_extension.h"
 
 Encoder::Encoder(Encoder&& other)
     : buf_(std::exchange(other.buf_, nullptr)),
@@ -55,12 +56,12 @@ int Encoder::varint32_length(uint32_t v) { return Varint::Length32(v); }
 int Encoder::varint64_length(uint64_t v) { return Varint::Length64(v); }
 
 std::pair<unsigned char*, size_t> Encoder::NewBuffer(size_t size) {
-  auto* p = std::allocator<unsigned char>().allocate(size);
-  return {p, size};
+  auto res = __size_returning_new(size);
+  return {static_cast<unsigned char*>(res.p), res.n};
 }
 
 void Encoder::DeleteBuffer(unsigned char* buf, size_t size) {
-  std::allocator<unsigned char>().deallocate(buf, size);
+  base::sized_delete(buf, size);
 }
 
 void Encoder::EnsureSlowPath(size_t N) {

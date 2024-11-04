@@ -25,8 +25,6 @@
 #include "s2/s2point.h"
 #include "s2/s2region.h"
 
-class Decoder;
-class Encoder;
 class S2Cap;
 class S2Cell;
 class S2LatLngRect;

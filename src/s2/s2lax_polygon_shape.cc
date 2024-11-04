@@ -20,14 +20,15 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "absl/log/absl_check.h"
 #include "absl/memory/memory.h"
+#include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
 #include "s2/encoded_s2point_vector.h"
@@ -62,7 +63,7 @@ unique_ptr<T> make_unique_for_overwrite(size_t n) {
 static const unsigned char kCurrentEncodingVersionNumber = 1;
 
 S2LaxPolygonShape::S2LaxPolygonShape(
-    const vector<S2LaxPolygonShape::Loop>& loops) {
+    absl::Span<const S2LaxPolygonShape::Loop> loops) {
   Init(loops);
 }
 
@@ -94,7 +95,7 @@ S2LaxPolygonShape& S2LaxPolygonShape::operator=(
   return *this;
 }
 
-void S2LaxPolygonShape::Init(const vector<S2LaxPolygonShape::Loop>& loops) {
+void S2LaxPolygonShape::Init(absl::Span<const S2LaxPolygonShape::Loop> loops) {
   vector<Span<const S2Point>> spans;
   spans.reserve(loops.size());
   for (const S2LaxPolygonShape::Loop& loop : loops) {
@@ -190,43 +191,63 @@ void S2LaxPolygonShape::Encode(Encoder* encoder,
   }
 }
 
-bool S2LaxPolygonShape::Init(Decoder* decoder) {
-  if (decoder->avail() < 1) return false;
+bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error* error) {
+  const auto Error = [&error](absl::string_view message) {
+    if (error != nullptr) {
+      *error = S2Error::DataLoss(message);
+    }
+    return false;
+  };
+
+  if (decoder->avail() < 1) {
+    return Error("Insufficient data in decoder");
+  }
+
   uint8_t version = decoder->get8();
-  if (version != kCurrentEncodingVersionNumber) return false;
+  if (version != kCurrentEncodingVersionNumber) {
+    return Error("Bad version number in byte string");
+  }
 
   uint32_t num_loops;
-  if (!decoder->get_varint32(&num_loops)) return false;
+  if (!decoder->get_varint32(&num_loops)) {
+    return Error("Failed to decode number of loops");
+  }
+
   num_loops_ = num_loops;
   s2coding::EncodedS2PointVector vertices;
-  if (!vertices.Init(decoder)) return false;
+  if (!vertices.Init(decoder)) {
+    return Error("Failed to decode vertices");
+  }
 
   if (num_loops_ == 0) {
     num_vertices_ = 0;
   } else {
     num_vertices_ = vertices.size();
     vertices_ = make_unique<S2Point[]>(num_vertices_);  // TODO(see above)
-    for (int i = 0; i < num_vertices_; ++i) {
-      vertices_[i] = vertices[i];
+
+    // Load the polygon vertices from the encoded s2point vector.
+    if (error == nullptr) {
+      vertices.Decode(absl::MakeSpan(vertices_.get(), num_vertices_));
+    } else {
+      vertices.Decode(absl::MakeSpan(vertices_.get(), num_vertices_), *error);
+      if (!error->ok()) {
+        return false;
+      }
     }
+
     if (num_loops_ > 1) {
       s2coding::EncodedUintVector<uint32_t> loop_starts;
-      if (!loop_starts.Init(decoder)) return false;
+      if (!loop_starts.Init(decoder) || loop_starts.size() != num_loops_ + 1) {
+        return Error("Failed to decode loop offsets");
+      }
+
       loop_starts_ = make_unique_for_overwrite<uint32_t[]>(loop_starts.size());
       for (size_t i = 0; i < loop_starts.size(); ++i) {
         loop_starts_[i] = loop_starts[i];
       }
     }
   }
-  return true;
-}
 
-bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error& error) {
-  if (!Init(decoder)) {
-    error.Init(S2Error::DATA_LOSS,
-               "Unknown error occurred decoding S2LaxPolygonShape");
-    return false;
-  }
   return true;
 }
 

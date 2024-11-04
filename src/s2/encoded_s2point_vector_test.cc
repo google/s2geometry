@@ -18,7 +18,6 @@
 #include "s2/encoded_s2point_vector.h"
 
 #include <cstddef>
-
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -26,8 +25,6 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/base/log_severity.h"
-#include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
@@ -70,10 +67,26 @@ size_t TestEncodedS2PointVector(const vector<S2Point>& expected,
   auto aligned = make_unique<double[]>(encoder.length() / sizeof(double) + 1);
   std::memcpy(aligned.get(), encoder.base(), encoder.length());
 
-  Decoder decoder(aligned.get(), encoder.length());
-  EncodedS2PointVector actual;
-  EXPECT_TRUE(actual.Init(&decoder));
-  EXPECT_EQ(actual.Decode(), expected);
+  {
+    // Test un-checked decoding path.
+    Decoder decoder(aligned.get(), encoder.length());
+    EncodedS2PointVector actual;
+    EXPECT_TRUE(actual.Init(&decoder));
+    EXPECT_EQ(actual.Decode(), expected);
+  }
+
+  {
+    // Test checked decoding path.
+    Decoder decoder(aligned.get(), encoder.length());
+    EncodedS2PointVector actual;
+
+    S2Error error;
+    EXPECT_TRUE(actual.Init(&decoder, error));
+    EXPECT_TRUE(error.ok()) << error.message();
+    EXPECT_EQ(actual.Decode(error), expected);
+    EXPECT_TRUE(error.ok()) << error.message();
+  }
+
   return encoder.length();
 }
 

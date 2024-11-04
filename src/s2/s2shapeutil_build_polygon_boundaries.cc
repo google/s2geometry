@@ -23,6 +23,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2pointutil.h"
@@ -34,7 +35,7 @@ using std::vector;
 
 namespace s2shapeutil {
 
-void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
+void BuildPolygonBoundaries(absl::Span<const vector<S2Shape*>> components,
                             vector<vector<S2Shape*>>* polygons) {
   polygons->clear();
   if (components.empty()) return;

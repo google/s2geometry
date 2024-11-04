@@ -13,26 +13,28 @@
 // limitations under the License.
 //
 
-#ifndef S2_S2INDEX_CELL_DATA_H_
-#define S2_S2INDEX_CELL_DATA_H_
+#ifndef S2_INTERNAL_S2INDEX_CELL_DATA_H_
+#define S2_INTERNAL_S2INDEX_CELL_DATA_H_
 
 #include <atomic>
 #include <cstdint>
+#include <cstdlib>
 #include <utility>
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2contains_point_query.h"
+#include "s2/s2point.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 // A class for working with S2ShapeIndexCell data.  For larger queries like
-// validation, we often look up up edges multiple times, and sometimes need to
+// validation, we often look up edges multiple times, and sometimes need to
 // work with the edges themselves, their edge ids, or their chain and offset.
 //
 // S2ShapeIndexCell and the S2ClippedShape APIs fundamentally work with edge ids
@@ -71,6 +73,8 @@
 //
 // The clipped shapes in a cell are exposed through the Shapes() method.
 //
+namespace internal {
+
 class S2IndexCellData {
  public:
   // Extension of Edge with fields for the edge id, chain id, and offset.  It's
@@ -236,7 +240,7 @@ class S2IndexCellData {
   // access the values through a const reference though, so we have to
   // synchronize access ourselves.
   //
-  // TODO: We can use std::atomic_flag instead when C++20 is allowed.
+  // TODO(b/335677213): Use std::atomic_flag instead when C++20 is allowed.
   mutable std::atomic<bool> s2cell_set_ = false;
   mutable std::atomic<bool> center_set_ = false;
   mutable absl::Mutex lock_;
@@ -262,4 +266,6 @@ class S2IndexCellData {
   Region dim_regions_[3];
 };
 
-#endif  // S2_S2INDEX_CELL_DATA_H_
+}  // namespace internal
+
+#endif  // S2_INTERNAL_S2INDEX_CELL_DATA_H_

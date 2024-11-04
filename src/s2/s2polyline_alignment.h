@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "s2/s2polyline.h"
 
 // This library provides code to compute vertex alignments between S2Polylines.
@@ -136,7 +137,7 @@ VertexAlignment GetExactVertexAlignment(const S2Polyline& a,
 double GetExactVertexAlignmentCost(const S2Polyline& a, const S2Polyline& b);
 
 // GetApproxVertexAlignment takes two non-empty polylines `a` and `b` as input,
-// and a `radius` paramater GetApproxVertexAlignment (quickly) computes an
+// and a `radius` parameter GetApproxVertexAlignment (quickly) computes an
 // approximately optimal vertex alignment of points between polylines `a` and
 // `b` by implementing the algorithm described in `FastDTW: Toward Accurate
 // Dynamic Time Warping in Linear Time and Space` by Stan Salvador and Philip
@@ -183,7 +184,7 @@ class MedoidOptions {
   bool approx_ = true;
 };
 
-int GetMedoidPolyline(const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+int GetMedoidPolyline(absl::Span<const std::unique_ptr<S2Polyline>> polylines,
                       const MedoidOptions options);
 
 // GetConsensusPolyline allocates and returns a new "consensus" polyline from a

@@ -15,9 +15,8 @@
 
 #include "s2/s2polyline_alignment.h"
 
-#include <cmath>
-
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <tuple>

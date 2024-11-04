@@ -265,7 +265,7 @@ class S2ClosestEdgeQuery {
   // Note that if options().include_interiors() is true, the result vector may
   // include some entries with edge_id == -1.  This indicates that the target
   // intersects the indexed polygon with the given shape_id.  Such results may
-  // be identifed by calling Result::is_interior().
+  // be identified by calling Result::is_interior().
   std::vector<Result> FindClosestEdges(Target* target, ShapeFilter filter = {});
 
   // This version can be more efficient when this method is called many times,

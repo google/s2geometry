@@ -102,9 +102,9 @@ void IndexMatchingLayer::Build(const Graph& g, S2Error* error) {
     // existing error text.
     string label;
     if (dimension_ >= 0) label = absl::StrFormat("Dimension %d: ", dimension_);
-    error->Init(S2Error::FAILED_PRECONDITION,
-                "%s%sMissing edges: %s Extra edges: %s\n", error->text(), label,
-                ToString(missing), ToString(extra));
+    *error = S2Error::FailedPrecondition(absl::StrFormat(
+        "%s%sMissing edges: %s Extra edges: %s\n", error->message(), label,
+        ToString(missing), ToString(extra)));
   }
 }
 

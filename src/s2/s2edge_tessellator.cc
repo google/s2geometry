@@ -137,9 +137,9 @@ using std::vector;
 // in a Plate Carree edge of length 90 degrees or less.  This turns out to be
 // an edge from 45:-90 to 45:90 (in lat:lng format).  The corresponding error
 // as a function of "x" in the range [-1, 1] can be computed as the distance
-// between the the the Plate Caree edge point (45, 90 * x) and the geodesic
-// edge point (90 - 45 * abs(x), 90 * sgn(x)).  Using the Haversine formula,
-// the corresponding function E1 (normalized to have a maximum value of 1) is:
+// between the Plate Caree edge point (45, 90 * x) and the geodesic edge point
+// (90 - 45 * abs(x), 90 * sgn(x)).  Using the Haversine formula, the
+// corresponding function E1 (normalized to have a maximum value of 1) is:
 //
 //   E1(x) =
 //     asin(sqrt(sin(Pi / 8 * (1 - x)) ^ 2 +

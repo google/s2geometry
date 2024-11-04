@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <utility>
 
+#include "absl/strings/str_format.h"
 #include "s2/s2error.h"
 
 void S2MemoryTracker::SetError(S2Error error) {
@@ -28,9 +29,9 @@ void S2MemoryTracker::SetError(S2Error error) {
 
 // Not inline in order to avoid code bloat.
 void S2MemoryTracker::SetLimitExceededError() {
-  error_.Init(S2Error::RESOURCE_EXHAUSTED,
-              "Memory limit exceeded (tracked usage %d bytes, limit %d bytes)",
-              usage_bytes_, limit_bytes_);
+  error_ = S2Error::ResourceExhausted(absl::StrFormat(
+      "Memory limit exceeded (tracked usage %d bytes, limit %d bytes)",
+      usage_bytes_, limit_bytes_));
 }
 
 bool S2MemoryTracker::Client::TallyTemp(int64_t delta_bytes) {

@@ -41,6 +41,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -49,6 +50,7 @@
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_lax_polygon_layer.h"
 #include "s2/s2builderutil_lax_polyline_layer.h"
+#include "s2/s2builderutil_s2point_vector_layer.h"
 #include "s2/s2builderutil_s2polygon_layer.h"
 #include "s2/s2builderutil_s2polyline_layer.h"
 #include "s2/s2builderutil_s2polyline_vector_layer.h"
@@ -56,6 +58,7 @@
 #include "s2/s2builderutil_testing.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2convex_hull_query.h"
 #include "s2/s2debug.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
@@ -82,6 +85,7 @@ using s2builderutil::IdentitySnapFunction;
 using s2builderutil::IntLatLngSnapFunction;
 using s2builderutil::LaxPolylineLayer;
 using s2builderutil::S2CellIdSnapFunction;
+using s2builderutil::S2PointVectorLayer;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
@@ -223,7 +227,7 @@ TEST(S2Builder, VerticesMoveLessThanSnapRadius) {
 }
 
 TEST(S2Builder, MinEdgeVertexSeparation) {
-  // Check that edges are separted from non-incident vertices by at least
+  // Check that edges are separated from non-incident vertices by at least
   // min_edge_vertex_separation().  This requires adding new vertices (not
   // present in the input) in some cases.
 
@@ -800,7 +804,7 @@ TEST(S2Builder, GraphPersistence) {
 }
 
 void TestPolylineLayers(
-    const vector<string_view>& input_strs,
+    absl::Span<const string_view> input_strs,
     const vector<string_view>& expected_strs,
     const S2PolylineLayer::Options& layer_options,
     const S2Builder::Options& builder_options = S2Builder::Options()) {
@@ -825,7 +829,7 @@ void TestPolylineLayers(
 }
 
 void TestPolylineVector(
-    const vector<string_view>& input_strs,
+    absl::Span<const string_view> input_strs,
     const vector<string_view>& expected_strs,
     const S2PolylineVectorLayer::Options& layer_options,
     const S2Builder::Options& builder_options = S2Builder::Options()) {
@@ -847,7 +851,7 @@ void TestPolylineVector(
 }
 
 void TestPolylineLayersBothEdgeTypes(
-    const vector<string_view>& input_strs,
+    absl::Span<const string_view> input_strs,
     const vector<string_view>& expected_strs,
     S2PolylineLayer::Options layer_options,  // by value
     const S2Builder::Options& builder_options = S2Builder::Options()) {
@@ -1147,12 +1151,13 @@ void InputEdgeIdCheckingLayer::Build(const Graph& g, S2Error* error) {
     extra += ToString(p);
   }
   if (!missing.empty() || !extra.empty()) {
-    error->Init(INPUT_EDGE_ID_MISMATCH, "Missing:\n%sExtra:\n%s\n", missing,
-                extra);
+    *error =
+        S2Error(INPUT_EDGE_ID_MISMATCH,
+                absl::StrFormat("Missing:\n%sExtra:\n%s\n", missing, extra));
   }
 }
 
-void TestInputEdgeIds(const vector<string_view>& input_strs,
+void TestInputEdgeIds(absl::Span<const string_view> input_strs,
                       const EdgeInputEdgeIds& expected,
                       const GraphOptions& graph_options,
                       const S2Builder::Options& options) {
@@ -1584,7 +1589,8 @@ TEST(S2Builder, AdjacentCoverageIntervalsSpanMoreThan90Degrees) {
 
 // The following test requires internal debugging checks to be skipped.
 // TODO(b/233610812): This test fails for Android-x86.
-#if defined(NDEBUG) && !(defined(__ANDROID__) && defined(__i386__))
+#if defined(NDEBUG) && !defined(UNDEFINED_BEHAVIOR_SANITIZER) && \
+    !(defined(__ANDROID__) && defined(__i386__))
 TEST(S2Builder, NaNVertices) {
   // Test that S2Builder operations don't crash when some vertices are NaN.
   vector<vector<S2Point>> loops = {
@@ -1757,6 +1763,52 @@ TEST(S2Builder, PushPopLabel) {
   S2Builder builder;
   builder.push_label(S2Builder::Label{1});
   builder.pop_label();
+}
+
+TEST(S2Builder, SnappingTinyLoopRegression) {
+  // In Java, S2Builder's ChooseAllVerticesAsSites() method could fail to
+  // deduplicate input vertices that were within the same leaf S2Cell.  This
+  // test checks that this no longer happens.
+
+  // Build a tiny loop as a convex hull around a single point.  All three points
+  // are within the same level 30 S2Cell.
+  S2ConvexHullQuery query;
+  query.AddPoint(S2LatLng::FromDegrees(4.56, 1.23).ToPoint());
+  unique_ptr<S2Loop> loop = query.GetConvexHull();
+
+  // Use an identity snap function with a small snap radius.  None of the points
+  // will be moved by snapping, as although they're close together, they're not
+  // within the snap radius.
+  S2Builder::Options options(IdentitySnapFunction(S1Angle::Radians(1e-15)));
+  S2Builder builder(options);
+
+  S2PolylineVectorLayer::Options polyline_options;
+  polyline_options.set_edge_type(S2Builder::EdgeType::DIRECTED);
+  polyline_options.set_validate(true);
+
+  S2PolygonLayer::Options polygon_options;
+  polygon_options.set_edge_type(S2Builder::EdgeType::DIRECTED);
+  polygon_options.set_validate(true);
+
+  std::vector<S2Point> points;
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  S2Polygon polygon;
+
+  builder.StartLayer(make_unique<S2PointVectorLayer>(&points));
+  builder.StartLayer(
+      make_unique<S2PolylineVectorLayer>(&polylines, polyline_options));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&polygon, polygon_options));
+  builder.AddLoop(*loop);
+  builder.AddIsFullPolygonPredicate(
+      [](const S2Builder::Graph&, S2Error*) { return false; });
+
+  S2Error error;
+  builder.Build(&error);
+  EXPECT_TRUE(error.ok());
+
+  EXPECT_EQ(0, points.size());
+  EXPECT_EQ(0, polylines.size());
+  EXPECT_EQ(1, polygon.num_loops());
 }
 
 }  // namespace

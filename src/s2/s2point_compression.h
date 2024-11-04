@@ -52,8 +52,6 @@
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
-class Decoder;
-class Encoder;
 
 // The XYZ and face,si,ti coordinates of an S2Point and, if this point is equal
 // to the center of an S2Cell, the level of this cell (-1 otherwise).

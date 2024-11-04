@@ -68,11 +68,10 @@
 
 #include "s2/s2builder.h"
 
-#include <cstddef>
-
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -86,6 +85,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/str_format.h"
 #include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
@@ -352,7 +352,8 @@ void S2Builder::set_label(Label label) {
 
 bool S2Builder::IsFullPolygonUnspecified(const S2Builder::Graph& g,
                                          S2Error* error) {
-  error->Init(S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED,
+  *error =
+      S2Error(S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED,
               "A degenerate polygon was found, but no predicate was specified "
               "to determine whether the polygon is empty or full.  Call "
               "S2Builder::AddIsFullPolygonPredicate() to fix this problem.");
@@ -527,7 +528,7 @@ bool S2Builder::Build(S2Error* error) {
   // clients think about error handling.
   ABSL_CHECK(error != nullptr);
   error_ = error;
-  error_->Clear();
+  *error_ = S2Error::Ok();
 
   // Mark the end of the last layer.
   layer_begins_.push_back(input_edges_.size());
@@ -619,16 +620,18 @@ void S2Builder::ChooseAllVerticesAsSites() {
 
 vector<S2Builder::InputVertexKey> S2Builder::SortInputVertices() {
   // Sort all the input vertices in the order that we wish to consider them as
-  // candidate Voronoi sites.  Any sort order will produce correct output, so
-  // we have complete flexibility in choosing the sort key.  We could even
-  // leave them unsorted, although this would have the disadvantage that
-  // changing the order of the input edges could cause S2Builder to snap to a
-  // different set of Voronoi sites.
+  // candidate Voronoi sites.  ChooseAllVerticesAsSites() requires duplicate
+  // points be adjacent in the sorted output for deduplication.  Otherwise, any
+  // sort order will produce correct output, so we have complete flexibility in
+  // choosing the sort key.  We could even leave them unsorted, although this
+  // would have the disadvantage that changing the order of the input edges
+  // could cause S2Builder to snap to a different set of Voronoi sites.
   //
   // We have chosen to sort them primarily by S2CellId since this improves the
-  // performance of many S2Builder phases (due to better spatial locality).
-  // It also allows the possibility of replacing the current S2PointIndex
-  // approach with a more efficient recursive divide-and-conquer algorithm.
+  // performance of many S2Builder phases (due to better spatial locality).  It
+  // also allows the possibility of replacing the current S2PointIndex approach
+  // with a more efficient recursive divide-and-conquer algorithm.  Ties are
+  // broken by comparing the S2Point values of vertices lexicographically.
   //
   // However, sorting by leaf S2CellId alone has two small disadvantages in
   // the case where the candidate sites are densely spaced relative to the
@@ -794,12 +797,14 @@ S2Point S2Builder::SnapSite(const S2Point& point) const {
   S2Point site = options_.snap_function().SnapPoint(point);
   S1ChordAngle dist_moved(site, point);
   if (dist_moved > site_snap_radius_ca_) {
-    error_->Init(S2Error::BUILDER_SNAP_RADIUS_TOO_SMALL,
-                 "Snap function moved vertex (%.15g, %.15g, %.15g) "
-                 "by %.15g, which is more than the specified snap "
-                 "radius of %.15g", point.x(), point.y(), point.z(),
-                 dist_moved.ToAngle().radians(),
-                 site_snap_radius_ca_.ToAngle().radians());
+    *error_ = S2Error(
+        S2Error::BUILDER_SNAP_RADIUS_TOO_SMALL,
+        absl::StrFormat("Snap function moved vertex (%.15g, %.15g, %.15g) "
+                        "by %.15g, which is more than the specified snap "
+                        "radius of %.15g",
+                        point.x(), point.y(), point.z(),
+                        dist_moved.ToAngle().radians(),
+                        site_snap_radius_ca_.ToAngle().radians()));
   }
   return site;
 }
@@ -934,7 +939,7 @@ void S2Builder::AddExtraSites(const MutableS2ShapeIndex& input_edge_index) {
 }
 
 void S2Builder::MaybeAddExtraSites(
-    InputEdgeId edge_id, const vector<SiteId>& chain,
+    InputEdgeId edge_id, absl::Span<const SiteId> chain,
     const MutableS2ShapeIndex& input_edge_index,
     flat_hash_set<InputEdgeId>* edges_to_resnap) {
   // If the memory tracker has a periodic callback function, tally an amount
@@ -1322,8 +1327,8 @@ void S2Builder::BuildLayers() {
   }
 }
 
-static void DumpEdges(const vector<S2Builder::Graph::Edge>& edges,
-                      const vector<S2Point>& vertices) {
+static void DumpEdges(absl::Span<const S2Builder::Graph::Edge> edges,
+                      absl::Span<const S2Point> vertices) {
   for (const auto& e : edges) {
     vector<S2Point> v;
     v.push_back(vertices[e.first]);
@@ -1492,9 +1497,8 @@ class S2Builder::EdgeChainSimplifier {
                   flat_hash_set<VertexId>* used_vertices,
                   S2PolylineSimplifier* simplifier) const;
   void MergeChain(const vector<VertexId>& vertices);
-  void AssignDegenerateEdges(
-      const vector<InputEdgeId>& degenerate_ids,
-      vector<vector<InputEdgeId>>* merged_ids) const;
+  void AssignDegenerateEdges(absl::Span<const InputEdgeId> degenerate_ids,
+                             vector<vector<InputEdgeId>>* merged_ids) const;
 
   // LINT.IfChange
   const S2Builder& builder_;
@@ -1570,8 +1574,8 @@ void S2Builder::SimplifyEdgeChains(
 // that we can construct a single graph.  The sort is stable, which means that
 // any duplicate edges within each layer will still be sorted by InputEdgeId.
 void S2Builder::MergeLayerEdges(
-    const vector<vector<Edge>>& layer_edges,
-    const vector<vector<InputEdgeIdSetId>>& layer_input_edge_ids,
+    absl::Span<const vector<Edge>> layer_edges,
+    absl::Span<const vector<InputEdgeIdSetId>> layer_input_edge_ids,
     vector<Edge>* edges, vector<InputEdgeIdSetId>* input_edge_ids,
     vector<int>* edge_layers) const {
   vector<LayerEdgeId> order;
@@ -1581,9 +1585,9 @@ void S2Builder::MergeLayerEdges(
     }
   }
   std::sort(order.begin(), order.end(),
-    [&layer_edges](const LayerEdgeId& ai, const LayerEdgeId& bi) {
-         return StableLessThan(layer_edges[ai.first][ai.second],
-                               layer_edges[bi.first][bi.second], ai, bi);
+            [layer_edges](const LayerEdgeId& ai, const LayerEdgeId& bi) {
+              return StableLessThan(layer_edges[ai.first][ai.second],
+                                    layer_edges[bi.first][bi.second], ai, bi);
             });
   edges->reserve(order.size());
   input_edge_ids->reserve(order.size());
@@ -2037,7 +2041,7 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
 // interior of an edge chain, assigns each input edge id to one of the output
 // edges.
 void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
-    const vector<InputEdgeId>& degenerate_ids,
+    absl::Span<const InputEdgeId> degenerate_ids,
     vector<vector<InputEdgeId>>* merged_ids) const {
   // Each degenerate edge is assigned to an output edge in the appropriate
   // layer.  If there is more than one candidate, we use heuristics so that if
@@ -2090,7 +2094,6 @@ void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
     (*merged_ids)[it[0]].push_back(degenerate_id);
   }
 }
-
 
 /////////////////////// S2Builder::MemoryTracker /////////////////////////
 
@@ -2153,8 +2156,8 @@ bool S2Builder::MemoryTracker::DoneSiteIndex(
 // Called to indicate that edge simplification was requested.
 // LINT.IfChange(TallySimplifyEdgeChains)
 bool S2Builder::MemoryTracker::TallySimplifyEdgeChains(
-    const vector<compact_array<InputVertexId>>& site_vertices,
-    const vector<vector<Edge>>& layer_edges) {
+    absl::Span<const compact_array<InputVertexId>> site_vertices,
+    absl::Span<const vector<Edge>> layer_edges) {
   if (!is_active()) return true;
 
   // The simplify_edge_chains() option uses temporary memory per site
@@ -2198,7 +2201,7 @@ bool S2Builder::MemoryTracker::TallySimplifyEdgeChains(
 // Tracks the temporary memory used by Graph::FilterVertices.
 // LINT.IfChange(TallyFilterVertices)
 bool S2Builder::MemoryTracker::TallyFilterVertices(
-    int num_sites, const vector<vector<Edge>>& layer_edges) {
+    int num_sites, absl::Span<const vector<Edge>> layer_edges) {
   if (!is_active()) return true;
 
   // Vertex filtering (see BuildLayers) uses temporary space of one VertexId

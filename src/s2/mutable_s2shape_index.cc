@@ -17,11 +17,10 @@
 
 #include "s2/mutable_s2shape_index.h"
 
-#include <cstddef>
-
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -35,6 +34,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/types/span.h"
 #include "absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
@@ -57,7 +57,6 @@
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/util/gtl/compact_array.h"
-#include "s2/util/math/mathutil.h"
 
 using std::fabs;
 using std::make_pair;
@@ -493,10 +492,6 @@ void MutableS2ShapeIndex::MarkIndexStale() {
 
 void MutableS2ShapeIndex::Minimize() {
   mem_tracker_.Tally(-mem_tracker_.client_usage_bytes());
-  Iterator it;
-  for (it.InitStale(this, S2ShapeIndex::BEGIN); !it.done(); it.Next()) {
-    delete &it.cell();
-  }
   cell_map_.clear();
   pending_removals_.reset();
   pending_additions_begin_ = 0;
@@ -855,7 +850,7 @@ vector<int> MutableS2ShapeIndex::BatchGenerator::GetMaxBatchSizes(
   // number of batches to "kMaxBatches".
   const double total_budget_bytes = max(
       final_bytes + tmp_memory_budget_bytes,
-      final_bytes / (1 - MathUtil::IPow(kTmpSpaceMultiplier, kMaxBatches - 1)));
+      final_bytes / (1 - std::pow(kTmpSpaceMultiplier, kMaxBatches - 1)));
 
   // "ideal_batch_size" is the number of edges in the current batch before
   // rounding to an integer.
@@ -1088,11 +1083,12 @@ void MutableS2ShapeIndex::FinishPartialShape(int shape_id) {
                                         : S2CellId::End(S2CellId::kMaxLevel);
       if (begin != fill_end) {
         for (S2CellId cellid : S2CellUnion::FromBeginEnd(begin, fill_end)) {
-          S2ShapeIndexCell* cell = new S2ShapeIndexCell;
+          auto cell = make_unique<S2ShapeIndexCell>();
           S2ClippedShape* clipped = cell->add_shapes(1);
           clipped->Init(shape_id, 0);
           clipped->set_contains_center(true);
-          index_it = cell_map_.insert(index_it, make_pair(cellid, cell));
+          index_it =
+              cell_map_.insert(index_it, make_pair(cellid, std::move(cell)));
           ++index_it;
         }
       }
@@ -1101,9 +1097,9 @@ void MutableS2ShapeIndex::FinishPartialShape(int shape_id) {
 
     // Now check whether the current index cell needs to be updated.
     S2CellId cellid = index_it->first;
-    S2ShapeIndexCell* cell = index_it->second;
-    int n = cell->shapes_.size();
-    if (n > 0 && cell->shapes_[n - 1].shape_id() == shape_id) {
+    S2ShapeIndexCell& cell = *index_it->second;
+    int n = cell.shapes_.size();
+    if (n > 0 && cell.shapes_[n - 1].shape_id() == shape_id) {
       // This cell contains edges of the partial shape.  If the partial shape
       // contains the center of this cell, we must update the index.
       S2PaddedCell pcell(cellid, kCellPadding);
@@ -1111,7 +1107,7 @@ void MutableS2ShapeIndex::FinishPartialShape(int shape_id) {
         tracker.MoveTo(pcell.GetEntryVertex());
       }
       tracker.DrawTo(pcell.GetCenter());
-      S2ClippedShape* clipped = &cell->shapes_[n - 1];
+      S2ClippedShape* clipped = &cell.shapes_[n - 1];
       int num_edges = clipped->num_edges();
       ABSL_DCHECK_GT(num_edges, 0);
       for (int i = 0; i < num_edges; ++i) {
@@ -1134,7 +1130,7 @@ void MutableS2ShapeIndex::FinishPartialShape(int shape_id) {
     } else if (!tracker.shape_ids().empty()) {
       // The partial shape contains the center of an existing index cell that
       // does not intersect any of its edges.
-      S2ClippedShape* clipped = cell->add_shapes(1);
+      S2ClippedShape* clipped = cell.add_shapes(1);
       clipped->Init(shape_id, 0);
       clipped->set_contains_center(true);
     }
@@ -1229,7 +1225,7 @@ class MutableS2ShapeIndex::EdgeAllocator {
 // all the edges from the index.  (An edge is added if shapes_[id] is not
 // nullptr, and removed otherwise.)
 void MutableS2ShapeIndex::UpdateFaceEdges(int face,
-                                          const vector<FaceEdge>& face_edges,
+                                          absl::Span<const FaceEdge> face_edges,
                                           InteriorTracker* tracker) {
   int num_edges = face_edges.size();
   if (num_edges == 0 && tracker->shape_ids().empty()) return;
@@ -1673,7 +1669,6 @@ void MutableS2ShapeIndex::AbsorbIndexCell(const S2PaddedCell& pcell,
   // Update the edge list and delete this cell from the index.
   edges->swap(new_edges);
   cell_map_.erase(pcell.id());
-  delete &cell;
 }
 
 // Attempt to build an index cell containing the given edges, and return true
@@ -1839,7 +1834,7 @@ bool MutableS2ShapeIndex::MakeIndexCell(const S2PaddedCell& pcell,
   // with the shapes that happen to contain the cell center.
   const ShapeIdSet& cshape_ids = tracker->shape_ids();
   int num_shapes = CountShapes(edges, cshape_ids);
-  S2ShapeIndexCell* cell = new S2ShapeIndexCell;
+  auto cell = make_unique<S2ShapeIndexCell>();
   S2ClippedShape* base = cell->add_shapes(num_shapes);
 
   // To fill the index cell we merge the two sources of shapes: "edge shapes"
@@ -1885,7 +1880,7 @@ bool MutableS2ShapeIndex::MakeIndexCell(const S2PaddedCell& pcell,
   // is much faster to give an insertion hint in this case.  Otherwise the
   // hint doesn't do much harm.  With more effort we could provide a hint even
   // during incremental updates, but this is probably not worth the effort.
-  cell_map_.insert(cell_map_.end(), make_pair(pcell.id(), cell));
+  cell_map_.insert(cell_map_.end(), make_pair(pcell.id(), std::move(cell)));
 
   // Shift the InteriorTracker focus point to the exit vertex of this cell.
   if (tracker->is_active() && !edges.empty()) {
@@ -2004,13 +1999,12 @@ bool MutableS2ShapeIndex::Init(Decoder* decoder,
 
   for (size_t i = 0; i < cell_ids.size(); ++i) {
     S2CellId id = cell_ids[i];
-    S2ShapeIndexCell* cell = new S2ShapeIndexCell;
+    auto cell = make_unique<S2ShapeIndexCell>();
     Decoder decoder = encoded_cells.GetDecoder(i);
     if (!cell->Decode(num_shapes, &decoder)) {
-      delete cell;
       return false;
     }
-    cell_map_.insert(cell_map_.end(), make_pair(id, cell));
+    cell_map_.insert(cell_map_.end(), make_pair(id, std::move(cell)));
   }
   return true;
 }

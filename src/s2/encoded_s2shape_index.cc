@@ -24,7 +24,8 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/util/bits/bits.h"
+#include "absl/base/optimization.h"
+#include "absl/numeric/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
 #include "s2/encoded_s2cell_id_vector.h"
@@ -179,7 +180,8 @@ void EncodedS2ShapeIndex::Minimize() {
       uint64_t bits = cells_decoded_[i].load(std::memory_order_relaxed);
       if (bits == 0) continue;
       do {
-        int offset = Bits::FindLSBSetNonZero64(bits);
+        ABSL_ASSUME(bits != 0);
+        int offset = absl::countr_zero(bits);
         delete cells_[(i << 6) + offset];
         bits &= bits - 1;
       } while (bits != 0);

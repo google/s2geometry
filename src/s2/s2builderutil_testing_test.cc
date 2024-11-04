@@ -126,7 +126,7 @@ TEST(IndexMatchingLayer, DifferentResult) {
   S2Error error;
   EXPECT_FALSE(builder.Build(&error));
   EXPECT_FALSE(error.ok());
-  EXPECT_EQ(error.text(),
+  EXPECT_EQ(error.message(),
             "Missing edges: 3:4, 3:3; 3:3, 3:4; 1:1, 2:2; 0:0, 0:0 "
             "Extra edges: 1:0, 1:0\n");
 }

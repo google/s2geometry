@@ -19,7 +19,6 @@
 #define S2_ENCODED_STRING_VECTOR_H_
 
 #include <cstddef>
-
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -124,7 +123,7 @@ class EncodedStringVector {
 
  private:
   EncodedUintVector<uint64_t> offsets_;
-  const char* data_;
+  const char* data_ = nullptr;
 };
 
 
@@ -159,7 +158,7 @@ inline absl::string_view EncodedStringVector::operator[](size_t i) const {
 inline Decoder EncodedStringVector::GetDecoder(size_t i) const {
   // Return an empty decoder if we don't have enough data.
   if (i >= offsets_.size()) {
-    return Decoder();
+    return Decoder(nullptr, 0);
   }
 
   uint64_t start = (i == 0) ? 0 : offsets_[i - 1];

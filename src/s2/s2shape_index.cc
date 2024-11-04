@@ -18,6 +18,7 @@
 #include "s2/s2shape_index.h"
 
 #include <cstdint>
+#include <limits>
 
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
@@ -56,9 +57,12 @@ S2ShapeIndexCell::find_clipped(int shape_id) const {
 // shapes will have a larger shape id than any current shape, and that shapes
 // will be added in increasing shape id order.
 S2ClippedShape* S2ShapeIndexCell::add_shapes(int n) {
-  int size = shapes_.size();
-  shapes_.resize(size + n);
-  return &shapes_[size];
+  if (n > 0) {
+    int size = shapes_.size();
+    shapes_.resize(size + n);
+    return &shapes_[size];
+  }
+  return nullptr;
 }
 
 void S2ShapeIndexCell::Encode(int num_shape_ids, Encoder* encoder) const {
@@ -189,7 +193,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
   if (num_shape_ids == 1) {
     // Entire S2ShapeIndex contains only one shape.
     S2ClippedShape* clipped = add_shapes(1);
-    uint64_t header;
+    uint64_t header = 0;
     if (!decoder->get_varint64(&header)) return false;
     if ((header & 1) == 0) {
       // The cell contains a contiguous range of edges.
@@ -215,7 +219,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     return DecodeEdges(num_edges, clipped, decoder);
   }
   // S2ShapeIndex contains more than one shape.
-  uint32_t header;
+  uint32_t header = 0;
   if (!decoder->get_varint32(&header)) return false;
   int num_clipped = 1;
   if ((header & 7) == 3) {
@@ -223,9 +227,14 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     num_clipped = header >> 3;
     if (!decoder->get_varint32(&header)) return false;
   }
-  int shape_id = 0;
+  int64_t shape_id = 0;
   S2ClippedShape* clipped = add_shapes(num_clipped);
   for (int j = 0; j < num_clipped; ++j, ++clipped, ++shape_id) {
+    // Ensure we don't overflow a 32 bit shape id.
+    if (shape_id >= std::numeric_limits<int>::max()) {
+      return false;
+    }
+
     if (j > 0 && !decoder->get_varint32(&header)) return false;
     if ((header & 1) == 0) {
       // The clipped shape contains a contiguous range of edges.
@@ -245,8 +254,11 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       clipped->set_contains_center((header & 8) != 0);
     } else {
       // The clipped shape contains some other combination of edges.
-      ABSL_DCHECK_EQ(header & 3, 1);
-      uint32_t shape_delta;
+      if ((header & 3) != 1) {
+        return false;
+      }
+
+      uint32_t shape_delta = 0;
       if (!decoder->get_varint32(&shape_delta)) return false;
       shape_id += shape_delta;
       int num_edges = (header >> 3) + 1;
@@ -305,7 +317,7 @@ inline bool S2ShapeIndexCell::DecodeEdges(int num_edges,
   // This function inverts the encodings documented above.
   int32_t edge_id = 0;
   for (int i = 0; i < num_edges; ) {
-    uint32_t delta;
+    uint32_t delta = 0;
     if (!decoder->get_varint32(&delta)) return false;
     if (i + 1 == num_edges) {
       // The last edge is encoded without an edge count.

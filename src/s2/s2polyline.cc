@@ -17,11 +17,10 @@
 
 #include "s2/s2polyline.h"
 
-#include <cstddef>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -32,6 +31,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/str_format.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
@@ -168,20 +168,23 @@ bool S2Polyline::FindValidationError(S2Error* error) const {
   // All vertices must be unit length.
   for (int i = 0; i < num_vertices(); ++i) {
     if (!S2::IsUnitLength(vertex(i))) {
-      error->Init(S2Error::NOT_UNIT_LENGTH, "Vertex %d is not unit length", i);
+      *error = S2Error(S2Error::NOT_UNIT_LENGTH,
+                       absl::StrFormat("Vertex %d is not unit length", i));
       return true;
     }
   }
   // Adjacent vertices must not be identical or antipodal.
   for (int i = 1; i < num_vertices(); ++i) {
     if (vertex(i - 1) == vertex(i)) {
-      error->Init(S2Error::DUPLICATE_VERTICES,
-                  "Vertices %d and %d are identical", i - 1, i);
+      *error = S2Error(
+          S2Error::DUPLICATE_VERTICES,
+          absl::StrFormat("Vertices %d and %d are identical", i - 1, i));
       return true;
     }
     if (vertex(i - 1) == -vertex(i)) {
-      error->Init(S2Error::ANTIPODAL_VERTICES,
-                  "Vertices %d and %d are antipodal", i - 1, i);
+      *error = S2Error(
+          S2Error::ANTIPODAL_VERTICES,
+          absl::StrFormat("Vertices %d and %d are antipodal", i - 1, i));
       return true;
     }
   }

@@ -78,7 +78,7 @@ TEST(S2ShapeConversionUtilTest, ClosedLineToS2Polyline) {
 
 // Creates a (lax) polygon shape from the provided loops, and ensures that the
 // S2Polygon produced by ShapeToS2Polygon represents the same polygon.
-void VerifyShapeToS2Polygon(const vector<S2LaxPolygonShape::Loop>& loops,
+void VerifyShapeToS2Polygon(absl::Span<const S2LaxPolygonShape::Loop> loops,
                             int expected_num_loops, int expected_num_vertices) {
   S2LaxPolygonShape lax_polygon(loops);
   unique_ptr<S2Polygon> polygon = ShapeToS2Polygon(lax_polygon);

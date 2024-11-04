@@ -22,7 +22,6 @@
 #include "s2/s2shape_index_measures.h"
 
 #include <cmath>
-
 #include <memory>
 #include <string>
 

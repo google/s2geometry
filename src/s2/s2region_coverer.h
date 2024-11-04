@@ -174,7 +174,7 @@ class S2RegionCoverer {
   S2RegionCoverer();
   ~S2RegionCoverer();
 
-  // Returns the current options.  Options can be modifed between calls.
+  // Returns the current options.  Options can be modified between calls.
   const Options& options() const { return options_; }
   Options* mutable_options() { return &options_; }
 

@@ -17,7 +17,6 @@
 
 #include <cfloat>
 #include <cmath>
-
 #include <memory>
 #include <ostream>
 #include <string>

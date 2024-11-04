@@ -18,7 +18,6 @@
 #include "s2/s2contains_vertex_query.h"
 
 #include <cstdlib>
-
 #include <utility>
 
 #include "absl/log/absl_check.h"

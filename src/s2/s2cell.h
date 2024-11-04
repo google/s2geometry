@@ -32,8 +32,6 @@
 #include "s2/s2region.h"
 #include "s2/util/math/vector.h"
 
-class Decoder;
-class Encoder;
 class S2Cap;
 class S2LatLng;
 class S2LatLngRect;
@@ -266,10 +264,10 @@ class S2Cell final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* encoder) const;
 
   // Decodes an S2Cell encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
  private:
   // Returns the latitude or longitude of the cell vertex given by (i,j),

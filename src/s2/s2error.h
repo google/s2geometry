@@ -28,6 +28,7 @@
 #include "absl/base/attributes.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
 
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
@@ -121,36 +122,74 @@ class S2Error {
     // (containing all points).
     BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED = 305,
   };
-  S2Error() : code_(OK), text_() {}
 
-  // Convenience constructor that calls Init().
-  template <typename... Args>
-  S2Error(Code code, const absl::FormatSpec<Args...>& format,
-          const Args&... args) {
-    Init(code, format, args...);
-  }
+  // Creates error with OK status and empty message.
+  S2Error() = default;
 
-  // Set the error to the given code and absl::StrFormat-style message.
-  // Note that you can prepend text to an existing error by calling Init()
-  // more than once:
+  // Create an error with the specified code and message.
   //
-  //   error->Init(error->code(), "Loop %d: %s", j, error->text());
-  template <typename... Args>
-  void Init(Code code, const absl::FormatSpec<Args...>& format,
-            const Args&... args) {
-    code_ = code;
-    text_ = absl::StrFormat(format, args...);
+  // Note that you can prepend text to an existing error by reinitializeing
+  // like this:
+  //
+  //   error = S2Error(error.code(),
+  //                   absl::StrFormat("Loop %d: %s", j, error.message()));
+  S2Error(Code code, absl::string_view message) : code_(code), text_(message) {}
+
+  ABSL_MUST_USE_RESULT bool ok() const { return code_ == OK; }
+  Code code() const { return code_; }
+  absl::string_view message() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return text_;
+  }
+  [[deprecated("Use message() instead.")]]
+  std::string text() const {
+    return text_;
   }
 
-  bool ok() const { return code_ == OK; }
-  Code code() const { return code_; }
-  std::string text() const { return text_; }
+  // Returns a value with an `OK` code.  Prefer this to `S2Error()`.
+  static S2Error Ok() {
+    // This will be changed to `return absl::OkStatus();` when we switch over.
+    return S2Error();
+  }
 
-  // Clear the error to contain the OK code and no error message.
-  void Clear();
+  static S2Error Unknown(absl::string_view message) {
+    // This will be changed to `absl::UnknownError()` when we switch over.
+    return S2Error(UNKNOWN, message);
+  }
+
+  static S2Error Unimplemented(absl::string_view message) {
+    return S2Error(UNIMPLEMENTED, message);
+  }
+
+  static S2Error OutOfRange(absl::string_view message) {
+    return S2Error(OUT_OF_RANGE, message);
+  }
+
+  static S2Error InvalidArgument(absl::string_view message) {
+    return S2Error(INVALID_ARGUMENT, message);
+  }
+
+  static S2Error FailedPrecondition(absl::string_view message) {
+    return S2Error(FAILED_PRECONDITION, message);
+  }
+
+  static S2Error Internal(absl::string_view message) {
+    return S2Error(INTERNAL, message);
+  }
+
+  static S2Error DataLoss(absl::string_view message) {
+    return S2Error(DATA_LOSS, message);
+  }
+
+  static S2Error ResourceExhausted(absl::string_view message) {
+    return S2Error(RESOURCE_EXHAUSTED, message);
+  }
+
+  static S2Error Cancelled(absl::string_view message) {
+    return S2Error(CANCELLED, message);
+  }
 
  private:
-  Code code_;
+  Code code_ = OK;
   std::string text_;
 };
 
@@ -184,12 +223,7 @@ absl::Status ToStatus(const S2Error& error);
 
 
 inline std::ostream& operator<<(std::ostream& os, const S2Error& error) {
-  return os << error.text();
-}
-
-inline void S2Error::Clear() {
-  code_ = OK;
-  text_.clear();
+  return os << error.message();
 }
 
 #endif  // S2_S2ERROR_H_

@@ -25,6 +25,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -87,7 +88,7 @@ GraphOptions S2PolygonLayer::graph_options() const {
 }
 
 void S2PolygonLayer::AppendS2Loops(const Graph& g,
-                                   const vector<Graph::EdgeLoop>& edge_loops,
+                                   absl::Span<const Graph::EdgeLoop> edge_loops,
                                    vector<unique_ptr<S2Loop>>* loops) const {
   vector<S2Point> vertices;
   for (const auto& edge_loop : edge_loops) {
@@ -102,8 +103,7 @@ void S2PolygonLayer::AppendS2Loops(const Graph& g,
 }
 
 void S2PolygonLayer::AppendEdgeLabels(
-    const Graph& g,
-    const vector<Graph::EdgeLoop>& edge_loops) {
+    const Graph& g, absl::Span<const Graph::EdgeLoop> edge_loops) {
   if (!label_set_ids_) return;
 
   vector<Label> labels;  // Temporary storage for labels.
@@ -119,7 +119,7 @@ void S2PolygonLayer::AppendEdgeLabels(
   }
 }
 
-void S2PolygonLayer::InitLoopMap(const vector<unique_ptr<S2Loop>>& loops,
+void S2PolygonLayer::InitLoopMap(absl::Span<const unique_ptr<S2Loop>> loops,
                                  LoopMap* loop_map) const {
   if (!label_set_ids_) return;
   for (const auto& loop : loops) {

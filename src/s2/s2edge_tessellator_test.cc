@@ -196,7 +196,7 @@ TEST(S2EdgeTessellator, IsAssignable) {
   S2::PlateCarreeProjection proj(180);
   S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
 
-  // Assigning a tesselator with a new tolerance should work.
+  // Assigning a tessellator with a new tolerance should work.
   tess = S2EdgeTessellator(&proj, S1Angle::Degrees(1));
 }
 
@@ -502,7 +502,7 @@ TEST(S2EdgeTessellator, RandomEdgesMercator) {
   TestRandomEdges(bitgen, proj, tolerance);
 }
 
-// TODO(ericv): Superceded by random edge tests above, remove?
+// TODO(ericv): Superseded by random edge tests above, remove?
 TEST(S2EdgeTessellator, UnprojectedAccuracyRandomCheck) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
       "UNPROJECTED_ACCURACY_RANDOM_CHECK",
@@ -521,7 +521,7 @@ TEST(S2EdgeTessellator, UnprojectedAccuracyRandomCheck) {
   }
 }
 
-// XXX(ericv): Superceded by random edge tests above, remove?
+// XXX(ericv): Superseded by random edge tests above, remove?
 TEST(S2EdgeTessellator, ProjectedAccuracyRandomCheck) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
       "PROJECTED_ACCURACY_RANDOM_CHECK",
@@ -539,6 +539,43 @@ TEST(S2EdgeTessellator, ProjectedAccuracyRandomCheck) {
     Stats stats = TestProjected(proj, tolerance, a, b, false);
     EXPECT_LT(stats.max(), 1.0) << a << ", " << b;
   }
+}
+
+TEST(S2EdgeTessellator, UnwrappingDcheckRegression) {
+  // Before it was fixed, this series of points would cause a ABSL_DCHECK failure
+  // when tessellating due to rounding in the unwrapping code.
+  const double kPoints[][2] = {
+      {-16.876721435218865253, -179.986547984808964884},
+      {-16.874909244632696925, -179.991889238369623172},
+      {-16.880241814330226191, -179.990858688466971671},
+      {-16.883762104047619346, -179.995169553755403058},
+      {-16.881949690252106677, +179.999489074621124018},
+      {-16.876617071405430437, +179.998458788144517939},
+      {-16.880137137875717457, +179.994147804931060364},
+      {-16.878324446969305228, +179.988806637264332267},
+      {-16.872991774409559440, +179.987776672537478362},
+      {-16.869471841739493101, +179.992087611973005323},
+      {-16.867659097232969856, +179.986746766061799008},
+      {-16.862326415537093993, +179.985716917832945683},
+      {-16.858806527326652969, +179.990027652027180238},
+      {-16.860619186956174786, +179.995368278278732532},
+      {-16.855286549828541354, +179.994338224830613626},
+      {-16.851766483129139829, +179.998648636203512297},
+      {-16.849953908374558864, +179.993308229628894424},
+  };
+
+  S2::MercatorProjection projection(0.5);
+
+  S2EdgeTessellator tessellator(&projection, S1Angle::E7(1));
+
+  vector<R2Point> vertices;
+  for (int i = 0; i + 1 < sizeof(kPoints) / sizeof(kPoints[0]); ++i) {
+    tessellator.AppendProjected(
+        S2LatLng::FromDegrees(kPoints[i + 0][0], kPoints[i + 0][1]).ToPoint(),
+        S2LatLng::FromDegrees(kPoints[i + 1][0], kPoints[i + 1][1]).ToPoint(),
+        &vertices);
+  }
+  EXPECT_EQ(vertices.size(), 17);
 }
 
 }  // namespace

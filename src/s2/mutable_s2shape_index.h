@@ -33,6 +33,7 @@
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r1interval.h"
@@ -135,7 +136,8 @@ class BTreeMap : public absl::btree_map<Key, Value> {
 // in the S2ShapeIndexCell that contains that point.
 class MutableS2ShapeIndex final : public S2ShapeIndex {
  private:
-  using CellMap = s2internal::BTreeMap<S2CellId, S2ShapeIndexCell*>;
+  using CellMap =
+      s2internal::BTreeMap<S2CellId, std::unique_ptr<S2ShapeIndexCell>>;
 
  public:
   // The amount by which cells are "padded" to compensate for numerical errors
@@ -464,7 +466,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
                    InteriorTracker* tracker) const;
   void FinishPartialShape(int shape_id);
   void AddFaceEdge(FaceEdge* edge, std::vector<FaceEdge> all_edges[6]) const;
-  void UpdateFaceEdges(int face, const std::vector<FaceEdge>& face_edges,
+  void UpdateFaceEdges(int face, absl::Span<const FaceEdge> face_edges,
                        InteriorTracker* tracker);
   S2CellId ShrinkToFit(const S2PaddedCell& pcell, const R2Rect& bound) const;
   void SkipCellRange(S2CellId begin, S2CellId end, InteriorTracker* tracker,

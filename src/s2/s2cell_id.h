@@ -29,11 +29,11 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/base/optimization.h"
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
 #include "absl/strings/string_view.h"
-#include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
@@ -112,6 +112,7 @@ class S2CellId {
   explicit S2CellId(const S2Point& p);
 
   // Construct a leaf cell containing the given normalized S2LatLng.
+  // REQUIRES: Latitude and longitude are finite.
   explicit S2CellId(const S2LatLng& ll);
 
   // The default constructor returns an invalid cell id.
@@ -202,7 +203,7 @@ class S2CellId {
   S2LatLng ToLatLng() const;
 
   // The 64-bit unique identifier for this cell.
-  uint64_t id() const { return id_; }
+  constexpr uint64_t id() const { return id_; }
 
   // Return true if id() represents a valid cell.
   //
@@ -388,10 +389,10 @@ class S2CellId {
 
   // Use encoder to generate a serialized representation of this cell id.
   // Can also encode an invalid cell.
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* encoder) const;
 
   // Decodes an S2CellId encoded by Encode(). Returns true on success.
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
   // Creates a human readable debug string.  Used for << and available for
   // direct usage as well.  The format is "f/dd..d" where "f" is a digit in
@@ -454,7 +455,7 @@ class S2CellId {
   uint64_t lsb() const { return id_ & (~id_ + 1); }
 
   // Return the lowest-numbered bit that is on for cells at the given level.
-  static uint64_t lsb_for_level(int level) {
+  static constexpr uint64_t lsb_for_level(int level) {
     return uint64_t{1} << (2 * (kMaxLevel - level));
   }
 
@@ -486,27 +487,27 @@ class S2CellId {
 } ABSL_ATTRIBUTE_PACKED;  // Necessary so that structures containing S2CellId's
                           // can be ABSL_ATTRIBUTE_PACKED.
 
-inline bool operator==(S2CellId x, S2CellId y) {
+inline constexpr bool operator==(S2CellId x, S2CellId y) {
   return x.id() == y.id();
 }
 
-inline bool operator!=(S2CellId x, S2CellId y) {
+inline constexpr bool operator!=(S2CellId x, S2CellId y) {
   return x.id() != y.id();
 }
 
-inline bool operator<(S2CellId x, S2CellId y) {
+inline constexpr bool operator<(S2CellId x, S2CellId y) {
   return x.id() < y.id();
 }
 
-inline bool operator>(S2CellId x, S2CellId y) {
+inline constexpr bool operator>(S2CellId x, S2CellId y) {
   return x.id() > y.id();
 }
 
-inline bool operator<=(S2CellId x, S2CellId y) {
+inline constexpr bool operator<=(S2CellId x, S2CellId y) {
   return x.id() <= y.id();
 }
 
-inline bool operator>=(S2CellId x, S2CellId y) {
+inline constexpr bool operator>=(S2CellId x, S2CellId y) {
   return x.id() >= y.id();
 }
 
@@ -564,10 +565,10 @@ inline int S2CellId::level() const {
   // We can't just ABSL_DCHECK(is_valid()) because we want level() to be
   // defined for end-iterators, i.e. S2CellId::End(kLevel).  However there is
   // no good way to define S2CellId::None().level(), so we do prohibit that.
-  ABSL_DCHECK_NE(id_, uint64_t{0});
+  ABSL_ASSUME(id_ != 0);
 
   // A special case for leaf cells is not worthwhile.
-  return kMaxLevel - (Bits::FindLSBSetNonZero64(id_) >> 1);
+  return kMaxLevel - (absl::countr_zero(id_) >> 1);
 }
 
 inline int S2CellId::GetSizeIJ() const {

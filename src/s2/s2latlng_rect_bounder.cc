@@ -200,7 +200,7 @@ S2LatLngRect S2LatLngRectBounder::GetBound() const {
   // is simply the maximum rounding error for results in the range [-Pi, Pi].
   // This is true because the Gnu implementation of atan2() comes from the IBM
   // Accurate Mathematical Library, which implements correct rounding for this
-  // instrinsic (i.e., it returns the infinite precision result rounded to the
+  // intrinsic (i.e., it returns the infinite precision result rounded to the
   // nearest representable value, with ties rounded to even values).  This
   // implies that we don't need to expand the longitude bounds at all, since
   // we only guarantee that the bound contains the *rounded* latitudes of

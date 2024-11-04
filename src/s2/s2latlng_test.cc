@@ -18,6 +18,8 @@
 #include "s2/s2latlng.h"
 
 #include <cmath>
+#include <cstdio>
+#include <limits>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -25,7 +27,6 @@
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_format.h"
 #include "s2/s1angle.h"
 #include "s2/s2coder_testing.h"
 #include "s2/s2error.h"
@@ -122,6 +123,44 @@ TEST(S2LatLng, NegativeZeros) {
       S2LatLng::Longitude(S2Point(-0., 0., 1.)).radians(), +0.));
   EXPECT_TRUE(IsIdentical(
       S2LatLng::Longitude(S2Point(-0., -0., 1.)).radians(), +0.));
+}
+
+TEST(S2LatLng, InfIsInvalid) {
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(std::numeric_limits<double>::infinity(), -122)
+          .is_valid());
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(37, std::numeric_limits<double>::infinity())
+          .is_valid());
+
+  // Also check the results of .Normalized()
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(std::numeric_limits<double>::infinity(), -122)
+          .Normalized()
+          .is_valid());
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(37, std::numeric_limits<double>::infinity())
+          .Normalized()
+          .is_valid());
+}
+
+TEST(S2LatLng, NanIsInvalid) {
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(std::numeric_limits<double>::quiet_NaN(), -122)
+          .is_valid());
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(std::numeric_limits<double>::quiet_NaN(), -122)
+          .is_valid());
+
+  // Also check the results of .Normalized()
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(37, std::numeric_limits<double>::quiet_NaN())
+          .Normalized()
+          .is_valid());
+  EXPECT_FALSE(
+      S2LatLng::FromDegrees(37, std::numeric_limits<double>::quiet_NaN())
+          .Normalized()
+          .is_valid());
 }
 
 TEST(S2LatLng, TestDistance) {

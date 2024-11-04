@@ -17,9 +17,8 @@
 
 #include "s2/s2cell_union.h"
 
-#include <cstddef>
-
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <utility>

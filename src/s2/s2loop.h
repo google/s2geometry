@@ -48,8 +48,6 @@
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 
-class Decoder;
-class Encoder;
 class LoopCrosser;
 class LoopRelation;
 class MergingIterator;
@@ -416,14 +414,14 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* encoder) const;
 
   // Decodes a loop encoded with Encode() or the private method
   // EncodeCompressed() (used by the S2Polygon encoder).  Returns true on
   // success.
   //
   // This method may be called with loops that have already been initialized.
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
   ////////////////////////////////////////////////////////////////////////
   // Methods intended primarily for use by the S2Polygon implementation:
@@ -451,17 +449,6 @@ class S2Loop final : public S2Region {
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then !b->is_hole().
   int CompareBoundary(const S2Loop& b) const;
-
-  // Given another loop 'B' whose boundaries does not cross this loop's
-  // boundaries (see CompareBoundary), return true if this loop contains the
-  // boundary of B. If "reverse_b" is true, the boundary of B is reversed first
-  // (which only affects the result when there are shared edges).  This method
-  // is cheaper than CompareBoundary() because it does not test for edge
-  // intersections.
-  //
-  // REQUIRES: neither loop is empty.
-  // REQUIRES: if b->is_full(), then reverse_b == false.
-  bool ContainsNonCrossingBoundary(const S2Loop& b, bool reverse_b) const;
 
   // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this object
   // is inserted into an S2ShapeIndex it is owned by that index, and will be
@@ -572,7 +559,7 @@ class S2Loop final : public S2Region {
   bool FindValidationErrorNoIndex(S2Error* error) const;
 
   // Internal implementation of the Decode method above.
-  bool DecodeInternal(Decoder* const decoder);
+  bool DecodeInternal(Decoder* decoder);
 
   // Converts the loop vertices to the S2XYZFaceSiTi format and store the result
   // in the given array, which must be large enough to store all the vertices.

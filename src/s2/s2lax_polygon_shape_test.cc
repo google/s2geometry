@@ -27,7 +27,9 @@
 #include <vector>
 
 #include "s2/base/casts.h"
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/algorithm/container.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
@@ -56,53 +58,87 @@
 #include "s2/s2text_format.h"
 
 using absl::string_view;
+using s2coding::CodingHint;
+using s2textformat::MakePointOrDie;
 using s2textformat::MakePolygonOrDie;
 using std::make_unique;
 using std::unique_ptr;
 using std::vector;
+using testing::HasSubstr;
 
-// Verifies that EncodedS2LaxPolygonShape behaves identically to
-// S2LaxPolygonShape. Also supports testing that the encoded form is identical
-// to the re-encoded form.
-
-void TestEncodedS2LaxPolygonShape(const S2LaxPolygonShape& original) {
-  Encoder encoder;
-  original.Encode(&encoder, s2coding::CodingHint::COMPACT);
-  Decoder decoder(encoder.base(), encoder.length());
-  EncodedS2LaxPolygonShape encoded;
-  ASSERT_TRUE(encoded.Init(&decoder));
-  EXPECT_EQ(encoded.num_loops(), original.num_loops());
-  EXPECT_EQ(encoded.num_vertices(), original.num_vertices());
-  EXPECT_EQ(encoded.num_edges(), original.num_edges());
-  EXPECT_EQ(encoded.num_chains(), original.num_chains());
-  EXPECT_EQ(encoded.dimension(), original.dimension());
-  EXPECT_EQ(encoded.is_empty(), original.is_empty());
-  EXPECT_EQ(encoded.is_full(), original.is_full());
-  EXPECT_EQ(encoded.GetReferencePoint(), original.GetReferencePoint());
-  for (int i = 0; i < original.num_loops(); ++i) {
-    EXPECT_EQ(encoded.num_loop_vertices(i), original.num_loop_vertices(i));
-    EXPECT_EQ(encoded.chain(i), original.chain(i));
-    for (int j = 0; j < original.num_loop_vertices(i); ++j) {
-      EXPECT_EQ(encoded.loop_vertex(i, j), original.loop_vertex(i, j));
-      EXPECT_EQ(encoded.chain_edge(i, j), original.chain_edge(i, j));
+template <typename LaxShape>
+void TestLaxDecoding(const LaxShape& shape, const S2LaxPolygonShape& expected) {
+  EXPECT_EQ(shape.num_loops(), expected.num_loops());
+  EXPECT_EQ(shape.num_vertices(), expected.num_vertices());
+  EXPECT_EQ(shape.num_edges(), expected.num_edges());
+  EXPECT_EQ(shape.num_chains(), expected.num_chains());
+  EXPECT_EQ(shape.dimension(), expected.dimension());
+  EXPECT_EQ(shape.is_empty(), expected.is_empty());
+  EXPECT_EQ(shape.is_full(), expected.is_full());
+  EXPECT_EQ(shape.GetReferencePoint(), expected.GetReferencePoint());
+  for (int i = 0; i < expected.num_loops(); ++i) {
+    EXPECT_EQ(shape.num_loop_vertices(i), expected.num_loop_vertices(i));
+    EXPECT_EQ(shape.chain(i), expected.chain(i));
+    for (int j = 0; j < expected.num_loop_vertices(i); ++j) {
+      EXPECT_EQ(shape.loop_vertex(i, j), expected.loop_vertex(i, j));
+      EXPECT_EQ(shape.chain_edge(i, j), expected.chain_edge(i, j));
     }
   }
   // Now test all the edges in a random order in order to exercise the cases
   // involving prev_loop_.
-  vector<int> edge_ids(original.num_edges());
+  vector<int> edge_ids(expected.num_edges());
   std::iota(edge_ids.begin(), edge_ids.end(), 0);
   std::shuffle(edge_ids.begin(), edge_ids.end(), std::mt19937_64());
   for (int e : edge_ids) {
-    EXPECT_EQ(encoded.chain_position(e), original.chain_position(e));
-    EXPECT_EQ(encoded.edge(e), original.edge(e));
+    EXPECT_EQ(shape.chain_position(e), expected.chain_position(e));
+    EXPECT_EQ(shape.edge(e), expected.edge(e));
   }
+}
 
+template <typename LaxShape>
+void TestLaxRecoding(const LaxShape& shape, const Encoder& expected) {
   // Let's also test that the encoded form can be encoded, yielding the same
   // bytes as the originally encoded form.
   Encoder reencoder;
-  encoded.Encode(&reencoder, s2coding::CodingHint::COMPACT);
-  ASSERT_EQ(string_view(encoder.base(), encoder.length()),
+  shape.Encode(&reencoder, s2coding::CodingHint::COMPACT);
+  ASSERT_EQ(string_view(expected.base(), expected.length()),
             string_view(reencoder.base(), reencoder.length()));
+}
+
+// Tests encoding an S2LaxPolygonShape and decoding it through both
+// EncodedS2LaxPolygonShape and the Init() methods of S2LaxPolygonShape.
+void TestS2LaxPolygonShapeEncoding(const S2LaxPolygonShape& original) {
+  Encoder encoder;
+  original.Encode(&encoder, s2coding::CodingHint::COMPACT);
+
+  // Test EncodedS2LaxPolygonShape API.
+  {
+    Decoder decoder(encoder.base(), encoder.length());
+    EncodedS2LaxPolygonShape shape;
+    ASSERT_TRUE(shape.Init(&decoder));
+    TestLaxDecoding(shape, original);
+    TestLaxRecoding(shape, encoder);
+  }
+
+  // Test S2LaxPolygon::Init() API.
+  {
+    Decoder decoder(encoder.base(), encoder.length());
+    S2LaxPolygonShape shape;
+    ASSERT_TRUE(shape.Init(&decoder));
+    TestLaxDecoding(shape, original);
+    TestLaxRecoding(shape, encoder);
+  }
+
+  // Test S2LaxPolygon::Init(S2Error&) API.
+  {
+    Decoder decoder(encoder.base(), encoder.length());
+    S2Error error;
+    S2LaxPolygonShape shape;
+    ASSERT_TRUE(shape.Init(&decoder, error));
+    ASSERT_TRUE(error.ok());
+    TestLaxDecoding(shape, original);
+    TestLaxRecoding(shape, encoder);
+  }
 }
 
 TEST(S2LaxPolygonShape, EmptyPolygon) {
@@ -120,7 +156,7 @@ TEST(S2LaxPolygonShape, EmptyPolygon) {
   EXPECT_TRUE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 TEST(S2LaxPolygonShape, Move) {
@@ -136,7 +172,7 @@ TEST(S2LaxPolygonShape, Move) {
   // Test the move constructor.
   S2LaxPolygonShape move1(std::move(to_move));
   s2testing::ExpectEqual(correct, move1);
-  TestEncodedS2LaxPolygonShape(move1);
+  TestS2LaxPolygonShapeEncoding(move1);
   ASSERT_EQ(loops.size(), move1.num_loops());
   ASSERT_EQ(6, move1.num_vertices());
   for (int i = 0; i < loops.size(); ++i) {
@@ -149,7 +185,7 @@ TEST(S2LaxPolygonShape, Move) {
   S2LaxPolygonShape move2;
   move2 = std::move(move1);
   s2testing::ExpectEqual(correct, move2);
-  TestEncodedS2LaxPolygonShape(move2);
+  TestS2LaxPolygonShapeEncoding(move2);
   ASSERT_EQ(loops.size(), move2.num_loops());
   ASSERT_EQ(6, move2.num_vertices());
   for (int i = 0; i < loops.size(); ++i) {
@@ -169,7 +205,7 @@ TEST(S2LaxPolygonShape, FullPolygon) {
   EXPECT_FALSE(shape.is_empty());
   EXPECT_TRUE(shape.is_full());
   EXPECT_TRUE(shape.GetReferencePoint().contained);
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 TEST(S2LaxPolygonShape, SingleVertexPolygon) {
@@ -192,7 +228,7 @@ TEST(S2LaxPolygonShape, SingleVertexPolygon) {
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 TEST(S2LaxPolygonShape, SingleLoopPolygon) {
@@ -219,7 +255,7 @@ TEST(S2LaxPolygonShape, SingleLoopPolygon) {
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 TEST(S2LaxPolygonShape, MultiLoopPolygon) {
@@ -252,7 +288,7 @@ TEST(S2LaxPolygonShape, MultiLoopPolygon) {
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 TEST(S2LaxPolygonShape, MultiLoopS2Polygon) {
@@ -320,7 +356,7 @@ TEST(S2LaxPolygonShape, ManyLoopPolygon) {
     auto v1 = loops[i][(j + 1) % loops[i].size()];
     EXPECT_EQ(shape.edge(e), S2Shape::Edge(v0, v1));
   }
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 TEST(S2LaxPolygonShape, DegenerateLoops) {
@@ -330,7 +366,7 @@ TEST(S2LaxPolygonShape, DegenerateLoops) {
       s2textformat::ParsePointsOrDie("5:5, 6:6")};
   S2LaxPolygonShape shape(loops);
   EXPECT_FALSE(shape.GetReferencePoint().contained);
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 TEST(S2LaxPolygonShape, InvertedLoops) {
@@ -339,7 +375,7 @@ TEST(S2LaxPolygonShape, InvertedLoops) {
       s2textformat::ParsePointsOrDie("3:4, 3:3, 4:4")};
   S2LaxPolygonShape shape(loops);
   EXPECT_TRUE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
-  TestEncodedS2LaxPolygonShape(shape);
+  TestS2LaxPolygonShapeEncoding(shape);
 }
 
 void CompareS2LoopToShape(absl::BitGenRef bitgen, const S2Loop& loop,
@@ -463,4 +499,48 @@ TEST(S2LaxPolygonShape, ChainVertexIteratorWorks) {
 
     ++chain_counter;
   }
+}
+
+std::string DecodeS2LaxPolygonShape(absl::string_view data) {
+  Decoder decoder(data.data(), data.size());
+  S2Error error;
+
+  S2LaxPolygonShape shape;
+  (void)shape.Init(&decoder, error);
+  if (!error.ok()) {
+    return std::string(error.message());
+  }
+  return {};
+}
+
+TEST(S2LaxPolygonShapeTest, InsufficientDataInEncoder) {
+  EXPECT_THAT(DecodeS2LaxPolygonShape(""), HasSubstr("Insufficient data"));
+}
+
+TEST(S2LaxPolygonShapeTest, BadVersionNumber) {
+  EXPECT_THAT(DecodeS2LaxPolygonShape("\373"), HasSubstr("Bad version number"));
+}
+
+TEST(S2LaxPolygonShapeTest, BadLoopNumber) {
+  EXPECT_THAT(DecodeS2LaxPolygonShape("\001"), HasSubstr("number of loops"));
+}
+
+TEST(S2LaxPolygonShapeTest, BadVerticesInit) {
+  EXPECT_THAT(DecodeS2LaxPolygonShape("\001\003"),
+              HasSubstr("decode vertices"));
+}
+
+TEST(S2LaxPolygonShapeTest, BadVertices) {
+  EXPECT_THAT(
+      DecodeS2LaxPolygonShape(std::string(
+          "\0014\331\227\360\360."
+          "\010\010\010\010\010\010\010\010\010\010\010\000\010\010\360\360\360"
+          "\360\360\360\360\360\360\360\360\360\360\000\251\021\021\014",
+          39)),
+      HasSubstr("Invalid exception delta outside of block size"));
+}
+
+TEST(S2LaxPolygonShapeTest, BadLoopOffsets) {
+  EXPECT_THAT(DecodeS2LaxPolygonShape(std::string("\001\225\243C\000\373", 6)),
+              HasSubstr("Failed to decode loop offsets"));
 }

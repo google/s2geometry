@@ -17,10 +17,9 @@
 
 #include "s2/value_lexicon.h"
 
-#include <cstring>
-
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <utility>
 

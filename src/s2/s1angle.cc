@@ -53,7 +53,7 @@ void S1Angle::Coder::Encode(Encoder& encoder, const S1Angle& angle) const {
 bool S1Angle::Coder::Decode(Decoder& decoder, S1Angle& angle,
                             S2Error& error) const {
   if (decoder.avail() < sizeof(double)) {
-    error.Init(S2Error::DATA_LOSS, "Could not decode S1Angle.");
+    error = S2Error::DataLoss("Could not decode S1Angle.");
     return false;
   }
   angle = Radians(decoder.getdouble());

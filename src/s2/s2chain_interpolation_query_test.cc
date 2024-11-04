@@ -74,7 +74,7 @@ TEST(S2ChainInterpolationQueryTest, SimplePolylines) {
                                          1.e6};
 
   for (const double& distance : distances) {
-    double lat = std::max(0.0, std::min(kTotalLengthAbc, distance));
+    double lat = std::clamp(distance, 0.0, kTotalLengthAbc);
     const S2Point point = S2LatLng::FromDegrees(lat, 0).ToPoint();
     int32_t edge_id = distance < kLatitudeB ? 0 : 1;
     ground_truth.emplace_back(point, edge_id, S1Angle::Degrees(lat));

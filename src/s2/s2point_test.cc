@@ -29,6 +29,7 @@
 #include "absl/hash/hash.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
+#include "absl/strings/str_format.h"
 #include "s2/s2coder_testing.h"
 #include "s2/s2error.h"
 #include "s2/s2random.h"

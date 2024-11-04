@@ -31,7 +31,6 @@
 #include "s2/s2error.h"
 #include "s2/s2point.h"
 #include "s2/util/math/mathutil.h"
-#include "s2/util/math/vector.h"
 
 class S2LatLng;
 
@@ -156,10 +155,18 @@ class S1Angle {
   S1Angle& operator*=(double m);
   S1Angle& operator/=(double m);
 
-  // Trigonmetric functions (not necessary but slightly more convenient).
+  // Trigonometric functions (not necessary but slightly more convenient).
   friend double sin(S1Angle a);
   friend double cos(S1Angle a);
   friend double tan(S1Angle a);
+
+  struct SinCosPair {
+    double sin;
+    double cos;
+  };
+  // Return the sine and cosine of the angle. This may be more efficient than
+  // calling sin() and cos() separately.
+  SinCosPair SinCos() const;
 
   // Return the angle normalized to the range (-180, 180] degrees.
   S1Angle Normalized() const;
@@ -214,19 +221,19 @@ inline int32_t S1Angle::e5() const {
   // TODO(user,b/298298095): Tighten this to [-180, 180].
   ABSL_DCHECK_LE(std::numeric_limits<int32_t>::min() / 1e5, degrees());
   ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32_t>::max() / 1e5);
-  return MathUtil::FastIntRound(1e5 * degrees());
+  return MathUtil::Round<int32_t>(1e5 * degrees());
 }
 
 inline int32_t S1Angle::e6() const {
   ABSL_DCHECK_LE(std::numeric_limits<int32_t>::min() / 1e6, degrees());
   ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32_t>::max() / 1e6);
-  return MathUtil::FastIntRound(1e6 * degrees());
+  return MathUtil::Round<int32_t>(1e6 * degrees());
 }
 
 inline int32_t S1Angle::e7() const {
   ABSL_DCHECK_LE(std::numeric_limits<int32_t>::min() / 1e7, degrees());
   ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32_t>::max() / 1e7);
-  return MathUtil::FastIntRound(1e7 * degrees());
+  return MathUtil::Round<int32_t>(1e7 * degrees());
 }
 
 inline S1Angle S1Angle::abs() const {
@@ -319,6 +326,19 @@ inline double cos(S1Angle a) {
 
 inline double tan(S1Angle a) {
   return tan(a.radians());
+}
+
+inline S1Angle::SinCosPair S1Angle::SinCos() const {
+// TODO(b/370513151): Remove once Clang can optimize this.
+// NB: __sincos() provided by __APPLE__ is not bit-identical to sin(), cos()
+// under `--config=darwin_arm64`.
+#if defined(__GLIBC__) || defined(__ANDROID__)
+  double sin_angle, cos_angle;
+  sincos(radians(), &sin_angle, &cos_angle);
+  return {sin_angle, cos_angle};
+#else
+  return {sin(radians()), cos(radians())};
+#endif
 }
 
 inline constexpr S1Angle S1Angle::Radians(double radians) {

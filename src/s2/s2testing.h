@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "s2/base/commandlineflags_declare.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"

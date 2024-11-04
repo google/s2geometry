@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -154,13 +155,13 @@ inline Edge ClosedSetNormalizer::Advance(const Graph& g, EdgeId* e) const {
 // Helper function that advances to the next incoming edge in the given graph,
 // returning a sentinel value once all edges are exhausted.
 inline Edge ClosedSetNormalizer::AdvanceIncoming(
-    const Graph& g, const vector<EdgeId>& in_edges, int* i) const {
+    const Graph& g, absl::Span<const EdgeId> in_edges, int* i) const {
   return ((static_cast<size_t>(++*i) == in_edges.size())
               ? sentinel_
               : Graph::reverse(g.edge(in_edges[*i])));
-  }
+}
 
-void ClosedSetNormalizer::NormalizeEdges(const vector<Graph>& g,
+void ClosedSetNormalizer::NormalizeEdges(absl::Span<const Graph> g,
                                          S2Error* error) {
   // Find the degenerate polygon edges and sibling pairs, and classify each
   // edge as belonging to either a shell or a hole.

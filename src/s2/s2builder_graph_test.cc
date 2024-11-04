@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
@@ -232,8 +233,8 @@ struct TestEdge {
 
 namespace {
 
-void TestProcessEdges(const vector<TestEdge>& input,
-                      const vector<TestEdge>& expected,
+void TestProcessEdges(absl::Span<const TestEdge> input,
+                      absl::Span<const TestEdge> expected,
                       GraphOptions* options,
                       S2Error::Code expected_code = S2Error::OK) {
   vector<Edge> edges;
@@ -310,7 +311,7 @@ TEST(ProcessEdges, MergeConvertedUndirectedDuplicateDegenerateEdges) {
 TEST(ProcessEdges, DiscardExcessConnectedDegenerateEdges) {
   GraphOptions options(EdgeType::DIRECTED, DegenerateEdges::DISCARD_EXCESS,
                        DuplicateEdges::KEEP, SiblingPairs::KEEP);
-  // Test that degenerate edges are discarded if they are connnected to any
+  // Test that degenerate edges are discarded if they are connected to any
   // non-degenerate edges (whether they are incoming or outgoing, and whether
   // they are lexicographically before or after the degenerate edge).
   TestProcessEdges({{0, 0}, {0, 1}}, {{0, 1}}, &options);

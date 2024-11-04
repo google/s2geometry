@@ -25,6 +25,7 @@
 #include "s2/base/casts.h"
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -49,7 +50,7 @@ using EdgeType = S2Builder::EdgeType;
 namespace {
 
 void TestS2LaxPolylineShape(
-    const vector<string_view>& input_strs, string_view expected_str,
+    absl::Span<const string_view> input_strs, string_view expected_str,
     EdgeType edge_type,
     const S2Builder::Options& options = S2Builder::Options()) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
@@ -67,7 +68,7 @@ void TestS2LaxPolylineShape(
 
 // Convenience function that tests both directed and undirected edges.
 void TestS2LaxPolylineShape(
-    const vector<string_view>& input_strs, string_view expected_str,
+    absl::Span<const string_view> input_strs, string_view expected_str,
     const S2Builder::Options& options = S2Builder::Options()) {
   TestS2LaxPolylineShape(input_strs, expected_str, EdgeType::DIRECTED, options);
   TestS2LaxPolylineShape(input_strs, expected_str, EdgeType::UNDIRECTED,

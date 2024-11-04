@@ -121,7 +121,7 @@ S1Angle S2CellIdSnapFunction::MinSnapRadiusForLevel(int level) {
 }
 
 int S2CellIdSnapFunction::LevelForMaxSnapRadius(S1Angle snap_radius) {
-  // When choosing a level, we need to acount for the error bound of
+  // When choosing a level, we need to account for the error bound of
   // 4 * DBL_EPSILON that is added by MinSnapRadiusForLevel().
   return S2::kMaxDiag.GetLevelForMaxValue(
       2 * (snap_radius.radians() - 4 * DBL_EPSILON));
@@ -170,7 +170,7 @@ S1Angle S2CellIdSnapFunction::min_edge_vertex_separation() const {
   //    (b) Otherwise, for arbitrary snap radii the worst-case configuration
   //    in the plane has an edge-vertex separation of sqrt(3/19) *
   //    kMinDiag(level), where sqrt(3/19) is about 0.3973597071.  The unit
-  //    test verifies that the bound is slighty better on the sphere:
+  //    test verifies that the bound is slightly better on the sphere:
   //    0.3973595687 * kMinDiag(level).
   //
   // 2. Proportional bound: In the plane, the worst-case configuration has an
@@ -277,7 +277,7 @@ S1Angle IntLatLngSnapFunction::MinSnapRadiusForExponent(int exponent) {
 }
 
 int IntLatLngSnapFunction::ExponentForMaxSnapRadius(S1Angle snap_radius) {
-  // When choosing an exponent, we need to acount for the error bound of
+  // When choosing an exponent, we need to account for the error bound of
   // (9 * sqrt(2) + 1.5) * DBL_EPSILON added by MinSnapRadiusForExponent().
   snap_radius -= S1Angle::Radians((9 * M_SQRT2 + 1.5) * DBL_EPSILON);
   snap_radius = max(snap_radius, S1Angle::Radians(1e-30));
@@ -344,8 +344,8 @@ S1Angle IntLatLngSnapFunction::min_edge_vertex_separation() const {
 S2Point IntLatLngSnapFunction::SnapPoint(const S2Point& point) const {
   ABSL_DCHECK_GE(exponent_, 0);  // Make sure the snap function was initialized.
   S2LatLng input(point);
-  int64_t lat = MathUtil::FastInt64Round(input.lat().degrees() * from_degrees_);
-  int64_t lng = MathUtil::FastInt64Round(input.lng().degrees() * from_degrees_);
+  int64_t lat = MathUtil::Round<int64_t>(input.lat().degrees() * from_degrees_);
+  int64_t lng = MathUtil::Round<int64_t>(input.lng().degrees() * from_degrees_);
   return S2LatLng::FromDegrees(lat * to_degrees_, lng * to_degrees_).ToPoint();
 }
 

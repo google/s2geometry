@@ -18,7 +18,6 @@
 #include "s2/s2boolean_operation.h"
 
 #include <cmath>
-
 #include <memory>
 #include <string>
 #include <utility>
@@ -37,6 +36,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
@@ -1056,7 +1056,7 @@ class DegeneracyCoverageTest : public ::testing::Test {
   // Verifies that the S2BooleanOperation results for the given OpType and
   // PolygonModel match the given set of rules (encoded as described below).
   void Run(OpType op_type, PolygonModel polygon_model,
-           const vector<string>& rules);
+           absl::Span<const string> rules);
 
  private:
   // The inputs to the test cases are intended to span all possible types of
@@ -1145,7 +1145,7 @@ class DegeneracyCoverageTest : public ::testing::Test {
 };
 
 void DegeneracyCoverageTest::Run(OpType op_type, PolygonModel polygon_model,
-                                 const vector<string>& rules) {
+                                 absl::Span<const string> rules) {
   ABSL_CHECK_EQ(rules.size(), kInputChars.size());
 
   // For the symmetric operators (i.e., all except difference) we only need to

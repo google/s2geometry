@@ -59,7 +59,7 @@ S2Point Ortho(const S2Point& a) {
 #endif
 }
 
-S2Point Rotate(const S2Point& p, const S2Point& axis, S1Angle angle) {
+S2Point Rotate(const S2Point& p, const S2Point& axis, const S1Angle angle) {
   ABSL_DCHECK(IsUnitLength(p));
   ABSL_DCHECK(IsUnitLength(axis));
   // Let M be the plane through P that is perpendicular to "axis", and let
@@ -72,7 +72,8 @@ S2Point Rotate(const S2Point& p, const S2Point& axis, S1Angle angle) {
   S2Point dy = axis.CrossProd(p);
   // Mathematically the result is unit length, but normalization is necessary
   // to ensure that numerical errors don't accumulate.
-  return (cos(angle) * dx + sin(angle) * dy + center).Normalize();
+  const S1Angle::SinCosPair a = angle.SinCos();
+  return (a.cos * dx + a.sin * dy + center).Normalize();
 }
 
 Matrix3x3_d GetFrame(const S2Point& z) {

@@ -84,19 +84,16 @@ bool S2LaxPolylineShape::Init(Decoder* decoder) {
   if (!vertices.Init(decoder)) return false;
   num_vertices_ = vertices.size();
   vertices_ = make_unique<S2Point[]>(vertices.size());
-  for (int i = 0; i < num_vertices_; ++i) {
-    vertices_[i] = vertices[i];
-  }
-  return true;
+  return vertices.Decode(absl::MakeSpan(vertices_.get(), vertices.size()));
 }
 
 bool S2LaxPolylineShape::Init(Decoder* decoder, S2Error& error) {
-  if (!Init(decoder)) {
-    error.Init(S2Error::DATA_LOSS,
-               "Unknown error occurred decoding S2LaxPolylineShape");
-    return false;
-  }
-  return true;
+  s2coding::EncodedS2PointVector vertices;
+  if (!vertices.Init(decoder, error)) return false;
+  num_vertices_ = vertices.size();
+  vertices_ = make_unique<S2Point[]>(vertices.size());
+  vertices.Decode(absl::MakeSpan(vertices_.get(), vertices.size()), error);
+  return error.ok();
 }
 
 S2Shape::Edge S2LaxPolylineShape::edge(int e) const {

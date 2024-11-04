@@ -100,7 +100,7 @@ class S2PolylineSimplifier {
   //
   // If your input is a polyline, you can compute "disc_on_left" as follows.
   // Let the polyline be ABCDE and assume that it already avoids a set of
-  // points X_i.  Suppose that you have aleady added ABC to the simplifier, and
+  // points X_i.  Suppose that you have already added ABC to the simplifier, and
   // now want to extend the edge chain to D.  First find the X_i that are near
   // the edge CD, then discard the ones such that AX_i <= AC or AX_i >= AD
   // (since these points have either already been considered or aren't

@@ -65,6 +65,47 @@ TEST(S2, TraversalOrder) {
   }
 }
 
+TEST(S2, STtoIJBoundaries) {
+  EXPECT_EQ(0, S2::STtoIJ(0.0));
+  EXPECT_EQ(S2::kLimitIJ - 1, S2::STtoIJ(1.0));
+}
+
+TEST(S2, STtoIJHalfway) {
+  // `kLimitIJ` is 2^30, so this is exact.
+  constexpr double kRecipLimitIJ = 1.0 / S2::kLimitIJ;
+  EXPECT_EQ(S2::STtoIJ(0.5 * kRecipLimitIJ), 0);
+  EXPECT_EQ(S2::STtoIJ(1.0 * kRecipLimitIJ), 1);
+  EXPECT_EQ(S2::STtoIJ(1.5 * kRecipLimitIJ), 1);
+  EXPECT_EQ(S2::STtoIJ(2.0 * kRecipLimitIJ), 2);
+  EXPECT_EQ(S2::STtoIJ(2.5 * kRecipLimitIJ), 2);
+  EXPECT_EQ(S2::STtoIJ(3.0 * kRecipLimitIJ), 3);
+  EXPECT_EQ(S2::STtoIJ(3.5 * kRecipLimitIJ), 3);
+  EXPECT_EQ(S2::STtoIJ(4.0 * kRecipLimitIJ), 4);
+  EXPECT_EQ(S2::STtoIJ(4.5 * kRecipLimitIJ), 4);
+  EXPECT_EQ(S2::STtoIJ((S2::kLimitIJ - 2.5) * kRecipLimitIJ), S2::kLimitIJ - 3);
+  EXPECT_EQ(S2::STtoIJ((S2::kLimitIJ - 2.0) * kRecipLimitIJ), S2::kLimitIJ - 2);
+  EXPECT_EQ(S2::STtoIJ((S2::kLimitIJ - 1.5) * kRecipLimitIJ), S2::kLimitIJ - 2);
+  EXPECT_EQ(S2::STtoIJ((S2::kLimitIJ - 1.0) * kRecipLimitIJ), S2::kLimitIJ - 1);
+  EXPECT_EQ(S2::STtoIJ((S2::kLimitIJ - 0.5) * kRecipLimitIJ), S2::kLimitIJ - 1);
+}
+
+TEST(S2, IJtoSTtoIJRoundtripRandom) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "IJ_TO_ST_TO_IJ_ROUNDTRIP_RANDOM",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  for (int n = 0; n < 1000; ++n) {
+    const int i = absl::Uniform(bitgen, 0, S2::kLimitIJ);
+    const double s_min = S2::IJtoSTMin(i);
+    const double s_max = S2::IJtoSTMin(i + 1);
+    const double s = absl::Uniform(bitgen, s_min, s_max);
+    const int i_roundtrip = S2::STtoIJ(s);
+    EXPECT_EQ(i_roundtrip, i) << s;
+    EXPECT_EQ(S2::STtoIJ(s_min), i) << s_min;
+    const double before_s_max = std::nextafter(s_max, 0.0);
+    EXPECT_EQ(S2::STtoIJ(before_s_max), i) << before_s_max;
+  }
+}
+
 TEST(S2, ST_UV_Conversions) {
   // Check boundary conditions.
   for (double s = 0; s <= 1; s += 0.5) {
