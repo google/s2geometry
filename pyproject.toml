@@ -3,8 +3,8 @@ name = "s2geometry"
 description = "Computational geometry and spatial indexing on the sphere"
 authors = [
     { name = "Dan Larkin-York", email = "dan@arangodb.com" },
-    { name = "Google Inc."},
-    { name = "Koordinates Limited"},
+    { name = "Google Inc." },
+    { name = "Koordinates Limited" },
     { name = "Mike Playle", email = "mike@mythik.co.uk" },
     { name = "Tiago Brito", email = "tiago.brito@90poe.io" },
 ]
