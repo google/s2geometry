@@ -52,7 +52,3 @@ namespaces = false
 [tool.setuptools.package-dir]
 "" = "src"
 
-# [tool.pytest.ini-options]
-# testpaths = [
-#     "src/python/",
-# ]
