@@ -1,3 +1,26 @@
+[project]
+name = "s2geometry"
+version = "0.11.0.dev1"
+description = "Python packaging of s2geometry"
+authors = [
+    { name = "Brian Miles", email = "selimnairb@gmail.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX",
+    "License :: OSI Approved :: Apache Software License",
+]
+dynamic = [
+    "version",
+]
+
+[project.license]
+file = "LICENSE"
+content-type = "text/plain"
+
+[project.urls]
+Source = "https://github.com/google/s2geometry"
+
 [build-system]
 requires = [
     "wheel",
@@ -6,3 +29,17 @@ requires = [
     "cmake_build_extension",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = false
+python-requres = ">=3.7"
+
+[tool.setuptools.packages.find]
+where = [
+    "src",
+]
+namespaces = false
+
+[tool.setuptools.package-dir]
+"" = "src"
