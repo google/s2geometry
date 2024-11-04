@@ -205,23 +205,22 @@ even 2.0.
 Python 3 is required.
 
 ### Creating wheels
-First, make a virtual environment and install `cmake_build_extension` and `wheel`
-into it:
+First, make a virtual environment and install `build` into it:
 ```
 python3 -m venv venv
 source venv/bin/activate
-pip install cmake_build_extension wheel
+pip install build
 ```
 
 Then build the wheel:
 ```
-python setup.py bdist_wheel
+python -m build
 ```
 
 The resulting wheel will be in the `dist` directory.
 
-> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR` 
-> when calling `setup.py`, see above for more information.
+> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR`; 
+> see above for more information.
 
 ## Other S2 implementations
 
