@@ -4,6 +4,7 @@ description = "Computational geometry and spatial indexing on the sphere"
 authors = [
     { name = "Brian Miles", email = "selimnairb@gmail.com" },
 ]
+requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: POSIX",
@@ -32,7 +33,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 zip-safe = false
 include-package-data = false
-python-requres = ">=3.7"
 
 [tool.setuptools.packages.find]
 where = [
