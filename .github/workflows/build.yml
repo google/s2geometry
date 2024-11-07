@@ -35,7 +35,7 @@ jobs:
           path: ./_abseil-cpp/build/
           key: abseil-cpp-${{ runner.os }}-${{ runner.arch }}
       - run: |
-          cmake -DCMAKE_CXX_STANDARD=${{ inputs.cmake-cxx-standard }} ..
+          cmake -DCMAKE_CXX_STANDARD=14 ..
           cmake --build . --target install
           cmake --install .
         working-directory: ./_abseil-cpp/build/
