@@ -1,3 +1,39 @@
+[project]
+name = "s2geometry"
+description = "Computational geometry and spatial indexing on the sphere"
+authors = [
+    { name = "Dan Larkin-York", email = "dan@arangodb.com" },
+    { name = "Eric Veach", email = "ericv@google.com" },
+    { name = "Jesse Rosenstock", email = "jmr@google.com" },
+    { name = "Julien Basch", email = "julienbasch@google.com" },
+    { name = "Mike Playle", email = "mike@mythik.co.uk" },
+    { name = "Phil Elson", email = "pelson.pub@gmail.com" },
+    { name = "Robert Coup", email = "robert.coup@koordinates.com" },
+    { name = "Tiago Brito", email = "tiago.brito@90poe.io" },
+    { name = "Zachary Burnett", email = "zachary.r.burnett@gmail.com" },
+]
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX",
+    "License :: OSI Approved :: Apache Software License",
+]
+dynamic = [
+    "version",
+]
+
+[project.license]
+file = "LICENSE"
+content-type = "text/plain"
+
+[project.urls]
+Source = "https://github.com/google/s2geometry"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
 [build-system]
 requires = [
     "wheel",
@@ -6,3 +42,17 @@ requires = [
     "cmake_build_extension",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = [
+    "src",
+]
+namespaces = false
+
+[tool.setuptools.package-dir]
+"" = "src"
+
