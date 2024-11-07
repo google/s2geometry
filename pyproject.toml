@@ -3,10 +3,14 @@ name = "s2geometry"
 description = "Computational geometry and spatial indexing on the sphere"
 authors = [
     { name = "Dan Larkin-York", email = "dan@arangodb.com" },
-    { name = "Google Inc." },
-    { name = "Koordinates Limited" },
+    { name = "Eric Veach", email = "ericv@google.com" },
+    { name = "Jesse Rosenstock", email = "jmr@google.com" },
+    { name = "Julien Basch", email = "julienbasch@google.com" },
     { name = "Mike Playle", email = "mike@mythik.co.uk" },
+    { name = "Phil Elson", email = "pelson.pub@gmail.com" },
+    { name = "Robert Coup", email = "robert.coup@koordinates.com" },
     { name = "Tiago Brito", email = "tiago.brito@90poe.io" },
+    { name = "Zachary Burnett", email = "zachary.r.burnett@gmail.com" },
 ]
 requires-python = ">=3.7"
 classifiers = [
