@@ -1,0 +1,30 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  release:
+    types:
+      - released
+  workflow_dispatch:
+
+jobs:
+  python-wheels:
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          # macos-13 is an intel runner, macos-14 is apple silicon
+          - macos-13
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pypa/cibuildwheel@v2.21.3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-s2geometry-${{ matrix.runs-on }}
+          path: ./wheelhouse/*.whl
