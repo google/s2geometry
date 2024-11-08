@@ -11,6 +11,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  cmake:
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          # macos-13 is an intel runner, macos-14 is apple silicon
+          - macos-13
+          - macos-latest
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: zacharyburnett/setup-abseil-cpp@0726e9b923aa0dc53cdbe9f1c649260160838dc1 # 1.0.0
+        with:
+          cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+          abseil-version: "20240722.0"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: mkdir build
+      - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/lib/ ..
+        working-directory: build/
+      - run: make -j $(nproc)
+        working-directory: build/
+      - run: sudo make install
+        working-directory: build/
   python-wheels:
     strategy:
       matrix:
