@@ -20,6 +20,7 @@ jobs:
           - macos-13
           - macos-latest
           - windows-latest
+      fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: zacharyburnett/setup-abseil-cpp@0726e9b923aa0dc53cdbe9f1c649260160838dc1 # 1.0.0
