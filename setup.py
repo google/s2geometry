@@ -22,7 +22,9 @@ setuptools.setup(
                                         '-DCALL_FROM_SETUP_PY:BOOL=ON',
                                         '-DBUILD_SHARED_LIBS:BOOL=OFF',
                                         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
-                                        '-DWITH_PYTHON=ON'
+                                        '-DWITH_PYTHON=ON',
+                                        '-DCMAKE_PREFIX_PATH=/usr/local',
+                                        '-DBUILD_TESTS=OFF'
                                     ]
         )
     ],
