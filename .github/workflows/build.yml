@@ -22,24 +22,10 @@ jobs:
           - windows-latest
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: jwlawson/actions-setup-cmake@802fa1a2c4e212495c05bf94dba2704a92a472be # v2.0.2
+      - uses: zacharyburnett/setup-abseil-cpp@0726e9b923aa0dc53cdbe9f1c649260160838dc1 # 1.0.0
         with:
-          cmake-version: ${{ inputs.cmake-version }}
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: abseil/abseil-cpp
-          path: ./_abseil-cpp/
-      - run: mkdir ./_abseil-cpp/build/
-      - uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
-        with:
-          path: ./_abseil-cpp/build/
-          key: abseil-cpp-${{ runner.os }}-${{ runner.arch }}
-      - run: |
-          cmake -DCMAKE_CXX_STANDARD=14 ..
-          cmake --build . --target install
-          cmake --install .
-        working-directory: ./_abseil-cpp/build/
-      - run: rm -rf ./_abseil-cpp/
+          cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+          abseil-version: "20240722.0"
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: pypa/cibuildwheel@7940a4c0e76eb2030e473a5f864f291f63ee879b # v2.21.3
       - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
