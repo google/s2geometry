@@ -19,7 +19,6 @@ jobs:
           # macos-13 is an intel runner, macos-14 is apple silicon
           - macos-13
           - macos-latest
-          - windows-latest
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     steps:
