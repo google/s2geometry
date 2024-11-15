@@ -198,24 +198,14 @@ add_library(s2
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
-<<<<<<< Updated upstream
-add_library(s2testing STATIC
-            src/s2/s2builderutil_testing.cc
-            src/s2/s2shapeutil_testing.cc
-            src/s2/s2testing.cc)
-=======
->>>>>>> Stashed changes
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT})
-<<<<<<< Updated upstream
-=======
 target_link_libraries(
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
     absl::memory
     absl::strings)
->>>>>>> Stashed changes
 
 # Allow other CMake projects to use this one with:
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
@@ -416,16 +406,11 @@ install(FILES src/s2/util/math/mathutil.h
         DESTINATION include/s2/util/math)
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
-<<<<<<< Updated upstream
-        DESTINATION include/s2/util/units)
-install(TARGETS s2 s2testing DESTINATION lib)
-=======
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
 install(TARGETS s2
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
->>>>>>> Stashed changes
 
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
