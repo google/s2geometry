@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.18)
 
 project(s2-geometry
         VERSION 0.12.0)
@@ -67,7 +67,7 @@ if (WITH_PYTHON)
     find_package(SWIG 4.0)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
-    find_package(Python3 COMPONENTS Interpreter Development)
+    find_package(Python3 COMPONENTS Interpreter Development.Module)
 endif()
 
 if (MSVC)
