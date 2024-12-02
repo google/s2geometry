@@ -80,8 +80,9 @@ jobs:
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install build
-      - run: python -m build
+      - run: pip install build delocate
+      - run: python -m build -w
+      - run: delocate-wheel ./dist/*.whl
       - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: s2geometry-py${{ matrix.python-version }}-${{ runner.os }}-${{ runner.arch }}
