@@ -80,12 +80,12 @@ jobs:
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install build delocate
+      - run: pip install build repairwheel
       - run: python -m build -w
-      - run: delocate-wheel ./dist/*.whl
+      - run: repairwheel ./dist/*.whl -o ./dist/delocated/
       - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: s2geometry-py${{ matrix.python-version }}-${{ runner.os }}-${{ runner.arch }}
-          path: ./dist/*.whl
+          path: ./dist/delocated/*.whl
       - if: (github.event_name == 'release') && (github.event.action == 'released')
         uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc # v1.12.2
