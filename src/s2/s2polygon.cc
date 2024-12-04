@@ -36,11 +36,11 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/str_format.h"
 #include "absl/utility/utility.h"
 
 #include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
-#include "s2/base/types.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
@@ -80,6 +80,7 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
+#include "s2/s2validation_query.h"
 #include "s2/util/coding/coder.h"
 
 using absl::flat_hash_set;
@@ -231,63 +232,45 @@ bool S2Polygon::IsValid() const {
 }
 
 bool S2Polygon::FindValidationError(S2Error* error) const {
+  // S2LegacyValidQuery doesn't have access to the loop depth information via
+  // the S2Shape API, so we'll validate it manually.  We just have to check
+  // that the depth values are non-negative, and that we don't skip depths.
+  int last_depth = -1;
   for (int i = 0; i < num_loops(); ++i) {
-    // Check for loop errors that don't require building an S2ShapeIndex.
-    if (loop(i)->FindValidationErrorNoIndex(error)) {
-      error->Init(error->code(), "Loop %d: %s", i, error->text());
-      return true;
-    }
-    // Check that the full loop only appears in the full polygon.
-    if (loop(i)->is_full() && num_loops() > 1) {
-      error->Init(S2Error::POLYGON_EXCESS_FULL_LOOP,
-                  "Loop %d: full loop appears in non-full polygon", i);
-      return true;
-    }
-  }
-
-  // Check for loop self-intersections and loop pairs that cross
-  // (including duplicate edges and vertices).
-  if (s2shapeutil::FindSelfIntersection(index_, error)) return true;
-
-  // Check whether InitOriented detected inconsistent loop orientations.
-  if (error_inconsistent_loop_orientations_) {
-    error->Init(S2Error::POLYGON_INCONSISTENT_LOOP_ORIENTATIONS,
-                "Inconsistent loop orientations detected");
-    return true;
-  }
-
-  // Finally, verify the loop nesting hierarchy.
-  return FindLoopNestingError(error);
-}
-
-bool S2Polygon::FindLoopNestingError(S2Error* error) const {
-  // First check that the loop depths make sense.
-  for (int last_depth = -1, i = 0; i < num_loops(); ++i) {
-    int depth = loop(i)->depth();
+    const S2Loop* loop = this->loop(i);
+    int depth = loop->depth();
     if (depth < 0 || depth > last_depth + 1) {
-      error->Init(S2Error::POLYGON_INVALID_LOOP_DEPTH,
-                  "Loop %d: invalid loop depth (%d)", i, depth);
+      *error = S2Error(
+          S2Error::POLYGON_INVALID_LOOP_DEPTH,
+          absl::StrFormat("Loop %d: invalid loop depth (%d)", i, depth));
       return true;
     }
     last_depth = depth;
-  }
-  // Then check that they correspond to the actual loop nesting.  This test
-  // is quadratic in the number of loops but the cost per iteration is small.
-  for (int i = 0; i < num_loops(); ++i) {
-    int last = GetLastDescendant(i);
-    for (int j = 0; j < num_loops(); ++j) {
-      if (i == j) continue;
-      bool nested = (j >= i + 1) && (j <= last);
-      const bool reverse_b = false;
-      if (loop(i)->ContainsNonCrossingBoundary(*loop(j), reverse_b) != nested) {
-        error->Init(S2Error::POLYGON_INVALID_LOOP_NESTING,
-                    "Invalid nesting: loop %d should %scontain loop %d",
-                    i, nested ? "" : "not ", j);
+
+    // `S2LegacyValidQuery` will go into an infinite loop if there are NaN
+    // vertices.  Check for unit-length like
+    // `S2Loop::FindValidationErrorNoIndex` does for the no-validation-query
+    // case.
+    for (int j = 0; j < loop->num_vertices(); ++j) {
+      if (!S2::IsUnitLength(loop->vertex(j))) {
+        *error = S2Error(
+            S2Error::NOT_UNIT_LENGTH,
+            absl::StrFormat("Loop %d: Vertex %d is not unit length", i, j));
         return true;
       }
     }
   }
-  return false;
+
+  // Check whether InitOriented detected inconsistent loop orientations.
+  if (error_inconsistent_loop_orientations_) {
+    *error = S2Error(S2Error::POLYGON_INCONSISTENT_LOOP_ORIENTATIONS,
+                     "Inconsistent loop orientations detected");
+    return true;
+  }
+
+  // Finally check that the geometry is topologically valid.
+  S2LegacyValidQuery<MutableS2ShapeIndex> query;
+  return !query.Validate(index_, error);
 }
 
 void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
@@ -700,6 +683,8 @@ bool S2Polygon::MayIntersect(const S2Cell& target) const {
 }
 
 bool S2Polygon::Contains(const S2Point& p) const {
+  ABSL_DCHECK(S2::IsUnitLength(p));
+
   // NOTE(ericv): A bounds check slows down this function by about 50%.  It is
   // worthwhile only when it might allow us to delay building the index.
   if (!index_.is_fresh() && !bound_.Contains(p)) return false;

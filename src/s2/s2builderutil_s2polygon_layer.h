@@ -37,6 +37,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -134,12 +135,12 @@ class S2PolygonLayer : public S2Builder::Layer {
   void Init(S2Polygon* polygon, LabelSetIds* label_set_ids,
             IdSetLexicon* label_set_lexicon, const Options& options);
   void AppendS2Loops(const Graph& g,
-                     const std::vector<Graph::EdgeLoop>& edge_loops,
+                     absl::Span<const Graph::EdgeLoop> edge_loops,
                      std::vector<std::unique_ptr<S2Loop>>* loops) const;
   void AppendEdgeLabels(const Graph& g,
-                        const std::vector<Graph::EdgeLoop>& edge_loops);
+                        absl::Span<const Graph::EdgeLoop> edge_loops);
   using LoopMap = absl::flat_hash_map<S2Loop*, std::pair<int, bool>>;
-  void InitLoopMap(const std::vector<std::unique_ptr<S2Loop>>& loops,
+  void InitLoopMap(absl::Span<const std::unique_ptr<S2Loop>> loops,
                    LoopMap* loop_map) const;
   void ReorderEdgeLabels(const LoopMap& loop_map);
 

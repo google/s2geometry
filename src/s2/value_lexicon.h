@@ -19,7 +19,6 @@
 #define S2_VALUE_LEXICON_H_
 
 #include <cstddef>
-
 #include <cstdint>
 #include <functional>
 #include <limits>

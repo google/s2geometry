@@ -20,6 +20,7 @@
 
 #include <vector>
 
+#include "absl/types/span.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
@@ -58,9 +59,8 @@ namespace s2shapeutil {
 // the collection of loops that form its boundary.  This function does not
 // actually construct any S2Shapes; it simply identifies the loops that belong
 // to each polygon.
-void BuildPolygonBoundaries(
-    const std::vector<std::vector<S2Shape*>>& components,
-    std::vector<std::vector<S2Shape*>>* polygons);
+void BuildPolygonBoundaries(absl::Span<const std::vector<S2Shape*>> components,
+                            std::vector<std::vector<S2Shape*>>* polygons);
 
 }  // namespace s2shapeutil
 

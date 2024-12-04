@@ -99,7 +99,7 @@ class S2LaxPolygonShape : public S2Shape {
 
   // Constructs an S2LaxPolygonShape from the given vertex loops.
   using Loop = std::vector<S2Point>;
-  explicit S2LaxPolygonShape(const std::vector<Loop>& loops);
+  explicit S2LaxPolygonShape(absl::Span<const Loop> loops);
 
   // Alternative version that can be used to avoid copying all the vertex data
   // when it is stored using something other than std::vector.
@@ -110,7 +110,7 @@ class S2LaxPolygonShape : public S2Shape {
   explicit S2LaxPolygonShape(const S2Polygon& polygon);
 
   // Initializes an S2LaxPolygonShape from the given vertex loops.
-  void Init(const std::vector<Loop>& loops);
+  void Init(absl::Span<const Loop> loops);
 
   // Alternative version that can be used to avoid copying all the vertex data
   // when it is stored using something other than std::vector.
@@ -142,10 +142,16 @@ class S2LaxPolygonShape : public S2Shape {
 
   // Decodes an S2LaxPolygonShape, returning true on success.  (The method
   // name is chosen for compatibility with EncodedS2LaxPolygonShape below.)
-  bool Init(Decoder* decoder);
+  bool Init(Decoder* decoder) { return Init(decoder, nullptr); }
 
-  // Populates an S2Error if decoding fails.
-  bool Init(Decoder* decoder, S2Error& error);
+  // Decodes an S2LaxPolygonShape, returning true on success.  If any errors are
+  // encountered during decoding, the S2Error is set and false is returned.
+  //
+  // This error checking may incur slightly more overhead than the plain Init()
+  // method above, but promises to catch any decoding errors that occur.  Since
+  // S2LaxPolygonShape is not an encoded type, if this function succeeds, then
+  // the byte stream was fully decoded without errors.
+  bool Init(Decoder* decoder, S2Error& error) { return Init(decoder, &error); }
 
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
@@ -159,6 +165,11 @@ class S2LaxPolygonShape : public S2Shape {
   TypeTag type_tag() const override { return kTypeTag; }
 
  private:
+  // Decodes an S2LaxPolygonShape, returning true on success.  When error is
+  // given, if any errors are encountered during decoding, the S2Error is set
+  // and false is returned.
+  bool Init(Decoder* decoder, S2Error* error);
+
   // Note that the parent class has a 4-byte S2Shape::id_ field so there is no
   // wasted space in the following layout.
   int32_t num_loops_ = 0;

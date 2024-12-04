@@ -37,6 +37,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -129,7 +130,7 @@ class LaxPolygonLayer : public S2Builder::Layer {
 
   // Specifies that a polygon should be constructed using the given options,
   // and that any labels attached to the input edges should be returned in
-  // "label_set_ids" and "label_set_lexicion".
+  // "label_set_ids" and "label_set_lexicon".
   //
   // The labels associated with the edge "polygon.chain_edge(i, j)"
   // can be retrieved as follows:
@@ -148,10 +149,10 @@ class LaxPolygonLayer : public S2Builder::Layer {
   void Init(S2LaxPolygonShape* polygon, LabelSetIds* label_set_ids,
             IdSetLexicon* label_set_lexicon, const Options& options);
   void AppendPolygonLoops(const Graph& g,
-                          const std::vector<Graph::EdgeLoop>& edge_loops,
+                          absl::Span<const Graph::EdgeLoop> edge_loops,
                           std::vector<std::vector<S2Point>>* loops) const;
   void AppendEdgeLabels(const Graph& g,
-                        const std::vector<Graph::EdgeLoop>& edge_loops);
+                        absl::Span<const Graph::EdgeLoop> edge_loops);
   void BuildDirected(Graph g, S2Error* error);
 
   S2LaxPolygonShape* polygon_;

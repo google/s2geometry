@@ -280,14 +280,15 @@ inline S2Point GetPointOnRay(const S2Point& origin, const S2Point& dir,
 }
 
 inline S2Point GetPointOnRay(const S2Point& origin, const S2Point& dir,
-                             S1Angle r) {
+                             const S1Angle r) {
   // See comments above.
   ABSL_DCHECK(S2::IsUnitLength(origin));
   ABSL_DCHECK(S2::IsUnitLength(dir));
   ABSL_DCHECK_LE(origin.DotProd(dir),
                  S2::kRobustCrossProdError.radians() + 0.75 * DBL_EPSILON);
 
-  return (cos(r) * origin + sin(r) * dir).Normalize();
+  const S1Angle::SinCosPair trig_r = r.SinCos();
+  return (trig_r.cos * origin + trig_r.sin * dir).Normalize();
 }
 
 }  // namespace S2

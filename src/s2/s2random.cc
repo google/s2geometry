@@ -23,7 +23,7 @@
 #include "absl/random/distributions.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
-#include "s2/s2edge_distances.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
 #include "s2/util/math/matrix3x3.h"
@@ -66,8 +66,8 @@ Matrix3x3_d Frame(absl::BitGenRef bitgen) {
 
 void FrameAt(absl::BitGenRef bitgen, const S2Point& z,  //
              S2Point& x, S2Point& y) {
-  x = z.CrossProd(Point(bitgen)).Normalize();
-  y = z.CrossProd(x).Normalize();
+  x = S2::RobustCrossProd(z, Point(bitgen)).Normalize();
+  y = S2::RobustCrossProd(z, x).Normalize();
 }
 
 Matrix3x3_d FrameAt(absl::BitGenRef bitgen, const S2Point& z) {

@@ -65,8 +65,11 @@ unique_ptr<S2Polygon> ShapeToS2Polygon(const S2Shape& poly) {
     loops.push_back(make_unique<S2Loop>(vertices));
   }
   auto output_poly = make_unique<S2Polygon>();
-  output_poly->InitOriented(std::move(loops));
-
+  if (loops.size() == 1) {
+    output_poly->Init(std::move(loops[0]));
+  } else {
+    output_poly->InitOriented(std::move(loops));
+  }
   return output_poly;
 }
 

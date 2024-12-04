@@ -185,11 +185,6 @@ class dense_hash_set {
       "absl::flat_hash_set.")
   local_iterator begin(size_type i) const { return rep.begin(i); }
 
-  ABSL_DEPRECATED(
-      "This method is slated for removal.  Please migrate to "
-      "absl::flat_hash_set.")
-  local_iterator end(size_type i) const { return rep.end(i); }
-
   // Accessor functions
   allocator_type get_allocator() const { return rep.get_allocator(); }
   hasher hash_funct() const { return rep.hash_funct(); }

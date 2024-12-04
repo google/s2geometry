@@ -17,12 +17,11 @@
 
 #include "s2/s2loop.h"
 
-#include <cstddef>
-
 #include <algorithm>
 #include <atomic>
 #include <bitset>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -32,6 +31,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/str_format.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
 
@@ -203,8 +203,8 @@ bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
   // optimized builds.)
   for (int i = 0; i < num_vertices(); ++i) {
     if (!S2::IsUnitLength(vertex(i))) {
-      error->Init(S2Error::NOT_UNIT_LENGTH,
-                  "Vertex %d is not unit length", i);
+      *error = S2Error(S2Error::NOT_UNIT_LENGTH,
+                       absl::StrFormat("Vertex %d is not unit length", i));
       return true;
     }
   }
@@ -213,8 +213,8 @@ bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
     if (is_empty_or_full()) {
       return false;  // Skip remaining tests.
     }
-    error->Init(S2Error::LOOP_NOT_ENOUGH_VERTICES,
-                "Non-empty, non-full loops must have at least 3 vertices");
+    *error = S2Error(S2Error::LOOP_NOT_ENOUGH_VERTICES,
+                     "Non-empty, non-full loops must have at least 3 vertices");
     return true;
   }
   // Loops are not allowed to have any duplicate vertices or edge crossings.
@@ -225,14 +225,15 @@ bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
   // of this method.
   for (int i = 0; i < num_vertices(); ++i) {
     if (vertex(i) == vertex(i+1)) {
-      error->Init(S2Error::DUPLICATE_VERTICES,
-                  "Edge %d is degenerate (duplicate vertex)", i);
+      *error = S2Error(
+          S2Error::DUPLICATE_VERTICES,
+          absl::StrFormat("Edge %d is degenerate (duplicate vertex)", i));
       return true;
     }
     if (vertex(i) == -vertex(i + 1)) {
-      error->Init(S2Error::ANTIPODAL_VERTICES,
-                  "Vertices %d and %d are antipodal", i,
-                  (i + 1) % num_vertices());
+      *error = S2Error(S2Error::ANTIPODAL_VERTICES,
+                       absl::StrFormat("Vertices %d and %d are antipodal", i,
+                                       (i + 1) % num_vertices()));
       return true;
     }
   }
@@ -817,7 +818,7 @@ class LoopCrosser {
 
  private:
   // Given two iterators positioned such that ai->id().Contains(bi->id()),
-  // return true if there is an edge crossing or wedge crosssing anywhere
+  // return true if there is an edge crossing or wedge crossing anywhere
   // within ai->id().  Advances "bi" (only) past ai->id().
   bool HasCrossing(RangeIterator* ai, RangeIterator* bi);
 
@@ -1217,28 +1218,6 @@ int S2Loop::CompareBoundary(const S2Loop& b) const {
   return Contains(b.vertex(0)) ? 1 : -1;
 }
 
-bool S2Loop::ContainsNonCrossingBoundary(const S2Loop& b,
-                                         bool reverse_b) const {
-  ABSL_DCHECK(!is_empty() && !b.is_empty());
-  ABSL_DCHECK(!b.is_full() || !reverse_b);
-
-  // The bounds must intersect for containment.
-  if (!bound_.Intersects(b.bound_)) return false;
-
-  // Full loops are handled as though the loop surrounded the entire sphere.
-  if (is_full()) return true;
-  if (b.is_full()) return false;
-
-  int m = FindVertex(b.vertex(0));
-  if (m < 0) {
-    // Since vertex b0 is not shared, we can check whether A contains it.
-    return Contains(b.vertex(0));
-  }
-  // Otherwise check whether the edge (b0, b1) is contained by A.
-  return WedgeContainsSemiwedge(vertex(m - 1), vertex(m), vertex(m + 1),
-                                b.vertex(1), reverse_b);
-}
-
 bool S2Loop::ContainsNested(const S2Loop& b) const {
   if (!subregion_bound_.Contains(b.bound_)) return false;
 
@@ -1480,13 +1459,16 @@ unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const Matrix3x3_d& frame,
   // (0, 0, 1).  For a loop of radius "r", the loop vertices have the form
   // (x, y, z) where x^2 + y^2 = sin(r) and z = cos(r).  The distance on the
   // sphere (arc length) from each vertex to the center is acos(cos(r)) = r.
-  double z = cos(radius.radians());
-  double r = sin(radius.radians());
-  double radian_step = 2 * M_PI / num_vertices;
+  const S1Angle::SinCosPair r_and_z = radius.SinCos();
+  const double r = r_and_z.sin;
+  const double z = r_and_z.cos;
+  const double radian_step = 2 * M_PI / num_vertices;
   vector<S2Point> vertices;
+  vertices.reserve(num_vertices);
   for (int i = 0; i < num_vertices; ++i) {
-    double angle = i * radian_step;
-    S2Point p(r * cos(angle), r * sin(angle), z);
+    const S1Angle angle = S1Angle::Radians(i * radian_step);
+    const S1Angle::SinCosPair a = angle.SinCos();
+    const S2Point p(r * a.cos, r * a.sin, z);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
   return make_unique<S2Loop>(vertices);

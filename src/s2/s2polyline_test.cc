@@ -377,7 +377,7 @@ TEST(S2Polyline, SpaceUsedNonEmptyPolyline)  {
   EXPECT_GT(line->SpaceUsed(), 3 * sizeof(S2Point));
 }
 
-static string JoinInts(const vector<int>& ints) {
+static string JoinInts(absl::Span<const int> ints) {
   string result;
   int n = ints.size();
   for (int i = 0; i + 1 < n; ++i) {

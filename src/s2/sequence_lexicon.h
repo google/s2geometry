@@ -18,9 +18,8 @@
 #ifndef S2_SEQUENCE_LEXICON_H_
 #define S2_SEQUENCE_LEXICON_H_
 
-#include <cstddef>
-
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iterator>

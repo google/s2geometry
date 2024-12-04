@@ -19,7 +19,6 @@
 #define S2_ENCODED_S2CELL_ID_VECTOR_H_
 
 #include <cstddef>
-
 #include <cstdint>
 #include <vector>
 

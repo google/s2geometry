@@ -18,11 +18,27 @@
 
 // This file contains things that are not used in third_party/absl but needed by
 // s2geometry. It is structured into the following high-level categories:
+// - Utility functions
 // - Endianness
 // - Performance optimization (alignment)
 
 #include <cstdint>
 #include <cstring>
+
+// -----------------------------------------------------------------------------
+// Utility Functions
+// -----------------------------------------------------------------------------
+
+// C++14 sized deallocation
+namespace base {
+inline void sized_delete(void *ptr, size_t size) {
+  ::operator delete(ptr, size);
+}
+
+inline void sized_delete_array(void *ptr, size_t size) {
+  ::operator delete[](ptr, size);
+}
+}  // namespace base
 
 // -----------------------------------------------------------------------------
 // Endianness

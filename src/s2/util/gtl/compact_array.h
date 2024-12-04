@@ -56,8 +56,7 @@
 #include "absl/log/absl_log.h"
 #include "absl/meta/type_traits.h"
 
-#include "s2/base/port.h"
-#include "s2/base/types.h"
+#include "s2/base/malloc_extension.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/gtl/container_logging.h"
 
@@ -74,7 +73,6 @@ class compact_array_base {
   // kMaxSize is the maximum size this array can grow.
   static const int kMaxSize = (1 << kSizeNumBits) - 1;
 
-#ifdef IS_LITTLE_ENDIAN
   uint32_t size_ : kSizeNumBits;          // number of valid items in the array
   uint32_t capacity_ : kCapacityNumBits;  // allocated array size
   uint32_t is_exponent_ : 1;              // whether capacity_ is an exponent
@@ -83,12 +81,6 @@ class compact_array_base {
   // other data structures. We reserved the DO_NOT_USE (32nd bit in
   // little endian format) to be used as a tag.
   uint32_t DO_NOT_USE : 1;
-#else
-  uint32_t DO_NOT_USE : 1;
-  uint32_t is_exponent_ : 1;
-  uint32_t capacity_ : kCapacityNumBits;
-  uint32_t size_ : kSizeNumBits;
-#endif
 
   // Opportunistically consider allowing inlined elements.
 #if defined(_LP64) && defined(__GNUC__)
@@ -396,7 +388,11 @@ class compact_array_base {
   void reallocate(size_type n) {
     size_type old_capacity = capacity();
     if (n <= old_capacity) return;
-    set_capacity(n);
+    size_type new_n = n;
+    if (new_n > kInlined) {
+      new_n = nallocx(n * sizeof(T), 0) / sizeof(T);
+    }
+    set_capacity(new_n);
     if (MayBeInlined()) {
       if (!IsInlined() && n <= kInlined) {
         SetInlined();

@@ -17,7 +17,6 @@
 #ifndef S2_S2SHAPE_NESTING_QUERY_H_
 #define S2_S2SHAPE_NESTING_QUERY_H_
 
-#include <climits>
 #include <cstdint>
 #include <vector>
 
@@ -105,11 +104,6 @@ class S2ShapeNestingQuery {
         relation.AddHole(chain);
       }
       return relation;
-    }
-
-    // Builds a `ChainRelation` that's a hole with given parent.
-    static ChainRelation MakeHole(int32_t parent) {
-      return ChainRelation(parent);
     }
 
     explicit ChainRelation(int32_t parent = -1) : parent_(parent) {}

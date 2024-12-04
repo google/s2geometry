@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 #include "absl/container/btree_set.h"
+#include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
@@ -163,7 +164,7 @@ vector<int> GetContainingShapes(S2MinDistanceTarget* target,
 
 // Given two sorted vectors "x" and "y", returns true if x is a subset of y
 // and x.size() == x_size.
-bool IsSubsetOfSize(const vector<int>& x, const vector<int>& y,
+bool IsSubsetOfSize(absl::Span<const int> x, absl::Span<const int> y,
                     int x_size) {
   if (x.size() != x_size) return false;
   return std::includes(y.begin(), y.end(), x.begin(), x.end());

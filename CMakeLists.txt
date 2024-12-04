@@ -104,11 +104,14 @@ endif()
 include_directories(src)
 
 add_library(s2
+            src/s2/base/malloc_extension.cc
             src/s2/encoded_s2cell_id_vector.cc
             src/s2/encoded_s2point_vector.cc
             src/s2/encoded_s2shape_index.cc
             src/s2/encoded_string_vector.cc
             src/s2/id_set_lexicon.cc
+            src/s2/internal/s2incident_edge_tracker.cc
+            src/s2/internal/s2index_cell_data.cc
             src/s2/mutable_s2shape_index.cc
             src/s2/r2rect.cc
             src/s2/s1angle.cc
@@ -154,7 +157,6 @@ add_library(s2
             src/s2/s2fractal.cc
             src/s2/s2furthest_edge_query.cc
             src/s2/s2hausdorff_distance_query.cc
-            src/s2/s2index_cell_data.cc
             src/s2/s2latlng.cc
             src/s2/s2latlng_rect.cc
             src/s2/s2latlng_rect_bounder.cc
@@ -334,6 +336,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2crossing_edge_query.h
               src/s2/s2debug.h
               src/s2/s2density_tree.h
+              src/s2/s2density_tree_internal.h
               src/s2/s2distance_target.h
               src/s2/s2earth.h
               src/s2/s2edge_clipping.h
@@ -347,7 +350,6 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2fractal.h
               src/s2/s2furthest_edge_query.h
               src/s2/s2hausdorff_distance_query.h
-              src/s2/s2index_cell_data.h
               src/s2/s2latlng.h
               src/s2/s2latlng_rect.h
               src/s2/s2latlng_rect_bounder.h
@@ -407,19 +409,24 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shapeutil_visit_crossing_edge_pairs.h
               src/s2/s2testing.h
               src/s2/s2text_format.h
+              src/s2/s2validation_query.h
               src/s2/s2wedge_relations.h
               src/s2/s2winding_operation.h
               src/s2/s2wrapped_shape.h
               src/s2/sequence_lexicon.h
               src/s2/thread_testing.h
               src/s2/value_lexicon.h
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2")
-install(FILES src/s2/internal/s2meta.h
+        DESTINATION include/s2)
+install(FILES src/s2/internal/s2disjoint_set.h
+              src/s2/internal/s2incident_edge_tracker.h
+              src/s2/internal/s2index_cell_data.h
+              src/s2/internal/s2meta.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/internal")
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
               src/s2/base/commandlineflags_declare.h
               src/s2/base/log_severity.h
+              src/s2/base/malloc_extension.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
               src/s2/base/types.h
@@ -493,6 +500,8 @@ if (BUILD_TESTS)
       src/s2/encoded_uint_vector_test.cc
       src/s2/gmock_matchers_test.cc
       src/s2/id_set_lexicon_test.cc
+      src/s2/internal/s2disjoint_set_test.cc
+      src/s2/internal/s2index_cell_data_test.cc
       src/s2/mutable_s2shape_index_test.cc
       src/s2/r1interval_test.cc
       src/s2/r2rect_test.cc
@@ -547,7 +556,6 @@ if (BUILD_TESTS)
       src/s2/s2fractal_test.cc
       src/s2/s2furthest_edge_query_test.cc
       src/s2/s2hausdorff_distance_query_test.cc
-      src/s2/s2index_cell_data_test.cc
       src/s2/s2latlng_rect_bounder_test.cc
       src/s2/s2latlng_rect_test.cc
       src/s2/s2latlng_test.cc
@@ -600,6 +608,7 @@ if (BUILD_TESTS)
       src/s2/s2shapeutil_shape_edge_id_test.cc
       src/s2/s2shapeutil_visit_crossing_edge_pairs_test.cc
       src/s2/s2text_format_test.cc
+      src/s2/s2validation_query_test.cc
       src/s2/s2wedge_relations_test.cc
       src/s2/s2winding_operation_test.cc
       src/s2/s2wrapped_shape_test.cc

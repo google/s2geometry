@@ -18,7 +18,6 @@
 #include "s2/s2edge_distances.h"
 
 #include <cmath>
-
 #include <limits>
 #include <memory>
 #include <string>

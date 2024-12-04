@@ -139,8 +139,8 @@ bool BuildChain(
   while (chain_in->back() != chain_in->front()) {
     const auto& range = input_vertex_edge_map->equal_range(chain_in->back());
     if (range.first == range.second) {
-      error->Init(S2Error::INVALID_ARGUMENT,
-                  "Input edges (after filtering) do not form loops");
+      *error = S2Error::InvalidArgument(
+          "Input edges (after filtering) do not form loops");
       return false;
     }
     EdgeSnap snap = range.first->second;

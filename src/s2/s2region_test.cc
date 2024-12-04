@@ -17,7 +17,6 @@
 #include "s2/s2region.h"
 
 #include <cstddef>
-
 #include <memory>
 #include <string>
 #include <vector>

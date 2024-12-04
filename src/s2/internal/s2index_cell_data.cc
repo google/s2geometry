@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-#include "s2/s2index_cell_data.h"
+#include "s2/internal/s2index_cell_data.h"
 
 #include <algorithm>
 #include <atomic>
@@ -24,6 +24,8 @@
 #include "s2/s2cell.h"
 #include "s2/s2padded_cell.h"
 #include "s2/s2shape.h"
+
+namespace internal {
 
 void S2IndexCellData::LoadCell(const S2ShapeIndex* index, S2CellId id,
                                const S2ShapeIndexCell* cell) {
@@ -204,3 +206,5 @@ bool S2IndexCellData::ShapeContains(const S2ClippedShape& clipped,
   }
   return inside;
 }
+
+}  // namespace internal

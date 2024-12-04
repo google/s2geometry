@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/s2point.h"
 #include "s2/s2polyline.h"
 #include "s2/s2polyline_alignment_internal.h"
@@ -348,7 +349,7 @@ VertexAlignment GetApproxVertexAlignment(const S2Polyline& a,
 // alignments. Specifically, because cost_fn(a, b) = cost_fn(b, a), and
 // cost_fn(a, a) = 0, we can compute only the lower triangle of cost matrix
 // and then mirror it across the diagonal to save on cost_fn invocations.
-int GetMedoidPolyline(const vector<unique_ptr<S2Polyline>>& polylines,
+int GetMedoidPolyline(absl::Span<const unique_ptr<S2Polyline>> polylines,
                       const MedoidOptions options) {
   const int num_polylines = polylines.size();
   const bool approx = options.approx();

@@ -16,7 +16,6 @@
 #include "s2/s2region_sharder.h"
 
 #include <cstdint>
-
 #include <utility>
 #include <vector>
 

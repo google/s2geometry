@@ -17,9 +17,8 @@
 
 #include "s2/s2metrics.h"
 
-#include <cmath>
-
 #include <algorithm>
+#include <cmath>
 
 #include <gtest/gtest.h>
 #include "s2/s2coords.h"
@@ -117,7 +116,7 @@ TEST(S2, Metrics) {
     if (level >= S2::kMaxCellLevel + 3) width = 0;
 
     // Check boundary cases (exactly equal to a threshold value).
-    int expected_level = std::max(0, std::min(S2::kMaxCellLevel, level));
+    int expected_level = std::clamp(level, 0, S2::kMaxCellLevel);
     EXPECT_EQ(S2::kMinWidth.GetLevelForMaxValue(width), expected_level);
     EXPECT_EQ(S2::kMinWidth.GetLevelForMinValue(width), expected_level);
     EXPECT_EQ(S2::kMinWidth.GetClosestLevel(width), expected_level);

@@ -18,7 +18,6 @@
 #include "s2/s2centroids.h"
 
 #include <cmath>
-
 #include <string>
 
 #include <gtest/gtest.h>

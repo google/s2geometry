@@ -17,18 +17,18 @@
 
 #include "s2/encoded_s2point_vector.h"
 
-#include <cstddef>
-
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <vector>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/numeric/bits.h"
+#include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
 #include "s2/encoded_string_vector.h"
@@ -36,6 +36,7 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2coder.h"
 #include "s2/s2coords.h"
+#include "s2/s2error.h"
 #include "s2/s2point.h"
 
 using absl::MakeSpan;
@@ -135,6 +136,14 @@ bool EncodedS2PointVector::Init(Decoder* decoder) {
   }
 }
 
+bool EncodedS2PointVector::Init(Decoder* decoder, S2Error& error) {
+  if (!Init(decoder)) {
+    error = S2Error::DataLoss("Error initializing EncodedS2PointVector");
+    return false;
+  }
+  return true;
+}
+
 vector<S2Point> EncodedS2PointVector::Decode() const {
   vector<S2Point> points;
   points.reserve(size_);
@@ -142,6 +151,32 @@ vector<S2Point> EncodedS2PointVector::Decode() const {
     points.push_back((*this)[i]);
   }
   return points;
+}
+
+bool EncodedS2PointVector::Decode(absl::Span<S2Point> points) const {
+  ABSL_DCHECK_EQ(points.size(), size());
+  for (size_t i = 0; i < size_; ++i) {
+    points[i] = (*this)[i];
+  }
+  return true;
+}
+
+std::vector<S2Point> EncodedS2PointVector::Decode(S2Error& error) const {
+  vector<S2Point> points;
+  points.reserve(size_);
+  for (size_t i = 0; i < size_ && error.ok(); ++i) {
+    points.push_back(At(i, error));
+  }
+  return points;
+}
+
+bool EncodedS2PointVector::Decode(absl::Span<S2Point> points,
+                                  S2Error& error) const {
+  ABSL_DCHECK_EQ(points.size(), size());
+  for (size_t i = 0; i < size_ && error.ok(); ++i) {
+    points[i] = At(i, error);
+  }
+  return error.ok();
 }
 
 // The encoding must be identical to EncodeS2PointVector().
@@ -274,7 +309,7 @@ inline int BaseShift(int level, int base_bits) {
 int ChooseBestLevel(Span<const S2Point> points, vector<CellPoint>* cell_points);
 vector<uint64_t> ConvertCellsToValues(const vector<CellPoint>& cell_points,
                                       int level, bool* have_exceptions);
-uint64_t ChooseBase(const vector<uint64_t>& values, int level,
+uint64_t ChooseBase(absl::Span<const uint64_t> values, int level,
                     bool have_exceptions, int* base_bits);
 BlockCode GetBlockCode(Span<const uint64_t> values, uint64_t base,
                        bool have_exceptions);
@@ -623,7 +658,7 @@ vector<uint64_t> ConvertCellsToValues(const vector<CellPoint>& cell_points,
   return values;
 }
 
-uint64_t ChooseBase(const vector<uint64_t>& values, int level,
+uint64_t ChooseBase(absl::Span<const uint64_t> values, int level,
                     bool have_exceptions, int* base_bits) {
   // Find the minimum and maximum non-exception values to be represented.
   uint64_t v_min = kException, v_max = 0;
@@ -655,7 +690,7 @@ uint64_t ChooseBase(const vector<uint64_t>& values, int level,
   if (base == 0) {
     *base_bits = 0;
   } else {
-    int low_bit = Bits::FindLSBSetNonZero64(base);
+    int low_bit = absl::countr_zero(base);
     *base_bits = (MaxBitsForLevel(level) - low_bit + 7) & ~7;
   }
 
@@ -785,9 +820,8 @@ BlockCode GetBlockCode(Span<const uint64_t> values, uint64_t base,
     int offset_shift = delta_bits - overlap_bits;
     uint64_t mask = BitMask(offset_shift);
     uint64_t min_offset = (b_max - max_delta + mask) & ~mask;
-    ABSL_DCHECK_GT(min_offset, 0);
-    offset_bits =
-        (Bits::FindMSBSetNonZero64(min_offset) + 1 - offset_shift + 7) & ~7;
+    ABSL_ASSUME(min_offset != 0);
+    offset_bits = (absl::bit_width(min_offset) - offset_shift + 7) & ~7;
     // A 64-bit offset can only be encoded with an overlap of 4 bits.
     if (offset_bits == 64) overlap_bits = 4;
   }
@@ -806,6 +840,7 @@ bool EncodedS2PointVector::InitCellIdsFormat(Decoder* decoder) {
   last_block_count = (header1 >> 4) + 1;
   base_bytes = header2 & 7;
   cell_ids_.level = header2 >> 3;
+  if (cell_ids_.level > S2CellId::kMaxLevel) return false;
 
   // Decode the base value (if any).
   uint64_t base;
@@ -822,11 +857,22 @@ bool EncodedS2PointVector::InitCellIdsFormat(Decoder* decoder) {
   return true;
 }
 
-S2Point EncodedS2PointVector::DecodeCellIdsFormat(int i) const {
+S2Point EncodedS2PointVector::DecodeCellIdsFormat(int i, S2Error* error) const {
   // This function inverts the encodings documented above.
+  const auto Error = [error](absl::string_view message) {
+    if (error != nullptr) {
+      *error = S2Error::DataLoss(message);
+    }
+    return S2Point();
+  };
 
   // First we decode the block header.
-  const char* ptr = cell_ids_.blocks.GetStart(i >> kBlockShift);
+  const absl::string_view block = cell_ids_.blocks[i >> kBlockShift];
+  if (block.empty()) {
+    return Error("Invalid block header");
+  }
+  const char* ptr = block.data();
+  const char* end = ptr + block.size();
   uint8_t header = *ptr++;
   int overlap_nibbles = (header >> 3) & 1;
   int offset_bytes = (header & 7) + overlap_nibbles;
@@ -839,6 +885,13 @@ S2Point EncodedS2PointVector::DecodeCellIdsFormat(int i) const {
   uint64_t offset = 0;
   if (offset_bytes > 0) {
     int offset_shift = (delta_nibbles - overlap_nibbles) << 2;
+    // TODO(b/267575159): detect root cause for shift exponent overflow earlier?
+    if (offset_shift >= 64) {
+      return Error("Invalid offset_shift");
+    }
+    if (ptr + offset_bytes > end) {
+      return Error("Invalid offset outside of block size");
+    }
     offset = GetUintWithLength<uint64_t>(ptr, offset_bytes) << offset_shift;
     ptr += offset_bytes;
   }
@@ -847,6 +900,9 @@ S2Point EncodedS2PointVector::DecodeCellIdsFormat(int i) const {
   int delta_nibble_offset = (i & (kBlockSize - 1)) * delta_nibbles;
   int delta_bytes = (delta_nibbles + 1) >> 1;
   const char* delta_ptr = ptr + (delta_nibble_offset >> 1);
+  if (delta_ptr + delta_bytes > end) {
+    return Error("Invalid delta outside of block size");
+  }
   uint64_t delta = GetUintWithLength<uint64_t>(delta_ptr, delta_bytes);
   delta >>= (delta_nibble_offset & 1) << 2;
   delta &= BitMask(delta_nibbles << 2);
@@ -857,6 +913,9 @@ S2Point EncodedS2PointVector::DecodeCellIdsFormat(int i) const {
       int block_size = min(kBlockSize, size_ - (i & ~(kBlockSize - 1)));
       ptr += (block_size * delta_nibbles + 1) >> 1;
       ptr += delta * sizeof(S2Point);
+      if (ptr + sizeof(S2Point) > end) {
+        return Error("Invalid exception delta outside of block size");
+      }
       return *reinterpret_cast<const S2Point*>(ptr);
     }
     delta -= kBlockSize;

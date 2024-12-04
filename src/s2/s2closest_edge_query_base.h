@@ -775,10 +775,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesOptimized(
     // remove it before adding any new entries to the queue.
     QueueEntry entry = queue_.top();
     queue_.pop();
-    // Work around weird parse error in gcc 4.9 by using a local variable for
-    // entry.distance.
-    Distance distance = entry.distance;
-    if (!(distance < distance_limit_)) {
+    if (!(entry.distance < distance_limit_)) {
       queue_ = CellQueue();  // Clear any remaining entries.
       break;
     }

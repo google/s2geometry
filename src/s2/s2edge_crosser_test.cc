@@ -18,7 +18,6 @@
 #include "s2/s2edge_crosser.h"
 
 #include <cmath>
-
 #include <vector>
 
 #include <gtest/gtest.h>

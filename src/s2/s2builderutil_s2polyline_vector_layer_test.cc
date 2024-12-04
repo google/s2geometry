@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -53,7 +54,7 @@ using PolylineType = S2PolylineVectorLayer::Options::PolylineType;
 namespace {
 
 void TestS2PolylineVector(
-    const vector<string_view>& input_strs,
+    absl::Span<const string_view> input_strs,
     const vector<string_view>& expected_strs, EdgeType edge_type,
     S2PolylineVectorLayer::Options layer_options =  // by value
     S2PolylineVectorLayer::Options(),
@@ -79,7 +80,7 @@ void TestS2PolylineVector(
 
 // Convenience function that tests both directed and undirected edges.
 void TestS2PolylineVector(
-    const vector<string_view>& input_strs,
+    absl::Span<const string_view> input_strs,
     const vector<string_view>& expected_strs,
     const S2PolylineVectorLayer::Options& layer_options =
         S2PolylineVectorLayer::Options(),

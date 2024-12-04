@@ -25,6 +25,7 @@
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/s2coder.h"
+#include "s2/s2error.h"
 #include "s2/s2point.h"
 #include "s2/s2shape.h"
 
@@ -72,6 +73,19 @@ class S2PointVectorShape : public S2Shape {
     if (!points.Init(decoder)) return false;
     points_ = points.Decode();
     return true;
+  }
+
+  // Decodes an S2PointVectorShape, returning true on success.  If any errors
+  // are encountered during decoding, the S2Error is set and false is returned.
+  //
+  // This error checking may incur slightly more overhead than the plain Init()
+  // method above, but promises that no fatal decoding conditions will occur in
+  // tests.
+  bool Init(Decoder* decoder, S2Error& error) {
+    s2coding::EncodedS2PointVector points;
+    if (!points.Init(decoder, error)) return false;
+    points_ = points.Decode(error);
+    return error.ok();
   }
 
   // S2Shape interface.

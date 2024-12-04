@@ -171,7 +171,7 @@ class R1Interval {
   // The interval must be non-empty.
   double Project(double p) const {
     ABSL_DCHECK(!is_empty());
-    return std::max(lo(), std::min(hi(), p));
+    return std::clamp(p, lo(), hi());
   }
 
   // Return an interval that has been expanded on each side by the given

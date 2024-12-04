@@ -64,10 +64,9 @@
 
 #include "s2/s2boolean_operation.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
-
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -83,8 +82,8 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
-#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
@@ -302,16 +301,15 @@ class GraphEdgeClipper {
 
  private:
   void AddEdge(Graph::Edge edge, InputEdgeId input_edge_id);
-  void GatherIncidentEdges(
-      const vector<VertexId>& a, int ai,
-      const vector<CrossingInputEdge>& b_input_edges,
-      vector<CrossingGraphEdgeVector>* b_edges) const;
-  int GetCrossedVertexIndex(
-      const vector<VertexId>& a, const CrossingGraphEdgeVector& b,
-      bool left_to_right) const;
+  void GatherIncidentEdges(absl::Span<const VertexId> a, int ai,
+                           absl::Span<const CrossingInputEdge> b_input_edges,
+                           vector<CrossingGraphEdgeVector>* b_edges) const;
+  int GetCrossedVertexIndex(absl::Span<const VertexId> a,
+                            const CrossingGraphEdgeVector& b,
+                            bool left_to_right) const;
   int GetVertexRank(const CrossingGraphEdge& e) const;
-  bool EdgeChainOnLeft(const vector<VertexId>& a,
-                       EdgeId b_first, EdgeId b_last) const;
+  bool EdgeChainOnLeft(absl::Span<const VertexId> a, EdgeId b_first,
+                       EdgeId b_last) const;
 
   const Graph& g_;
   Graph::VertexInMap in_;
@@ -524,8 +522,8 @@ void GraphEdgeClipper::Run() {
 // output vector.  (A and B can refer to either the input edge or the
 // corresponding snapped edge chain.)
 void GraphEdgeClipper::GatherIncidentEdges(
-    const vector<VertexId>& a, int ai,
-    const vector<CrossingInputEdge>& b_input_edges,
+    absl::Span<const VertexId> a, int ai,
+    absl::Span<const CrossingInputEdge> b_input_edges,
     vector<CrossingGraphEdgeVector>* b_edges) const {
   // Examine all of the edges incident to the given vertex of A.  If any edge
   // comes from a B input edge, append it to the appropriate vector.
@@ -565,9 +563,9 @@ int GraphEdgeClipper::GetVertexRank(const CrossingGraphEdge& e) const {
 // parameters are the vertices of the A chain ("a") and the set of edges in
 // the B chain ("b") that are incident to vertices of A.  The B chain edges
 // are sorted in increasing order of (a_index, outgoing) tuple.
-int GraphEdgeClipper::GetCrossedVertexIndex(
-    const vector<VertexId>& a, const CrossingGraphEdgeVector& b,
-    bool left_to_right) const {
+int GraphEdgeClipper::GetCrossedVertexIndex(absl::Span<const VertexId> a,
+                                            const CrossingGraphEdgeVector& b,
+                                            bool left_to_right) const {
   if (a.empty() || b.empty()) {
     ABSL_LOG(ERROR) << "GraphEdgeClipper::GetCrossedVertexIndex called with "
                      << a.size() << " vertex ids and " << b.size()
@@ -714,8 +712,8 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
 // direction of chain B), returns true if chain B is to the left of chain A.
 // Chain A is given as a sequence of vertices, while chain B is specified as
 // the first and last edges of the chain.
-bool GraphEdgeClipper::EdgeChainOnLeft(
-    const vector<VertexId>& a, EdgeId b_first, EdgeId b_last) const {
+bool GraphEdgeClipper::EdgeChainOnLeft(absl::Span<const VertexId> a,
+                                       EdgeId b_first, EdgeId b_last) const {
   // TODO(b/317065708): Rather than collecting all the vertices in a list,
   // accumulate the angle.
 
@@ -2623,7 +2621,7 @@ void S2BooleanOperation::Impl::DoBuild(S2Error* error) {
 
 bool S2BooleanOperation::Impl::Build(S2Error* error) {
   // This wrapper ensures that memory tracking errors are reported.
-  error->Clear();
+  *error = S2Error::Ok();
   DoBuild(error);
   if (!tracker_.ok()) *error = tracker_.error();
   return error->ok();

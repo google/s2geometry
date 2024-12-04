@@ -24,8 +24,6 @@
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
-class Decoder;
-class Encoder;
 class S2Cap;
 class S2Cell;
 class S2CellId;
@@ -114,7 +112,7 @@ class S2Region {
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
   //
-  // void Encode(Encoder* const encoder) const;
+  // void Encode(Encoder* encoder) const;
 
   // Decodes an S2Region encoded with Encode().  Note that this method
   // requires that an S2Region object of the appropriate concrete type has
@@ -128,7 +126,7 @@ class S2Region {
   //
   // Returns true on success.
   //
-  // bool Decode(Decoder* const decoder);
+  // bool Decode(Decoder* decoder);
 
  protected:
   S2Region() = default;

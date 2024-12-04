@@ -29,9 +29,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
-#include "s2/base/casts.h"
-#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -61,7 +60,7 @@ namespace {
 
 using ::testing::Contains;
 
-void TestS2Polygon(const vector<string_view>& input_strs,
+void TestS2Polygon(absl::Span<const string_view> input_strs,
                    string_view expected_str, EdgeType edge_type) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder{S2Builder::Options()};
@@ -94,7 +93,7 @@ void TestS2PolygonUnchanged(string_view input_str) {
 }
 
 // Unlike the methods above, the input consists of a set of *polylines*.
-void TestS2PolygonError(const vector<string_view>& input_strs,
+void TestS2PolygonError(absl::Span<const string_view> input_strs,
                         absl::Span<const S2Error::Code> expected_codes,
                         EdgeType edge_type) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");

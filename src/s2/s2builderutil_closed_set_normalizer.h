@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -131,8 +132,8 @@ class ClosedSetNormalizer {
       const S2Builder::Graph& g, S2Builder::Graph::EdgeId* id) const;
   S2Builder::Graph::Edge AdvanceIncoming(
       const S2Builder::Graph& g,
-      const std::vector<S2Builder::Graph::EdgeId>& in_edges, int* i) const;
-  void NormalizeEdges(const std::vector<S2Builder::Graph>& g, S2Error* error);
+      absl::Span<const S2Builder::Graph::EdgeId> in_edges, int* i) const;
+  void NormalizeEdges(absl::Span<const S2Builder::Graph> g, S2Error* error);
   void AddEdge(int new_dim, const S2Builder::Graph& g,
                S2Builder::Graph::EdgeId e);
   bool is_suppressed(S2Builder::Graph::VertexId v) const;

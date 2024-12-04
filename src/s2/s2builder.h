@@ -32,6 +32,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/types/span.h"
 
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
@@ -332,7 +333,7 @@ class S2Builder {
     bool split_crossing_edges() const;
     void set_split_crossing_edges(bool split_crossing_edges);
 
-    // Specifes the maximum allowable distance between a vertex added by
+    // Specifies the maximum allowable distance between a vertex added by
     // AddIntersection() and the edge(s) that it is intended to snap to.  This
     // method must be called before AddIntersection() can be used.  It has the
     // effect of increasing the snap radius for edges (but not vertices) by
@@ -803,11 +804,11 @@ class S2Builder {
     bool DoneSiteIndex(const S2PointIndex<SiteId>& index);
 
     bool TallySimplifyEdgeChains(
-        const std::vector<gtl::compact_array<InputVertexId>>& site_vertices,
-        const std::vector<std::vector<Edge>>& layer_edges);
+        absl::Span<const gtl::compact_array<InputVertexId>> site_vertices,
+        absl::Span<const std::vector<Edge>> layer_edges);
 
     bool TallyFilterVertices(int num_sites,
-                             const std::vector<std::vector<Edge>>& layer_edges);
+                             absl::Span<const std::vector<Edge>> layer_edges);
     bool DoneFilterVertices();
 
    private:
@@ -836,7 +837,7 @@ class S2Builder {
   void InsertSiteByDistance(SiteId new_site_id, const S2Point& x,
                             gtl::compact_array<SiteId>* sites);
   void AddExtraSites(const MutableS2ShapeIndex& input_edge_index);
-  void MaybeAddExtraSites(InputEdgeId edge_id, const std::vector<SiteId>& chain,
+  void MaybeAddExtraSites(InputEdgeId edge_id, absl::Span<const SiteId> chain,
                           const MutableS2ShapeIndex& input_edge_index,
                           absl::flat_hash_set<InputEdgeId>* edges_to_resnap);
   void AddExtraSite(const S2Point& new_site,
@@ -870,10 +871,9 @@ class S2Builder {
       std::vector<std::vector<InputEdgeIdSetId>>* layer_input_edge_ids,
       IdSetLexicon* input_edge_id_set_lexicon);
   void MergeLayerEdges(
-      const std::vector<std::vector<Edge>>& layer_edges,
-      const std::vector<std::vector<InputEdgeIdSetId>>& layer_input_edge_ids,
-      std::vector<Edge>* edges,
-      std::vector<InputEdgeIdSetId>* input_edge_ids,
+      absl::Span<const std::vector<Edge>> layer_edges,
+      absl::Span<const std::vector<InputEdgeIdSetId>> layer_input_edge_ids,
+      std::vector<Edge>* edges, std::vector<InputEdgeIdSetId>* input_edge_ids,
       std::vector<int>* edge_layers) const;
   static bool StableLessThan(const Edge& a, const Edge& b,
                              const LayerEdgeId& ai, const LayerEdgeId& bi);

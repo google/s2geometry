@@ -56,8 +56,7 @@ S2Point SnapPointToLevel(const S2Point& point, int level) {
   return S2CellId(point).parent(level).ToPoint();
 }
 
-vector<S2Point> SnapPointsToLevel(const vector<S2Point>& points,
-                                  int level) {
+vector<S2Point> SnapPointsToLevel(absl::Span<const S2Point> points, int level) {
   vector<S2Point> snapped_points(points.size());
   for (int i = 0; i < points.size(); ++i) {
     snapped_points[i] = SnapPointToLevel(points[i], level);

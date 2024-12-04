@@ -109,7 +109,8 @@ class S2Shape {
   struct Chain {
     int32_t start, length;
     Chain() = default;
-    Chain(int32_t _start, int32_t _length) : start(_start), length(_length) {}
+    constexpr Chain(int32_t _start, int32_t _length)
+        : start(_start), length(_length) {}
 
     friend bool operator==(const Chain& x, const Chain& y) {
       return x.start == y.start && x.length == y.length;

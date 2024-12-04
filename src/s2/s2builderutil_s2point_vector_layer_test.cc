@@ -26,6 +26,7 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
@@ -51,9 +52,9 @@ namespace {
 
 void VerifyS2PointVectorLayerResults(
     const S2PointVectorLayer::LabelSetIds& label_set_ids,
-    const IdSetLexicon& label_set_lexicon, const vector<S2Point>& output,
+    const IdSetLexicon& label_set_lexicon, absl::Span<const S2Point> output,
     string_view str_expected_points,
-    const vector<vector<int32_t>>& expected_labels) {
+    absl::Span<const vector<int32_t>> expected_labels) {
   vector<S2Point> expected_points =
       s2textformat::ParsePointsOrDie(str_expected_points);
 
@@ -144,7 +145,7 @@ TEST(S2PointVectorLayer, Error) {
   S2Error error;
   EXPECT_FALSE(builder.Build(&error));
   EXPECT_EQ(error.code(), S2Error::INVALID_ARGUMENT);
-  EXPECT_EQ(error.text(), "Found non-degenerate edges");
+  EXPECT_EQ(error.message(), "Found non-degenerate edges");
 
   EXPECT_EQ(2, output.size());
   EXPECT_EQ(MakePointOrDie("0:1"), output[0]);

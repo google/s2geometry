@@ -24,10 +24,11 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/types/span.h"
 
 using std::vector;
 
-void ExpectIdSet(const vector<int32_t>& expected,
+void ExpectIdSet(absl::Span<const int32_t> expected,
                  const IdSetLexicon::IdSet& actual) {
   EXPECT_EQ(expected.size(), actual.size());
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), actual.begin()));

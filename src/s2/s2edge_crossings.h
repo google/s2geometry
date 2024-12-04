@@ -49,6 +49,21 @@
 #include "s2/util/math/vector.h"
 
 namespace S2 {
+namespace internal {
+
+// Returns whether (a0,a1) is less than (b0,b1) with respect to a total
+// ordering on edges that is invariant under edge reversals.
+template <class T>
+inline bool CompareEdges(const Vector3<T>& a0, const Vector3<T>& a1,
+                         const Vector3<T>& b0, const Vector3<T>& b1) {
+  const Vector3<T>*pa0 = &a0, *pa1 = &a1;
+  const Vector3<T>*pb0 = &b0, *pb1 = &b1;
+  if (*pa0 >= *pa1) std::swap(pa0, pa1);
+  if (*pb0 >= *pb1) std::swap(pb0, pb1);
+  return *pa0 < *pb0 || (*pa0 == *pb0 && *pa1 < *pb1);
+}
+
+}  // namespace internal
 
 // Returns a vector whose direction is guaranteed to be very close to the exact
 // mathematical cross product of the given unit-length vectors "a" and "b", but
