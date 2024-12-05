@@ -12,4 +12,4 @@ use_repo(cc_configure, "local_config_cc")
 
 bazel_dep(name = "boringssl", version = "0.0.0-20240126-22d349c")
 bazel_dep(name = "abseil-cpp", version = "20240722.0")
-bazel_dep(name = "googletest", version = "1.14.0")
+bazel_dep(name = "googletest", version = "1.15.2")
