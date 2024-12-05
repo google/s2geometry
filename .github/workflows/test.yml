@@ -7,6 +7,12 @@ on:
       - master
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
 env:
   GOOGLETEST_VERSION: "1.15.2"
 
@@ -21,6 +27,7 @@ jobs:
           - macos-latest
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
     env:
       CTEST_OUTPUT_ON_FAILURE: ON
     steps:
@@ -83,6 +90,7 @@ jobs:
             python-version: "3.12"
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
     steps:
       - uses: zacharyburnett/setup-abseil-cpp@de39f445295c887839e30c864ffbbb1c0231bc83 # 1.0.5
         with:
