@@ -67,13 +67,7 @@ if (WITH_PYTHON)
     find_package(SWIG 4.0)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        # Workaround for issue https://github.com/google/s2geometry/issues/398
-        # Macos requires libpython3.13.dylib and does not get it with .Module
-        find_package(Python3 COMPONENTS Interpreter Development)
-    else()
-        find_package(Python3 COMPONENTS Interpreter Development.Module)
-    endif()
+    find_package(Python3 COMPONENTS Interpreter Development.Module)
 endif()
 
 if (MSVC)
