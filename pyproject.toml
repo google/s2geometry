@@ -40,6 +40,7 @@ requires = [
     "setuptools",
     "setuptools_scm[toml]",
     "cmake_build_extension",
+    "swig",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -55,4 +56,21 @@ namespaces = false
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.cibuildwheel]
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_34_x86_64"
+test-requires = "pytest"
+test-command = "pytest {project}/tests"
+
+[tool.cibuildwheel.environment]
+MACOSX_DEPLOYMENT_TARGET = 14.0
+
+[tool.cibuildwheel.linux]
+#repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+# the EPEL9 package `abseil-cpp` is out of date, so we have to build `abseil-cpp` from source
+before-all = "yum install -y gflags-devel glog-devel gtest-devel openssl-devel && git clone https://github.com/abseil/abseil-cpp.git && cd abseil-cpp && mkdir build && cd build && cmake -DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off .. && cmake --build . --parallel --target=install"
+
+[tool.cibuildwheel.macos]
+#repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+before-all = "brew install gflags glog openssl abseil"
 
