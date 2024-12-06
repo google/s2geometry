@@ -28,12 +28,12 @@
 
 #include "absl/base/call_once.h"
 #include "absl/base/casts.h"
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
+#include "absl/numeric/bits.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/types.h"
-#include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
@@ -199,12 +199,12 @@ int S2CellId::GetCommonAncestorLevel(S2CellId other) const {
   // differ and convert that to a level.  The max() below is necessary for the
   // case where one S2CellId is a descendant of the other.
   uint64_t bits = max(id() ^ other.id(), max(lsb(), other.lsb()));
-  ABSL_DCHECK_NE(bits, 0);  // Because lsb() is non-zero.
+  ABSL_ASSUME(bits != 0);  // Because lsb() is non-zero.
 
   // Compute the position of the most significant bit, and then map the bit
   // position as follows:
   // {0} -> 30, {1,2} -> 29, {3,4} -> 28, ... , {59,60} -> 0, {61,62,63} -> -1.
-  return max(60 - Bits::FindMSBSetNonZero64(bits), -1) >> 1;
+  return max(61 - absl::bit_width(bits), -1) >> 1;
 }
 
 // Print the num_digits low order hex digits.
@@ -229,7 +229,7 @@ string S2CellId::ToToken() const {
   // "0" with trailing 0s stripped is the empty string, which is not a
   // reasonable token.  Encode as "X".
   if (id_ == 0) return "X";
-  const size_t num_zero_digits = Bits::FindLSBSetNonZero64(id_) / 4;
+  const size_t num_zero_digits = absl::countr_zero(id_) / 4;
   return HexFormatString(id_ >> (4 * num_zero_digits), 16 - num_zero_digits);
 }
 
@@ -661,7 +661,7 @@ bool S2CellId::Coder::Decode(Decoder& decoder, S2CellId& v,
 
   // The token must be nul-terminated.
   if (bytes_read == 0 || bytes[bytes_read - 1] != '\0') {
-    error.Init(S2Error::DATA_LOSS, "Unknown decoding error");
+    error = S2Error::DataLoss("Unknown decoding error");
     return false;
   }
 
@@ -670,7 +670,7 @@ bool S2CellId::Coder::Decode(Decoder& decoder, S2CellId& v,
   // Prevent edge cases where S2CellId::FromToken returns S2CellId::None for
   // an invalid token.
   if (v == S2CellId::None() && token != "X") {
-    error.Init(S2Error::DATA_LOSS, "Unknown decoding error");
+    error = S2Error::DataLoss("Unknown decoding error");
     return false;
   }
   return true;

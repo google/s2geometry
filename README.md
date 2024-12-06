@@ -49,14 +49,14 @@ This issue may require revision of boringssl or exactfloat.
 
 ## Requirements for End Users using CMake
 
-* [CMake](http://www.cmake.org/)
-* A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
-* [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
-  [`20240116`](https://github.com/abseil/abseil-cpp/releases/tag/20240116.1)
-  (standard library extensions)
-* [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
-* [googletest testing framework >= 1.10](https://github.com/google/googletest)
-  (to build tests and example programs, optional)
+*   [CMake](http://www.cmake.org/) >= 3.5
+*   A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
+*   [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
+    [`20240722`](https://github.com/abseil/abseil-cpp/releases/tag/20240722.0)
+    (standard library extensions)
+*   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
+*   [googletest testing framework >= 1.10](https://github.com/google/googletest)
+    (to build tests and example programs, optional)
 
 On Ubuntu, all of these other than abseil can be installed via apt-get:
 

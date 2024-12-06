@@ -308,7 +308,7 @@ class S2FurthestEdgeQuery {
   // Note that if options().include_interiors() is true, the result vector may
   // include some entries with edge_id == -1.  This indicates that the
   // furthest distance is attained at a point in the interior of the indexed
-  // polygon with the given shape_id.  Such results may be identifed by
+  // polygon with the given shape_id.  Such results may be identified by
   // calling Result::is_interior().
   std::vector<Result> FindFurthestEdges(Target* target);
 

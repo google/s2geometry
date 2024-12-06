@@ -16,11 +16,10 @@
 #ifndef S2_S2DENSITY_TREE_INTERNAL_H_
 #define S2_S2DENSITY_TREE_INTERNAL_H_
 
-#include <cstddef>
-#include <cstdint>
-
 #include <algorithm>
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 #include "absl/log/absl_check.h"

@@ -29,8 +29,10 @@
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
@@ -75,9 +77,9 @@ class S2CellIndexTest : public ::testing::Test {
   void VerifyRangeIterators() const;
   void VerifyIndexContents() const;
   void TestIntersection(const S2CellUnion& target);
-  void ExpectContents(string_view target_str,
-                      S2CellIndex::ContentsIterator* contents,
-                      const vector<pair<string, Label>>& expected_strs) const;
+  void ExpectContents(
+      string_view target_str, S2CellIndex::ContentsIterator* contents,
+      absl::Span<const pair<string, Label>> expected_strs) const;
 
  protected:
   S2CellIndex index_;
@@ -293,7 +295,7 @@ TEST_F(S2CellIndexTest, RandomCellUnions) {
 // (cell_id, label) pairs given by "expected_strs".
 void S2CellIndexTest::ExpectContents(
     string_view target_str, S2CellIndex::ContentsIterator* contents,
-    const vector<pair<string, Label>>& expected_strs) const {
+    absl::Span<const pair<string, Label>> expected_strs) const {
   S2CellIndex::RangeIterator range(&index_);
   range.Seek(S2CellId::FromDebugString(target_str).range_min());
   vector<LabelledCell> expected, actual;

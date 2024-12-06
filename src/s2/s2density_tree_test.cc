@@ -15,9 +15,8 @@
 
 #include "s2/s2density_tree.h"
 
-#include <cstdint>
-
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <string>
@@ -35,6 +34,7 @@
 #include "absl/meta/type_traits.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2cap.h"
@@ -316,7 +316,7 @@ TEST(S2DensityTreeTest, VisitorCancellation) {
   S2Error error;
   S2DensityTree tree;
   ASSERT_TRUE(tree.InitToVertexDensity(index, 10000, 30, &error))
-      << error.text();
+      << error.message();
 
   ASSERT_FALSE(tree.VisitCells(
       [](S2CellId, const S2DensityTree::Cell&) {
@@ -381,15 +381,15 @@ TEST(S2DensityTreeTest, S2CoderWorks) {
   tree.InitToVertexDensity(*index, 10'000, 20, &error);
   ASSERT_TRUE(error.ok()) << error;
 
-  error.Clear();
+  error = S2Error::Ok();
   auto decoded = s2coding::RoundTrip(S2DensityTree::Coder(), tree, error);
 
   // Fully decode density trees and compare to check the decoding.
-  error.Clear();
+  error = S2Error::Ok();
   absl::btree_map<S2CellId, int64_t> tree_a = tree.Decode(&error);
   EXPECT_TRUE(error.ok());
 
-  error.Clear();
+  error = S2Error::Ok();
   absl::btree_map<S2CellId, int64_t> tree_b = decoded.Decode(&error);
   EXPECT_TRUE(error.ok());
 
@@ -858,7 +858,7 @@ class SumDensityTreesTest : public ::testing::TestWithParam<bool> {
   }
 
   void CheckSum(const absl::btree_map<S2CellId, int64_t>& expected,
-                const vector<S2CellId>& roots, int max_level = 30) {
+                absl::Span<const S2CellId> roots, int max_level = 30) {
     S2Error error;
     vector<S2DensityTree> trees;
     for (S2CellId root : roots) {

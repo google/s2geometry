@@ -41,11 +41,11 @@
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
 #include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -66,6 +66,7 @@
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
+#include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
 using absl::flat_hash_map;
@@ -391,9 +392,9 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
     vector<S2Point> vertices;
     for (double theta = 0; theta < 2 * M_PI;
          theta += absl::Uniform(bitgen, 0.0, max_dtheta)) {
-      vertices.push_back(cos(theta) * cos(phi) * x +
-                         sin(theta) * cos(phi) * y +
-                         sin(phi) * z);
+      vertices.push_back(
+          (cos(theta) * cos(phi) * x + sin(theta) * cos(phi) * y + sin(phi) * z)
+              .Normalize());
     }
     S2Loop loop(vertices);
     double area = loop.GetArea();
@@ -1160,15 +1161,15 @@ static void CheckLoopIsInvalid(string_view str, string_view snippet) {
   unique_ptr<S2Loop> loop(MakeLoopOrDie(str, S2Debug::DISABLE));
   S2Error error;
   EXPECT_TRUE(loop->FindValidationError(&error));
-  EXPECT_THAT(error.text(), testing::HasSubstr(snippet));
+  EXPECT_THAT(error.message(), testing::HasSubstr(snippet));
 }
 
-static void CheckLoopIsInvalid(const vector<S2Point>& points,
+static void CheckLoopIsInvalid(absl::Span<const S2Point> points,
                                string_view snippet) {
   S2Loop l(points, S2Debug::DISABLE);
   S2Error error;
   EXPECT_TRUE(l.FindValidationError(&error));
-  EXPECT_THAT(error.text(), testing::HasSubstr(snippet));
+  EXPECT_THAT(error.message(), testing::HasSubstr(snippet));
 }
 
 TEST(S2Loop, IsValidDetectsInvalidLoops) {
@@ -1353,5 +1354,10 @@ TEST(S2LoopOwningShape, Ownership) {
   // Debug mode builds will catch any memory leak below.
   auto loop = make_unique<S2Loop>(S2Loop::kEmpty());
   S2Loop::OwningShape shape(std::move(loop));
+}
+
+TEST(S2LoopOwningShape, Init) {
+  S2Loop::OwningShape shape;
+  shape.Init(make_unique<S2Loop>(S2Loop::kEmpty()));
 }
 

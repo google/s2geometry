@@ -19,7 +19,6 @@
 #define S2_S2SHAPEUTIL_SHAPE_EDGE_ID_H_
 
 #include <cstddef>
-
 #include <cstdint>
 #include <iostream>
 #include <ostream>

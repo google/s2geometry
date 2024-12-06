@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -86,7 +87,7 @@ GraphOptions LaxPolygonLayer::graph_options() const {
 }
 
 void LaxPolygonLayer::AppendPolygonLoops(
-    const Graph& g, const vector<Graph::EdgeLoop>& edge_loops,
+    const Graph& g, absl::Span<const Graph::EdgeLoop> edge_loops,
     vector<vector<S2Point>>* loops) const {
   for (const auto& edge_loop : edge_loops) {
     vector<S2Point> vertices;
@@ -99,8 +100,7 @@ void LaxPolygonLayer::AppendPolygonLoops(
 }
 
 void LaxPolygonLayer::AppendEdgeLabels(
-    const Graph& g,
-    const vector<Graph::EdgeLoop>& edge_loops) {
+    const Graph& g, absl::Span<const Graph::EdgeLoop> edge_loops) {
   if (!label_set_ids_) return;
 
   vector<Label> labels;  // Temporary storage for labels.
@@ -210,7 +210,7 @@ void LaxPolygonLayer::Build(const Graph& g, S2Error* error) {
   if (g.options().edge_type() == EdgeType::DIRECTED) {
     BuildDirected(g, error);
   } else {
-    error->Init(S2Error::UNIMPLEMENTED, "Undirected edges not supported yet");
+    *error = S2Error::Unimplemented("Undirected edges not supported yet");
   }
 }
 

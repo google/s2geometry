@@ -43,7 +43,6 @@ using internal::intersection_method_tally_;
 using internal::IntersectionMethod;
 using S2::internal::GetStableCrossProd;
 using s2pred::DBL_ERR;
-using s2pred::kHasLongDouble;
 using s2pred::kSqrt3;
 using s2pred::rounding_epsilon;
 using s2pred::ToExact;
@@ -161,9 +160,11 @@ S2Point RobustCrossProd(const S2Point& a, const S2Point& b) {
   if (a == b) {
     return Ortho(a);
   }
+  constexpr bool kUseLongDoubleInRobustCrossProd = s2pred::kHasLongDouble;
   // Next we try using "long double" precision (if available).
   Vector3_ld result_ld;
-  if (kHasLongDouble && GetStableCrossProd(ToLD(a), ToLD(b), &result_ld)) {
+  if (kUseLongDoubleInRobustCrossProd &&
+      GetStableCrossProd(ToLD(a), ToLD(b), &result_ld)) {
     return Vector3_d::Cast(result_ld);
   }
   // Otherwise we fall back to exact arithmetic, then symbolic perturbations.
@@ -470,7 +471,7 @@ static bool GetIntersectionSimple(const Vector3<T>& a0, const Vector3<T>& a1,
       12 / (kIntersectionError.radians() / T_ERR - (2 + 2 * kSqrt3));
 
   // On some platforms "long double" is the same as "double", and on these
-  // platforms this method always returns false (e.g. ARM, Win32).  Rather
+  // platforms this method always returns false (e.g. ARM32, Win32).  Rather
   // than testing this directly, instead we look at kMinResultLen since this
   // is a direct measure of whether "long double" has sufficient accuracy to
   // be useful.  If kMinResultLen >= 0.5, it means that this method will fail
@@ -614,18 +615,6 @@ static bool GetIntersectionStableSorted(
   return true;
 }
 
-// Returns whether (a0,a1) is less than (b0,b1) with respect to a total
-// ordering on edges that is invariant under edge reversals.
-template <class T>
-static bool CompareEdges(const Vector3<T>& a0, const Vector3<T>& a1,
-                         const Vector3<T>& b0, const Vector3<T>& b1) {
-  const Vector3<T> *pa0 = &a0, *pa1 = &a1;
-  const Vector3<T> *pb0 = &b0, *pb1 = &b1;
-  if (*pa0 >= *pa1) std::swap(pa0, pa1);
-  if (*pb0 >= *pb1) std::swap(pb0, pb1);
-  return *pa0 < *pb0 || (*pa0 == *pb0 && *pb0 < *pb1);
-}
-
 // If the intersection point of the edges (a0,a1) and (b0,b1) can be computed
 // to within an error of at most kIntersectionError by this function, then set
 // "result" to the intersection point and return true.
@@ -642,7 +631,8 @@ static bool GetIntersectionStable(const Vector3<T>& a0, const Vector3<T>& a1,
   //    is used for interpolation (where a shorter edge means less error).
   T a_len2 = (a1 - a0).Norm2();
   T b_len2 = (b1 - b0).Norm2();
-  if (a_len2 < b_len2 || (a_len2 == b_len2 && CompareEdges(a0, a1, b0, b1))) {
+  if (a_len2 < b_len2 ||
+      (a_len2 == b_len2 && internal::CompareEdges(a0, a1, b0, b1))) {
     return GetIntersectionStableSorted(b0, b1, a0, a1, result);
   } else {
     return GetIntersectionStableSorted(a0, a1, b0, b1, result);
@@ -755,26 +745,32 @@ S2Point GetIntersection(const S2Point& a0, const S2Point& a1,
   //
   // We don't actually use the first method (GetIntersectionSimple) because it
   // turns out that GetIntersectionStable() is twice as fast and also much
-  // more accurate (even in double precision).  The "long double" version
-  // (only available on some platforms) uses 80-bit precision and is about
-  // twice as slow.  The exact arithmetic version is about 100x slower.
+  // more accurate (even in double precision). The "long double" version
+  // (only available on some platforms) uses 80-bit precision on x64 and
+  // 128-bit precision on ARM64, and is ~7x slower on x86. The exact arithmetic
+  // version is about 140x slower than "double" on x86.
   //
   // So our strategy is to first call GetIntersectionStable() in double
-  // precision; if that doesn't work and this platform supports "long double",
-  // then we try again in "long double"; if that doesn't work then we fall
-  // back to exact arithmetic.
+  // precision; if that doesn't work then we fall back to exact arithmetic.
+  // Because "long double" version gives different results depending on the
+  // platform, it is not used in this function.
 
+  // TODO(b/365080041): consider moving the unused implementations to the test
+  // so they can be benchmarked and compared for accuracy.
   constexpr bool kUseSimpleMethod = false;
+  // Long double version produces different results on x86-64 and ARM64
+  // platforms, and is not used in this function.
+  constexpr bool kUseLongDoubleInIntersection = s2pred::kHasLongDouble && false;
   S2Point result;
   IntersectionMethod method;
   if (kUseSimpleMethod && GetIntersectionSimple(a0, a1, b0, b1, &result)) {
     method = IntersectionMethod::SIMPLE;
-  } else if (kUseSimpleMethod && kHasLongDouble &&
+  } else if (kUseSimpleMethod && kUseLongDoubleInIntersection &&
              GetIntersectionSimpleLD(a0, a1, b0, b1, &result)) {
     method = IntersectionMethod::SIMPLE_LD;
   } else if (GetIntersectionStable(a0, a1, b0, b1, &result)) {
     method = IntersectionMethod::STABLE;
-  } else if (kHasLongDouble &&
+  } else if (kUseLongDoubleInIntersection &&
              GetIntersectionStableLD(a0, a1, b0, b1, &result)) {
     method = IntersectionMethod::STABLE_LD;
   } else {

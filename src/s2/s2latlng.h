@@ -102,7 +102,7 @@ class S2LatLng {
 
   // Clamps the latitude to the range [-90, 90] degrees, and adds or subtracts
   // a multiple of 360 degrees to the longitude if necessary to reduce it to
-  // the range [-180, 180].
+  // the range [-180, 180]. Returns Invalid() if not finite.
   S2LatLng Normalized() const;
 
   // Converts an S2LatLng to the equivalent unit-length vector.  Unnormalized
@@ -117,6 +117,9 @@ class S2LatLng {
   // Can be used just like an S2Point constructor.  For example:
   //   S2Cap cap;
   //   cap.AddPoint(S2Point(latlng));
+  //
+  // REQUIRES: Latitude and longitude are finite.  (This is weaker than
+  // `is_valid()`.
   explicit operator S2Point() const;
 
   // Converts to an S2Point (equivalent to the operator above).

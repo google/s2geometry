@@ -14,7 +14,7 @@
 //
 
 
-#include "s2/s2index_cell_data.h"
+#include "s2/internal/s2index_cell_data.h"
 
 #include <memory>
 
@@ -25,6 +25,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+namespace internal {
 namespace {
 
 using ::std::unique_ptr;
@@ -153,3 +154,4 @@ TEST(S2IndexCellData, CellAndCenterRecomputed) {
 }
 
 }  // namespace
+}  // namespace internal

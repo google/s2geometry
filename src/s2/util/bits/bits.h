@@ -24,18 +24,6 @@
 // Use namespace because this used to be a static class.
 namespace Bits {
 
-inline int FindLSBSetNonZero(uint32_t n) {
-  // TODO: Investigate whether ABSL_ASSUME is needed at all, or if clang
-  // and gcc can prove the argument is non-zero where these are used.
-  ABSL_ASSUME(n != 0);
-  return absl::countr_zero(n);
-}
-
-inline int FindLSBSetNonZero64(uint64_t n) {
-  ABSL_ASSUME(n != 0);
-  return absl::countr_zero(n);
-}
-
 inline int Log2FloorNonZero(uint32_t n) {
   ABSL_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
@@ -45,9 +33,6 @@ inline int Log2FloorNonZero64(uint64_t n) {
   ABSL_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
-
-inline int FindMSBSetNonZero(uint32_t n) { return Log2FloorNonZero(n); }
-inline int FindMSBSetNonZero64(uint64_t n) { return Log2FloorNonZero64(n); }
 
 inline int Log2Ceiling(uint32_t n) {
   int floor = absl::bit_width(n) - 1;

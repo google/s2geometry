@@ -302,7 +302,8 @@ bool S2CellIteratorJoin<A, B>::TolerantJoin(Visitor& visitor) {
     return cells;
   };
 
-  // Seed the recursion with a coarse covering of each input iterator.
+  // Seed the recursion with a coarse covering of each input iterator's current
+  // position.
   return ProcessNearby(Covering(iter_a_), Covering(iter_b_), visitor);
 }
 
@@ -389,17 +390,17 @@ bool S2CellIteratorJoin<A, B>::ProcessCellPairs(
       return true;
     }
 
-    const S2Cell cell_a(iter_a_.id());
+    const S2Cell sub_cell_a(iter_a_.id());
 
-    // For each A cell, scan each B cell in the cell union and send the
-    // resulting (A,B) pairs to the visitor.  If it returns false at any point
-    // then stop the join and return false.
+    // For each sub cell in the cell_a range, scan each B cell in the cell union
+    // and send the resulting (A,B) pairs to the visitor.  If it returns false
+    // at any point then stop the join and return false.
     int idx = 0;
     bool success = true;
     for (int i = 0; i < cells_b.size() && success; ++i) {
       S2CellId id = cells_b[i].id();
       success &= ScanCellRange(iter_b_, id, [&](const auto& iter_b) {
-        if (cell_a.GetDistance(matched_cells_[idx++]) <= tolerance_) {
+        if (sub_cell_a.GetDistance(matched_cells_[idx++]) <= tolerance_) {
           if (!visitor(iter_a.iterator(), iter_b.iterator())) {
             return false;
           }

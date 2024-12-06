@@ -120,7 +120,7 @@ class S2LegacyCoder : public S2Coder<T> {
 
   bool Decode(Decoder& decoder, T& v, S2Error& error) const override {
     if (!v.Decode(&decoder)) {
-      error.Init(S2Error::DATA_LOSS, "Unknown decoding error");
+      error = S2Error::DataLoss("Unknown decoding error");
       return false;
     }
     return true;
@@ -141,7 +141,7 @@ class S2LegacyHintCoder : public S2Coder<T> {
 
   bool Decode(Decoder& decoder, T& v, S2Error& error) const override {
     if (!v.Decode(&decoder)) {
-      error.Init(S2Error::DATA_LOSS, "Unknown decoding error");
+      error = S2Error::DataLoss("Unknown decoding error");
       return false;
     }
     return true;

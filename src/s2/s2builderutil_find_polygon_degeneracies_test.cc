@@ -29,6 +29,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -92,7 +93,7 @@ class DegeneracyCheckingLayer : public S2Builder::Layer {
   vector<TestDegeneracy> expected_;
 };
 
-std::ostream& operator<<(std::ostream& os, const vector<TestDegeneracy>& v) {
+std::ostream& operator<<(std::ostream& os, absl::Span<const TestDegeneracy> v) {
   for (const auto& degeneracy : v) {
     os << (degeneracy.is_hole ? "Hole(" : "Shell(");
     os << degeneracy.edge_str + ") ";

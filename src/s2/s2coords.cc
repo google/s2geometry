@@ -18,7 +18,7 @@
 #include "s2/s2coords.h"
 
 #include "absl/log/absl_check.h"
-#include "s2/util/bits/bits.h"
+#include "absl/numeric/bits.h"
 #include "s2/s2coords_internal.h"
 #include "s2/s2point.h"
 
@@ -125,9 +125,9 @@ int XYZtoFaceSiTi(const S2Point& p, int* face, unsigned int* si,
   // center.  The si,ti values 0 and kMaxSiTi need to be handled specially
   // because they do not correspond to cell centers at any valid level; they
   // are mapped to level -1 by the code below.
-  int level = kMaxCellLevel - Bits::FindLSBSetNonZero(*si | kMaxSiTi);
+  int level = kMaxCellLevel - absl::countr_zero(*si | kMaxSiTi);
   if (level < 0 ||
-      level != kMaxCellLevel - Bits::FindLSBSetNonZero(*ti | kMaxSiTi)) {
+      level != kMaxCellLevel - absl::countr_zero(*ti | kMaxSiTi)) {
     return -1;
   }
   ABSL_DCHECK_LE(level, kMaxCellLevel);

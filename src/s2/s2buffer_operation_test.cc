@@ -17,11 +17,10 @@
 
 #include "s2/s2buffer_operation.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
-
-#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <memory>

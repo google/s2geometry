@@ -19,6 +19,7 @@
 #define S2_S1CHORD_ANGLE_H_
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -122,6 +123,11 @@
 // the default copy constructor and assignment operator.
 class S1ChordAngle {
  public:
+  // Maximum relative error when summing two S1ChordAngles together.
+  // Absolute error is length2() of the summed S1ChordAngle() times this value.
+  // See the definition of operator+() for the error analysis.
+  static constexpr double kRelativeSumError = 2.02 * DBL_EPSILON;
+
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
   constexpr S1ChordAngle() = default;

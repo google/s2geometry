@@ -1009,11 +1009,6 @@ class dense_hashtable {
            "Using the deleted key as a regular key");
   }
 
-  template <class K>
-  std::pair<size_type, size_type> find_position(const K& key) const {
-    return find_position_using_hash(hash(key), key);
-  }
-
   // Returns a pair of positions: 1st where the object is, 2nd where
   // it would go if you wanted to insert it.  1st is ILLEGAL_BUCKET
   // if object is not found; 2nd is ILLEGAL_BUCKET if it is.

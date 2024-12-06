@@ -17,9 +17,8 @@
 
 #include "s2/s2cap.h"
 
-#include <cmath>
-
 #include <cfloat>
+#include <cmath>
 #include <string>
 #include <vector>
 

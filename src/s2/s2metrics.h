@@ -171,7 +171,7 @@ int S2::Metric<dim>::GetLevelForMaxValue(double value) const {
   // rounding up.  ilogb() returns the exponent corresponding to a fraction in
   // the range [1,2).
   int level = ilogb(value / deriv_);
-  level = std::max(0, std::min(S2::kMaxCellLevel, -(level >> (dim - 1))));
+  level = std::clamp(-(level >> (dim - 1)), 0, S2::kMaxCellLevel);
   ABSL_DCHECK(level == S2::kMaxCellLevel || GetValue(level) <= value);
   ABSL_DCHECK(level == 0 || GetValue(level - 1) > value);
   return level;
@@ -184,7 +184,7 @@ int S2::Metric<dim>::GetLevelForMinValue(double value) const {
   // This code is equivalent to computing a floating-point "level" value and
   // rounding down.
   int level = ilogb(deriv_ / value);
-  level = std::max(0, std::min(S2::kMaxCellLevel, level >> (dim - 1)));
+  level = std::clamp(level >> (dim - 1), 0, S2::kMaxCellLevel);
   ABSL_DCHECK(level == 0 || GetValue(level) >= value);
   ABSL_DCHECK(level == kMaxCellLevel || GetValue(level + 1) < value);
   return level;

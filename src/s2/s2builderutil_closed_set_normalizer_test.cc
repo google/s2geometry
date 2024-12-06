@@ -89,7 +89,7 @@ class NormalizeTest : public testing::Test {
 
  private:
   static string ToString(const Graph& g);
-  void AddLayers(string_view str, const vector<GraphOptions>& graph_options,
+  void AddLayers(string_view str, absl::Span<const GraphOptions> graph_options,
                  vector<Graph>* graphs_out, S2Builder* builder);
 
   vector<unique_ptr<GraphClone>> graph_clones_;
@@ -116,7 +116,7 @@ void NormalizeTest::Run(string_view input_str, string_view expected_str) {
 }
 
 void NormalizeTest::AddLayers(string_view str,
-                              const vector<GraphOptions>& graph_options,
+                              absl::Span<const GraphOptions> graph_options,
                               vector<Graph>* graphs_out, S2Builder* builder) {
   auto index = s2textformat::MakeIndexOrDie(str);
   for (int dim = 0; dim < 3; ++dim) {
@@ -142,6 +142,20 @@ string NormalizeTest::ToString(const Graph& g) {
     msg += "; ";
   }
   return msg;
+}
+
+TEST_F(NormalizeTest, OptionsAccessorSuppressLowerDimensionsTrue) {
+  ClosedSetNormalizer::Options options;
+  options.set_suppress_lower_dimensions(/*suppress_lower_dimensions=*/true);
+  ClosedSetNormalizer normalizer(options, graph_options_out_);
+  EXPECT_TRUE(normalizer.options().suppress_lower_dimensions());
+}
+
+TEST_F(NormalizeTest, OptionsAccessorSuppressLowerDimensionsFalse) {
+  ClosedSetNormalizer::Options options;
+  options.set_suppress_lower_dimensions(/*suppress_lower_dimensions=*/false);
+  ClosedSetNormalizer normalizer(options, graph_options_out_);
+  EXPECT_FALSE(normalizer.options().suppress_lower_dimensions());
 }
 
 TEST_F(NormalizeTest, EmptyGraphs) {

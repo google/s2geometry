@@ -17,10 +17,9 @@
 
 #include "s2/mutable_s2shape_index.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
-
-#include <algorithm>
 #include <memory>
 #include <numeric>
 #include <thread>
@@ -39,11 +38,11 @@
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/types/span.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
 #include "s2/base/log_severity.h"
-#include "s2/base/types.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -113,14 +112,14 @@ class MutableS2ShapeIndexTest : public ::testing::Test {
   using BatchDescriptor = MutableS2ShapeIndex::BatchDescriptor;
 
   // Converts the given vector of batches to a human-readable form.
-  static string ToString(const vector<BatchDescriptor>& batches);
+  static string ToString(absl::Span<const BatchDescriptor> batches);
 
   // Verifies that removing and adding the given combination of shapes with
   // the given memory budget yields the expected vector of batches.
   void TestBatchGenerator(int num_edges_removed,
-                          const vector<int>& shape_edges_added,
+                          absl::Span<const int> shape_edges_added,
                           int64_t tmp_memory_budget, int shape_id_begin,
-                          const vector<BatchDescriptor>& expected_batches);
+                          absl::Span<const BatchDescriptor> expected_batches);
 };
 
 void MutableS2ShapeIndexTest::QuadraticValidate() {
@@ -237,7 +236,7 @@ void MutableS2ShapeIndexTest::TestEncodeDecode() {
 }
 
 /*static*/ string MutableS2ShapeIndexTest::ToString(
-    const vector<BatchDescriptor>& batches) {
+    absl::Span<const BatchDescriptor> batches) {
   string result;
   for (const auto& batch : batches) {
     if (!result.empty()) result += ", ";
@@ -250,9 +249,9 @@ void MutableS2ShapeIndexTest::TestEncodeDecode() {
 }
 
 void MutableS2ShapeIndexTest::TestBatchGenerator(
-    int num_edges_removed, const vector<int>& shape_edges_added,
+    int num_edges_removed, absl::Span<const int> shape_edges_added,
     int64_t tmp_memory_budget, int shape_id_begin,
-    const vector<BatchDescriptor>& expected_batches) {
+    absl::Span<const BatchDescriptor> expected_batches) {
   absl::FlagSaver fs;
   absl::SetFlag(&FLAGS_s2shape_index_tmp_memory_budget, tmp_memory_budget);
 

@@ -35,8 +35,6 @@
 #include "s2/s2point.h"
 #include "s2/s2region.h"
 
-class Decoder;
-class Encoder;
 class S2Cap;
 class S2Cell;
 
@@ -358,10 +356,10 @@ class S2LatLngRect final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* encoder) const;
 
   // Decodes an S2LatLngRect encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
   // Returns true if the edge AB intersects the given edge of constant
   // longitude.

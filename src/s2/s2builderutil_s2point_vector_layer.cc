@@ -63,7 +63,7 @@ void S2PointVectorLayer::Build(const Graph& g, S2Error* error) {
        edge_id++) {
     auto& edge = g.edge(edge_id);
     if (edge.first != edge.second) {
-      error->Init(S2Error::INVALID_ARGUMENT, "Found non-degenerate edges");
+      *error = S2Error::InvalidArgument("Found non-degenerate edges");
       continue;
     }
     points_->push_back(g.vertex(edge.first));

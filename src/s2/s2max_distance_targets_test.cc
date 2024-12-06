@@ -24,6 +24,7 @@
 #include "absl/container/btree_set.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
+#include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
@@ -323,7 +324,7 @@ TEST(CellTarget, VisitContainingShapes) {
 }
 
 // Negates S2 points to reflect them through the sphere.
-static vector<S2Point> Reflect(const vector<S2Point>& pts) {
+static vector<S2Point> Reflect(absl::Span<const S2Point> pts) {
   vector<S2Point> negative_pts;
   for (const auto& p : pts) {
     negative_pts.push_back(-p);

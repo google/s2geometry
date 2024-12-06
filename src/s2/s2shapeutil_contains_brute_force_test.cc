@@ -36,13 +36,15 @@ namespace s2shapeutil {
 
 TEST(ContainsBruteForce, NoInterior) {
   // Defines a polyline that almost entirely encloses the point 0:0.
-  auto polyline = MakeLaxPolylineOrDie("0:0, 0:1, 1:-1, -1:-1, -1e9:1");
+  // Note, however, that -1e-9 was originally -1e9, and this seems to pass
+  // with almost any value, so it's not clear what's being tested here.
+  auto polyline = MakeLaxPolylineOrDie("0:0, 0:1, 1:-1, -1:-1, -1e-9:1");
   EXPECT_FALSE(ContainsBruteForce(*polyline, MakePointOrDie("0:0")));
 }
 
 TEST(ContainsBruteForce, ContainsReferencePoint) {
   // Checks that ContainsBruteForce agrees with GetReferencePoint.
-  auto polygon = MakeLaxPolygonOrDie("0:0, 0:1, 1:-1, -1:-1, -1e9:1");
+  auto polygon = MakeLaxPolygonOrDie("0:0, 0:1, 1:-1, -1:-1, -1e-9:1");
   auto ref = polygon->GetReferencePoint();
   EXPECT_EQ(ref.contained, ContainsBruteForce(*polygon, ref.point));
 }

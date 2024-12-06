@@ -79,6 +79,19 @@ double S1ChordAngle::GetS1AngleConstructorMaxError() const {
 }
 
 S1ChordAngle operator+(S1ChordAngle a, S1ChordAngle b) {
+  // Error Analysis:
+  //
+  //   u is the unit round-off, equal to ε/2 = 2^-53
+  //   x and y below are both computed with (1+u)² error.  So we have
+  //     length2 = x + y + 2*sqrt(x * y)
+  //     length2 = ((x + y)(1+u)³ + 2*sqrt((x * y)((1+u)³))(1+u))(1+u)
+  //
+  //   Taking (1+u)^1.5 out of the square root and rounding (1+u)^2.5 to (1+u)³:
+  //     length2 = (x + y + 2*sqrt(x * y))(1+u)⁴
+  //
+  //   Bounding (1+u)⁴ as 4*1.01u = 4.04*ε/2 = 2.02ε, total relative error is:
+  //     length2()*2.02ε.
+
   // Note that this method is much more efficient than converting the chord
   // angles to S1Angles and adding those.  It requires only one square root
   // plus a few additions and multiplications.

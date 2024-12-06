@@ -18,7 +18,6 @@
 #include "s2/s2min_distance_targets.h"
 
 #include <cmath>
-
 #include <memory>
 #include <utility>
 

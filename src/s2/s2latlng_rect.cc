@@ -17,9 +17,8 @@
 
 #include "s2/s2latlng_rect.h"
 
-#include <cfloat>
-
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <ostream>
 
@@ -139,13 +138,18 @@ S2Point S2LatLngRect::GetCentroid() const {
   // which fortunately appears in the denominator of "d".
 
   if (is_empty()) return S2Point();
-  double z1 = sin(lat_lo()), z2 = sin(lat_hi());
-  double r1 = cos(lat_lo()), r2 = cos(lat_hi());
-  double alpha = 0.5 * lng_.GetLength();
-  double r = sin(alpha) * (r2 * z2 - r1 * z1 + lat_.GetLength());
-  double lng = lng_.GetCenter();
-  double z = alpha * (z2 + z1) * (z2 - z1);  // scaled by the area
-  return S2Point(r * cos(lng), r * sin(lng), z);
+  const S1Angle::SinCosPair lo = lat_lo().SinCos();
+  const double z1 = lo.sin;
+  const double r1 = lo.cos;
+  const S1Angle::SinCosPair hi = lat_hi().SinCos();
+  const double z2 = hi.sin;
+  const double r2 = hi.cos;
+  const double alpha = 0.5 * lng_.GetLength();
+  const double r = sin(alpha) * (r2 * z2 - r1 * z1 + lat_.GetLength());
+  const S1Angle lng = S1Angle::Radians(lng_.GetCenter());
+  const double z = alpha * (z2 + z1) * (z2 - z1);  // scaled by the area
+  const S1Angle::SinCosPair center = lng.SinCos();
+  return S2Point(r * center.cos, r * center.sin, z);
 }
 
 bool S2LatLngRect::Contains(const S2LatLng& ll) const {
@@ -604,7 +608,7 @@ S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
 // range 'b_lat', with their longitudinal difference given by 'lng_diff'.
 S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
     double lng_diff, const R1Interval& a, const R1Interval& b) {
-  // By symmetry, we can assume a's longtitude is 0 and b's longtitude is
+  // By symmetry, we can assume a's longitude is 0 and b's longitude is
   // lng_diff. Call b's two endpoints b_lo and b_hi. Let H be the hemisphere
   // containing a and delimited by the longitude line of b. The Voronoi diagram
   // of b on H has three edges (portions of great circles) all orthogonal to b
@@ -638,7 +642,7 @@ S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
     return S1Angle::Radians(a.GetDirectedHausdorffDistance(b));
   }
 
-  // Assumed longtitude of b.
+  // Assumed longitude of b.
   double b_lng = lng_diff;
   // Two endpoints of b.
   S2Point b_lo = S2LatLng::FromRadians(b.lo(), b_lng).ToPoint();

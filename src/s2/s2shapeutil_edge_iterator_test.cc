@@ -23,6 +23,7 @@
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/s2text_format.h"
 
 namespace s2shapeutil {
@@ -49,9 +50,20 @@ void Verify(const S2ShapeIndex* index) {
   vector<S2Shape::Edge> expected = GetEdges(index);
 
   int i = 0;
-  for (EdgeIterator it(index); !it.Done(); it.Next(), ++i) {
+  int shape_id = -1;
+  int edge_id = -1;
+  for (EdgeIterator it(index); !it.Done(); it.Next(), ++edge_id, ++i) {
+    // The iterator visits the edges of each shape in order.  When we see a new
+    // shape id, reset the edge_id count.
+    if (it.shape_id() != shape_id) {
+      shape_id = it.shape_id();
+      edge_id = 0;
+    }
+
     ASSERT_TRUE(i < expected.size());
     EXPECT_EQ(expected[i], it.edge());
+    EXPECT_EQ(it.edge_id(), edge_id);
+    EXPECT_EQ(it.shape_edge_id(), ShapeEdgeId(shape_id, edge_id));
   }
 }
 

@@ -34,8 +34,6 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2region.h"
 
-class Decoder;
-class Encoder;
 class S2Cell;
 class S2CellId;
 class S2LatLngRect;
@@ -198,10 +196,10 @@ class S2Cap final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* encoder) const;
 
   // Decodes an S2Cap encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
   ///////////////////////////////////////////////////////////////////////
   // The following static methods are convenience functions for assertions

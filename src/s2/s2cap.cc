@@ -104,9 +104,10 @@ void S2Cap::AddCap(const S2Cap& other) {
     *this = other;
   } else if (!other.is_empty()) {
     // We round up the distance to ensure that the cap is actually contained.
-    // TODO(ericv): Do some error analysis in order to guarantee this.
     S1ChordAngle dist = S1ChordAngle(center_, other.center_) + other.radius_;
-    radius_ = max(radius_, dist.PlusError(DBL_EPSILON * dist.length2()));
+    dist = dist.PlusError(  //
+        (2 * DBL_EPSILON + S1ChordAngle::kRelativeSumError) * dist.length2());
+    radius_ = max(radius_, dist);
   }
 }
 

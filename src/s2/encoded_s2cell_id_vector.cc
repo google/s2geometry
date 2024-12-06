@@ -24,7 +24,6 @@
 #include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
 #include "absl/types/span.h"
-#include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_uint_vector.h"
 #include "s2/s2cell_id.h"
@@ -107,7 +106,7 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
     // which case the shift is odd and the preceding bit is implicitly on).
     // There is no point in allowing shifts > 56 since deltas are encoded in
     // at least 1 byte each.
-    e_shift = min(56, Bits::FindLSBSetNonZero64(v_or) & ~1);
+    e_shift = min(56, absl::countr_zero(v_or) & ~1);
     if (v_and & (1ULL << e_shift)) ++e_shift;  // All S2CellIds same level.
 
     // "base" consists of the "base_len" most significant bytes of the minimum

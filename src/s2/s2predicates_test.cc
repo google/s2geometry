@@ -38,6 +38,7 @@
 #include "absl/random/random.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/s1angle.h"
@@ -176,7 +177,7 @@ class SignTest : public testing::Test {
   // Given a set of points with no duplicates, first remove "origin" from
   // "points" (if it exists) and then sort the remaining points in CCW order
   // around "origin" putting the result in "sorted".
-  static void SortCCW(const vector<S2Point>& points, const S2Point& origin,
+  static void SortCCW(absl::Span<const S2Point> points, const S2Point& origin,
                       vector<S2Point>* sorted) {
     // Make a copy of the points with "origin" removed.
     sorted->clear();
@@ -192,7 +193,7 @@ class SignTest : public testing::Test {
   // index "start" of a point A, count the number of CCW triangles OAB over
   // all sorted points B not equal to A.  Also check that the results of the
   // CCW tests are consistent with the hypothesis that the points are sorted.
-  static int CountCCW(const vector<S2Point>& sorted, const S2Point& origin,
+  static int CountCCW(absl::Span<const S2Point> sorted, const S2Point& origin,
                       int start) {
     int num_ccw = 0;
     int last_sign = 1;
@@ -402,7 +403,7 @@ class StableSignTest : public testing::Test {
     absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
         "STABLE_SIGN_TEST_FAILURE_RATE",
         absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
-    constexpr int kIters = 1000;
+    constexpr int kIters = 10000;
     int failure_count = 0;
     double m = tan(S2Testing::KmToAngle(km).radians());
     for (int iter = 0; iter < kIters; ++iter) {

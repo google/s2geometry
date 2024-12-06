@@ -383,9 +383,10 @@ static void InitLoopError(S2Error::Code code,
                           const absl::FormatSpec<int, int>& format,
                           ChainPosition ap, ChainPosition bp,
                           bool is_polygon, S2Error* error) {
-  error->Init(code, format, ap.offset, bp.offset);
+  *error = S2Error(code, absl::StrFormat(format, ap.offset, bp.offset));
   if (is_polygon) {
-    error->Init(code, "Loop %d: %s", ap.chain_id, error->text());
+    *error = S2Error(
+        code, absl::StrFormat("Loop %d: %s", ap.chain_id, error->message()));
   }
 }
 
@@ -399,9 +400,10 @@ static bool FindCrossingError(const S2Shape& shape,
   S2Shape::ChainPosition bp = shape.chain_position(b.id().edge_id);
   if (is_interior) {
     if (ap.chain_id != bp.chain_id) {
-      error->Init(S2Error::POLYGON_LOOPS_CROSS,
-                  "Loop %d edge %d crosses loop %d edge %d",
-                  ap.chain_id, ap.offset, bp.chain_id, bp.offset);
+      *error = S2Error(
+          S2Error::POLYGON_LOOPS_CROSS,
+          absl::StrFormat("Loop %d edge %d crosses loop %d edge %d",
+                          ap.chain_id, ap.offset, bp.chain_id, bp.offset));
     } else {
       InitLoopError(S2Error::LOOP_SELF_INTERSECTION,
                     "Edge %d crosses edge %d", ap, bp, is_polygon, error);
@@ -427,9 +429,10 @@ static bool FindCrossingError(const S2Shape& shape,
   S2Point b2 = shape.chain_edge(bp.chain_id, b_next).v1;
   if (a.v0() == b.v0() || a.v0() == b2) {
     // The second edge index is sometimes off by one, hence "near".
-    error->Init(S2Error::POLYGON_LOOPS_SHARE_EDGE,
-                "Loop %d edge %d has duplicate near loop %d edge %d",
-                ap.chain_id, ap.offset, bp.chain_id, bp.offset);
+    *error = S2Error(
+        S2Error::POLYGON_LOOPS_SHARE_EDGE,
+        absl::StrFormat("Loop %d edge %d has duplicate near loop %d edge %d",
+                        ap.chain_id, ap.offset, bp.chain_id, bp.offset));
     return true;
   }
   // Since S2ShapeIndex loops are oriented such that the polygon interior is
@@ -443,9 +446,10 @@ static bool FindCrossingError(const S2Shape& shape,
       S2::WEDGE_PROPERLY_OVERLAPS &&
       S2::GetWedgeRelation(a.v0(), a.v1(), a2, b2, b.v0()) ==
       S2::WEDGE_PROPERLY_OVERLAPS) {
-    error->Init(S2Error::POLYGON_LOOPS_CROSS,
-                "Loop %d edge %d crosses loop %d edge %d",
-                ap.chain_id, ap.offset, bp.chain_id, bp.offset);
+    *error = S2Error(
+        S2Error::POLYGON_LOOPS_CROSS,
+        absl::StrFormat("Loop %d edge %d crosses loop %d edge %d", ap.chain_id,
+                        ap.offset, bp.chain_id, bp.offset));
     return true;
   }
   return false;

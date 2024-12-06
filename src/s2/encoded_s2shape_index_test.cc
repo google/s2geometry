@@ -285,7 +285,7 @@ TEST(EncodedS2ShapeIndex, SnappedFractalPolylines) {
     builder.AddPolyline(polyline);
   }
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error.message();
   TestEncodedS2ShapeIndex<S2LaxPolylineShape, EncodedS2LaxPolylineShape>(
       index, 8698);
 }

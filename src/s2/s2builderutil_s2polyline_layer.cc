@@ -86,8 +86,8 @@ void S2PolylineLayer::Build(const Graph& g, S2Error* error) {
   vector<Graph::EdgePolyline> edge_polylines =
       g.GetPolylines(PolylineType::WALK);
   if (edge_polylines.size() != 1) {
-    error->Init(S2Error::BUILDER_EDGES_DO_NOT_FORM_POLYLINE,
-                "Input edges cannot be assembled into polyline");
+    *error = S2Error(S2Error::BUILDER_EDGES_DO_NOT_FORM_POLYLINE,
+                     "Input edges cannot be assembled into polyline");
     return;
   }
   const Graph::EdgePolyline& edge_polyline = edge_polylines[0];

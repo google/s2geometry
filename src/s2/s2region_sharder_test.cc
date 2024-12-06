@@ -19,6 +19,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/types/span.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_index.h"
 #include "s2/s2cell_union.h"
@@ -29,7 +30,7 @@ using std::vector;
 
 class S2RegionSharderTest : public ::testing::Test {
  public:
-  S2CellIndex IndexFromCoverings(const vector<S2CellUnion>& coverings) {
+  S2CellIndex IndexFromCoverings(absl::Span<const S2CellUnion> coverings) {
     S2CellIndex index;
     for (int i = 0; i < coverings.size(); ++i) {
       index.Add(coverings[i], i);
