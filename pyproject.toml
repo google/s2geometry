@@ -2,25 +2,23 @@
 name = "s2geometry"
 description = "Computational geometry and spatial indexing on the sphere"
 authors = [
-    { name = "Dan Larkin-York", email = "dan@arangodb.com" },
-    { name = "Eric Veach", email = "ericv@google.com" },
-    { name = "Jesse Rosenstock", email = "jmr@google.com" },
-    { name = "Julien Basch", email = "julienbasch@google.com" },
-    { name = "Mike Playle", email = "mike@mythik.co.uk" },
-    { name = "Phil Elson", email = "pelson.pub@gmail.com" },
-    { name = "Robert Coup", email = "robert.coup@koordinates.com" },
-    { name = "Tiago Brito", email = "tiago.brito@90poe.io" },
-    { name = "Zachary Burnett", email = "zachary.r.burnett@gmail.com" },
+  { name = "Dan Larkin-York", email = "dan@arangodb.com" },
+  { name = "Eric Veach", email = "ericv@google.com" },
+  { name = "Jesse Rosenstock", email = "jmr@google.com" },
+  { name = "Julien Basch", email = "julienbasch@google.com" },
+  { name = "Mike Playle", email = "mike@mythik.co.uk" },
+  { name = "Phil Elson", email = "pelson.pub@gmail.com" },
+  { name = "Robert Coup", email = "robert.coup@koordinates.com" },
+  { name = "Tiago Brito", email = "tiago.brito@90poe.io" },
+  { name = "Zachary Burnett", email = "zachary.r.burnett@gmail.com" },
 ]
 requires-python = ">=3.7"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: POSIX",
-    "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Operating System :: POSIX",
+  "License :: OSI Approved :: Apache Software License",
 ]
-dynamic = [
-    "version",
-]
+dynamic = ["version"]
 
 [project.license]
 file = "LICENSE"
@@ -30,16 +28,15 @@ content-type = "text/plain"
 Source = "https://github.com/google/s2geometry"
 
 [project.optional-dependencies]
-test = [
-    "pytest",
-]
+test = ["pytest"]
 
 [build-system]
 requires = [
-    "wheel",
-    "setuptools",
-    "setuptools_scm[toml]",
-    "cmake_build_extension",
+  "wheel",
+  "setuptools",
+  "setuptools_scm[toml]",
+  "cmake_build_extension",
+  "swig",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -48,11 +45,53 @@ zip-safe = false
 include-package-data = false
 
 [tool.setuptools.packages.find]
-where = [
-    "src",
-]
+where = ["src"]
 namespaces = false
 
 [tool.setuptools.package-dir]
 "" = "src"
 
+[tool.cibuildwheel]
+# manylinux-x86_64-image = "quay.io/pypa/manylinux2014_x86_64"
+build-frontend = "build[uv]"
+build = "cp3*-manylinux_x86_64 cp3*-macosx_x86_64 cp3*-macosx_arm64"
+# test-requires = "pytest"
+# test-command = "pytest {project}/src/python/"
+
+[tool.cibuildwheel.environment]
+MACOSX_DEPLOYMENT_TARGET = 14.0
+
+[tool.cibuildwheel.linux]
+# repair-wheel-command = ""
+# the EPEL9 package `abseil-cpp` is out of date, so we have to build `abseil-cpp` from source
+before-all = """
+yum install -y gflags-devel glog-devel gtest-devel openssl-devel 
+git clone https://github.com/abseil/abseil-cpp.git && cd ./abseil-cpp
+git checkout 20240116.2
+mkdir ./build && cd ./build
+cmake -DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off .. 
+cmake --build . --parallel --target=install
+"""
+
+[tool.cibuildwheel.macos]
+before-all = """
+git clone https://github.com/gflags/gflags.git && cd ./gflags
+mkdir ./build && cd ./build
+cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF
+cmake --build . --parallel --target install
+cd ../../
+git clone https://github.com/google/glog.git && cd ./glog
+cmake -S . -B ./build && cd ./build
+cmake --build . --parallel --target install
+cd ../../
+git clone https://github.com/openssl/openssl.git && cd ./openssl
+mkdir ./build && cd ./build
+../Configure install
+cmake --build . --parallel --target install
+cd ../../
+git clone https://github.com/abseil/abseil-cpp.git && cd ./abseil-cpp 
+git checkout 20240116.2
+mkdir ./build && cd ./build
+cmake -DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off .. 
+cmake --build . --parallel --target=install
+"""
