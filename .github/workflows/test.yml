@@ -1,0 +1,53 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+env:
+  GOOGLETEST_VERSION: "1.15.2"
+
+jobs:
+  ctest:
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          # macos-13 is an intel runner, macos-14 is apple silicon
+          - macos-13
+          - macos-latest
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
+    env:
+      CTEST_OUTPUT_ON_FAILURE: ON
+    steps:
+      - uses: zacharyburnett/setup-abseil-cpp@de39f445295c887839e30c864ffbbb1c0231bc83 # 1.0.5
+        with:
+          cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+          abseil-version: "20240722.0"
+      - name: retrieve googletest v${{ env.GOOGLETEST_VERSION }}
+        run: |
+          wget https://github.com/google/googletest/releases/download/v${{ env.GOOGLETEST_VERSION }}/googletest-${{ env.GOOGLETEST_VERSION }}.tar.gz
+          tar -xzvf googletest-${{ env.GOOGLETEST_VERSION }}.tar.gz
+          echo GOOGLETEST_ROOT=${{ runner.temp }}/googletest-${{ env.GOOGLETEST_VERSION }} >> $GITHUB_ENV
+        working-directory: ${{ runner.temp }}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: mkdir build
+      - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DGOOGLETEST_ROOT=${{ env.GOOGLETEST_ROOT }} -DGOOGLETEST_VERSION=${{ env.GOOGLETEST_VERSION }} ..
+        working-directory: build/
+      - run: cmake --build . ${{ runner.os == 'macOS' && '--parallel' || '' }}
+        # building tests with `--parallel` is disabled on Linux because GitHub seems to automatically cancel the job due to resource limits(?) 
+        working-directory: build/
+      - if: always()
+        run: cmake --build . --parallel --target=test
+        working-directory: build/
