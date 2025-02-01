@@ -1,0 +1,41 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  release:
+    types:
+      - released
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  cmake:
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          # macos-13 is an intel runner, macos-14 is apple silicon
+          - macos-13
+          - macos-latest
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
+    steps:
+      - uses: zacharyburnett/setup-abseil-cpp@de39f445295c887839e30c864ffbbb1c0231bc83 # 1.0.5
+        with:
+          cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+          abseil-version: "20240722.0"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: mkdir build
+      - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DBUILD_TESTS=OFF ..
+        working-directory: build/
+      - run: sudo cmake --build . --parallel --target=install
+        working-directory: build/
