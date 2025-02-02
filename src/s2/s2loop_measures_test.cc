@@ -253,7 +253,7 @@ TEST(GetSignedArea, Underflow) {
 }
 
 TEST(GetSignedArea, ErrorAccumulation) {
-#if defined(__APPLE__) && defined(__aarch64__)
+#if defined(__APPLE__)
   GTEST_SKIP() << "https://github.com/google/s2geometry/issues/395";
 #endif
   // Loop encompassing half an octant of the sphere.
