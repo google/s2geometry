@@ -7,9 +7,15 @@ module(
     compatibility_level = 1,
 )
 
-cc_configure = use_extension("@bazel_tools//tools/cpp:cc_configure.bzl", "cc_configure_extension")
+cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
 use_repo(cc_configure, "local_config_cc")
 
 bazel_dep(name = "boringssl", version = "0.0.0-20240126-22d349c")
-bazel_dep(name = "abseil-cpp", version = "20240722.0")
-bazel_dep(name = "googletest", version = "1.15.2")
+bazel_dep(name = "abseil-cpp", version = "20250127.0")
+bazel_dep(name = "googletest", version = "1.16.0")
+bazel_dep(name = "rules_cc", version = "0.1.1")
+
+# Forces usage of the patched re2 version that marks cc_configure_extension as a
+# dev dep as a workaround for https://github.com/bazelbuild/bazel/issues/24426.
+# TODO: remove once fixed upstream in re2, googletest, and abseil-cpp.
+bazel_dep(name = "re2", version = "2024-07-02.bcr.1")
