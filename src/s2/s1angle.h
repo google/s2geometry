@@ -332,7 +332,10 @@ inline S1Angle::SinCosPair S1Angle::SinCos() const {
 // TODO(b/370513151): Remove once Clang can optimize this.
 // NB: __sincos() provided by __APPLE__ is not bit-identical to sin(), cos()
 // under `--config=darwin_arm64`.
-#if defined(__GLIBC__) || defined(__ANDROID__)
+// `sincos` gives different results on Ubuntu 22.  Disable for glibc until
+// this can be narrowed down further.
+// https://github.com/google/s2geometry/issues/413
+#if defined(__ANDROID__)
   double sin_angle, cos_angle;
   sincos(radians(), &sin_angle, &cos_angle);
   return {sin_angle, cos_angle};
