@@ -21,10 +21,13 @@ jobs:
     strategy:
       matrix:
         runs-on:
+          - ubuntu-22.04
           - ubuntu-latest
-          # macos-13 is an intel runner, macos-14 is apple silicon
-          - macos-13
-          - macos-latest
+          - macos-13-large
+          # Can't add macos-13-xlarge due to
+          # https://github.com/zacharyburnett/setup-abseil-cpp/issues/4
+          - macos-latest-large
+          - macos-latest-xlarge
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
