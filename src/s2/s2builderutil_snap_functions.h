@@ -217,7 +217,7 @@ class IntLatLngSnapFunction : public S2Builder::SnapFunction {
   static int ExponentForMaxSnapRadius(S1Angle snap_radius);
 
   // For IntLatLng snapping, the minimum separation between vertices depends on
-  // exponent() and snap_radius().  It can vary between snap_radius()
+  // exponent() and snap_radius().  It can vary between 0.471 * snap_radius()
   // and snap_radius().
   S1Angle min_vertex_separation() const override;
 
