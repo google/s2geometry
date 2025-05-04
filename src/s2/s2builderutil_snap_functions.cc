@@ -143,7 +143,7 @@ S1Angle S2CellIdSnapFunction::min_vertex_separation() const {
   //    is slightly smaller at cell level 2 (0.54849 vs. 0.55470).  We reduce
   //    that value a bit more below to be conservative.
   //
-  // 3. Best asymptotic bound: This bound bound is derived by observing we
+  // 3. Best asymptotic bound: This bound is derived by observing we
   //    only select a new site when it is at least snap_radius() away from all
   //    existing sites, and the site can move by at most 0.5 * kMaxDiag(level)
   //    when snapped.
@@ -303,7 +303,7 @@ S1Angle IntLatLngSnapFunction::min_vertex_separation() const {
   //    is slightly smaller (0.471337 vs. 0.471404).  We reduce that value a
   //    bit more below to be conservative.
   //
-  // 2. Best asymptotic bound: This bound bound is derived by observing we
+  // 2. Best asymptotic bound: This bound is derived by observing we
   //    only select a new site when it is at least snap_radius() away from all
   //    existing sites, and snapping a vertex can move it by up to
   //    ((1 / sqrt(2)) * to_degrees_) degrees.
