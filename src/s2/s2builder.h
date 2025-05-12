@@ -281,10 +281,10 @@ class S2Builder {
     //
     // Note that if your input data includes vertices that were created using
     // S2::GetIntersection(), then you should use a "snap_radius" of
-    // at least S2::kIntersectionSnapRadius, e.g. by calling
+    // at least S2::kIntersectionMergeRadius, e.g. by calling
     //
     //  options.set_snap_function(s2builderutil::IdentitySnapFunction(
-    //      S2::kIntersectionSnapRadius));
+    //      S2::kIntersectionMergeRadius));
     //
     // DEFAULT: s2builderutil::IdentitySnapFunction(S1Angle::Zero())
     // [This does no snapping and preserves all input vertices exactly.]
