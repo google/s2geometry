@@ -32,11 +32,19 @@
 // C++14 sized deallocation
 namespace base {
 inline void sized_delete(void *ptr, size_t size) {
+#if defined(__cpp_sized_deallocation)
   ::operator delete(ptr, size);
+#else
+  ::operator delete(ptr);
+#endif
 }
 
 inline void sized_delete_array(void *ptr, size_t size) {
+#if defined(__cpp_sized_deallocation)
   ::operator delete[](ptr, size);
+#else
+  ::operator delete[](ptr);
+#endif
 }
 }  // namespace base
 
