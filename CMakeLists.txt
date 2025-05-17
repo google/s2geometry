@@ -22,7 +22,7 @@ endif()
 # this than assuming what absl used.  We default to c++17, but support
 # c++14 (like abseil).
 # Using CACHE allows the user to override the default.
-set(CMAKE_CXX_STANDARD 20 CACHE STRING "The C++ standard to build with")
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to build with")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # No compiler-specific extensions, i.e. -std=c++17, not -std=gnu++17.
 set(CMAKE_CXX_EXTENSIONS OFF)
