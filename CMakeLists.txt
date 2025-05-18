@@ -42,6 +42,12 @@ option(S2_USE_SYSTEM_INCLUDES
 add_feature_info(S2_USE_SYSTEM_INCLUDES S2_USE_SYSTEM_INCLUDES
     "Silence warnings in s2 headers by marking them as SYSTEM includes.")
 
+if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  option(S2_ENABLE_INSTALL "Enable install rule" OFF)
+else()
+  option(S2_ENABLE_INSTALL "Enable install rule" ON)
+endif()
+
 feature_summary(WHAT ALL)
 
 # Don't output anything for LOG(INFO).
