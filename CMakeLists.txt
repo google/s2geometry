@@ -42,6 +42,8 @@ option(S2_USE_SYSTEM_INCLUDES
 add_feature_info(S2_USE_SYSTEM_INCLUDES S2_USE_SYSTEM_INCLUDES
     "Silence warnings in s2 headers by marking them as SYSTEM includes.")
 
+# when s2geometry is included as subproject (i.e. using add_subdirectory(s2geometry))
+# in the source tree of a project that uses it, install rules are disabled.
 if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
   option(S2_ENABLE_INSTALL "Enable install rule" OFF)
 else()
@@ -277,7 +279,7 @@ set_target_properties(s2 PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
     VERSION ${PROJECT_VERSION})
 
-IF(S2_ENABLE_INSTALL)
+if(S2_ENABLE_INSTALL)
   # We don't need to install all headers, only those
   # transitively included by s2 headers we are exporting.
   install(FILES src/s2/_fp_contract_off.h
@@ -482,7 +484,7 @@ IF(S2_ENABLE_INSTALL)
           NAMESPACE s2::
           FILE s2Targets.cmake
           DESTINATION share/s2/)
-ENDIF() # S2_ENABLE_INSTALL
+endif() # S2_ENABLE_INSTALL
 
 if (BUILD_TESTS)
   if (NOT GOOGLETEST_ROOT)
