@@ -92,6 +92,12 @@ else()
     # match [-Wattributes]
     add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
+    # `base/port.h` uses sized deallocation, which should be enabled by
+    # default for C++14 and later.  There appears to be a bug with clang
+    # < 19 causing this not to be enabled.
+    # https://github.com/google/s2geometry/issues/411#issuecomment-2726949607
+    # This can be removed when clang19 is the minimum supported version.
+    add_compile_options(-fsized-deallocation)
 endif()
 
 # If OpenSSL is installed in a non-standard location, configure with
