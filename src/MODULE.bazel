@@ -10,9 +10,9 @@ module(
 cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
 use_repo(cc_configure, "local_config_cc")
 
-bazel_dep(name = "boringssl", version = "0.0.0-20240126-22d349c")
-bazel_dep(name = "abseil-cpp", version = "20250127.0")
-bazel_dep(name = "googletest", version = "1.16.0")
+bazel_dep(name = "boringssl", version = "0.20250514.0")
+bazel_dep(name = "abseil-cpp", version = "20250127.1")
+bazel_dep(name = "googletest", version = "1.17.0")
 bazel_dep(name = "rules_cc", version = "0.1.1")
 
 # Forces usage of the patched re2 version that marks cc_configure_extension as a
