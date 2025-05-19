@@ -40,5 +40,5 @@ jobs:
       - run: mkdir build
       - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DBUILD_TESTS=OFF ..
         working-directory: build/
-      - run: sudo cmake --build . --parallel --target=install
+      - run: sudo cmake --build . --parallel 45 --target=install
         working-directory: build/

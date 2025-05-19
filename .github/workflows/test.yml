@@ -49,9 +49,8 @@ jobs:
       - run: mkdir build
       - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DGOOGLETEST_ROOT=${{ env.GOOGLETEST_ROOT }} -DGOOGLETEST_VERSION=${{ env.GOOGLETEST_VERSION }} ..
         working-directory: build/
-      - run: cmake --build . ${{ runner.os == 'macOS' && '--parallel' || '' }}
-        # building tests with `--parallel` is disabled on Linux because GitHub seems to automatically cancel the job due to resource limits(?) 
+      - run: cmake --build . --parallel 45
         working-directory: build/
       - if: always()
-        run: cmake --build . --parallel --target=test
+        run: cmake --build . --parallel 45 --target=test
         working-directory: build/
