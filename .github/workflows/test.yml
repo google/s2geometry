@@ -32,8 +32,6 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
-    env:
-      CTEST_OUTPUT_ON_FAILURE: ON
     steps:
       - uses: zacharyburnett/setup-abseil-cpp@dfe299c5b1cad83ac96bb41461fea4296bf1a47c # Not a release, but has #423 fix.
         with:
@@ -53,4 +51,7 @@ jobs:
         working-directory: build/
       - if: always()
         run: cmake --build . --parallel 45 --target=test
+        env:
+          CTEST_OUTPUT_ON_FAILURE: ON
+          CTEST_PARALLEL_LEVEL: 45
         working-directory: build/
