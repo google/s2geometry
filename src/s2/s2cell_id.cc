@@ -204,7 +204,10 @@ int S2CellId::GetCommonAncestorLevel(S2CellId other) const {
   // Compute the position of the most significant bit, and then map the bit
   // position as follows:
   // {0} -> 30, {1,2} -> 29, {3,4} -> 28, ... , {59,60} -> 0, {61,62,63} -> -1.
-  return max(61 - absl::bit_width(bits), -1) >> 1;
+  // Work around https://github.com/abseil/abseil-cpp/issues/1890 with
+  // `static_cast`.  This can be removed when we require an abseil-cpp LTS
+  // with the fix, perhaps 2025-07.
+  return max(61 - static_cast<int>(absl::bit_width(bits)), -1) >> 1;
 }
 
 // Print the num_digits low order hex digits.
