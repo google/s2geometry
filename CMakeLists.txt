@@ -76,6 +76,8 @@ if (WITH_PYTHON)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
     find_package(Python3 COMPONENTS Interpreter Development.Module)
+else ()
+    set(Python3_FOUND TRUE)
 endif()
 
 if (MSVC)
