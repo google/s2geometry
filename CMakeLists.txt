@@ -655,7 +655,7 @@ if (BUILD_EXAMPLES AND TARGET s2testing)
   add_subdirectory("doc/examples" examples)
 endif()
 
-if (${SWIG_FOUND} AND ${Python3_FOUND})
+if (SWIG_FOUND AND Python3_FOUND)
   add_subdirectory("src/python" python)
 endif()
 
