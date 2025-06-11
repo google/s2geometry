@@ -38,9 +38,7 @@ class ABSL_LOCKABLE SpinLock {
     locked_.store(false, std::memory_order_release);
   }
 
-  inline bool IsHeld() const ABSL_ASSERT_EXCLUSIVE_LOCK() {
-    return locked_.load(std::memory_order_relaxed);
-  }
+  inline bool IsHeld() const { return locked_.load(std::memory_order_relaxed); }
 
  private:
   std::atomic_bool locked_{false};
