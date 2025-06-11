@@ -16,7 +16,6 @@
 #ifndef S2_BASE_SPINLOCK_H_
 #define S2_BASE_SPINLOCK_H_
 
-#include <absl/base/internal/raw_logging.h>
 #include <absl/base/thread_annotations.h>
 
 #include <atomic>
@@ -40,12 +39,6 @@ class ABSL_LOCKABLE SpinLock {
   }
 
   inline bool IsHeld() const { return locked_.load(std::memory_order_relaxed); }
-
-  inline void AssertHeld() const ABSL_ASSERT_EXCLUSIVE_LOCK() {
-    if (!IsHeld()) {
-      ABSL_RAW_LOG(FATAL, "thread should hold the lock on SpinLock");
-    }
-  }
 
  private:
   std::atomic_bool locked_{false};
