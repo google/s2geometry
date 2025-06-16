@@ -50,8 +50,6 @@
 #include "s2/s2shape_index.h"
 #include "s2/util/coding/coder.h"
 
-class Decoder;
-class Encoder;
 class S1Angle;
 class S2Cap;
 class S2Cell;
@@ -663,7 +661,7 @@ class S2Polygon final : public S2Region {
   bool Contains(const S2Cell& cell) const override;
   bool MayIntersect(const S2Cell& cell) const override;
 
-  // The point 'p' does not need to be normalized.
+  // The point 'p' must be normalized.
   bool Contains(const S2Point& p) const override;
 
   // Appends a serialized representation of the S2Polygon to "encoder".
@@ -693,7 +691,7 @@ class S2Polygon final : public S2Region {
   void EncodeUncompressed(Encoder* encoder) const;
 
   // Decodes a polygon encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
   // Wrapper class for indexing a polygon (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
@@ -820,9 +818,6 @@ class S2Polygon final : public S2Region {
   // Deletes the contents of the loops_ vector and resets the polygon state.
   void ClearLoops();
 
-  // Return true if there is an error in the loop nesting hierarchy.
-  bool FindLoopNestingError(S2Error* error) const;
-
   // A map from each loop to its immediate children with respect to nesting.
   // This map is built during initialization of multi-loop polygons to
   // determine which are shells and which are holes, and then discarded.
@@ -864,7 +859,7 @@ class S2Polygon final : public S2Region {
 
   // Decode a polygon encoded with EncodeUncompressed().  Used by the Decode
   // method above.
-  bool DecodeUncompressed(Decoder* const decoder);
+  bool DecodeUncompressed(Decoder* decoder);
 
   // Encode the polygon's vertices using about 4 bytes / vertex plus 24 bytes /
   // unsnapped vertex. All the loop vertices must be converted first to the

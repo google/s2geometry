@@ -30,8 +30,6 @@
 #include "s2/s2region.h"
 #include "s2/util/coding/coder.h"
 
-class Decoder;
-class Encoder;
 class S2Cap;
 class S2Cell;
 class S2LatLngRect;
@@ -65,11 +63,11 @@ class S2PointRegion final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* encoder) const;
 
   // Decodes an S2Point encoded with Encode().  Returns true on success.
   // (Returns false if the encoded point is not unit length.)
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
  private:
   S2Point point_;

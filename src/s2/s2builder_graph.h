@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
@@ -341,7 +342,7 @@ class S2Builder::Graph {
   // Returns a vector of EdgeIds sorted by minimum input edge id.  This is an
   // approximation of the input edge ordering.
   std::vector<EdgeId> GetInputEdgeOrder(
-      const std::vector<InputEdgeId>& min_input_edge_ids) const;
+      absl::Span<const InputEdgeId> min_input_edge_ids) const;
 
   // Convenience class to return the set of labels associated with a given
   // graph edge.  Note that due to snapping, one graph edge may correspond to
@@ -437,24 +438,22 @@ class S2Builder::Graph {
   // is not possible to make a left turn will have its entry set to -1.
   //
   // "in_edge_ids" should be equal to GetInEdgeIds() or GetSiblingMap().
-  bool GetLeftTurnMap(const std::vector<EdgeId>& in_edge_ids,
-                      std::vector<EdgeId>* left_turn_map,
-                      S2Error* error) const;
+  bool GetLeftTurnMap(absl::Span<const EdgeId> in_edge_ids,
+                      std::vector<EdgeId>* left_turn_map, S2Error* error) const;
 
   // Rotates the edges of "loop" if necessary so that the edge(s) with the
   // largest input edge ids are last.  This ensures that when an output loop
   // is equivalent to an input loop, their cyclic edge orders are the same.
   // "min_input_ids" is the output of GetMinInputEdgeIds().
-  static void CanonicalizeLoopOrder(
-      const std::vector<InputEdgeId>& min_input_ids,
-      std::vector<EdgeId>* loop);
+  static void CanonicalizeLoopOrder(absl::Span<const InputEdgeId> min_input_ids,
+                                    std::vector<EdgeId>* loop);
 
   // Sorts the given edge chains (i.e., loops or polylines) by the minimum
   // input edge id of each chains's first edge.  This ensures that when the
   // output consists of multiple loops or polylines, they are sorted in the
   // same order as they were provided in the input.
   static void CanonicalizeVectorOrder(
-      const std::vector<InputEdgeId>& min_input_ids,
+      absl::Span<const InputEdgeId> min_input_ids,
       std::vector<std::vector<EdgeId>>* chains);
 
   // A loop consisting of a sequence of edge ids.

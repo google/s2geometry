@@ -17,9 +17,8 @@
 
 #include "s2/s2region_coverer.h"
 
-#include <climits>
-
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -38,10 +37,10 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "absl/types/span.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/log_severity.h"
-#include "s2/base/types.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
@@ -353,7 +352,7 @@ TEST(GetFastCovering, HugeFixedLevelCovering) {
   EXPECT_GE(covering.size(), 1 << 16);
 }
 
-bool IsCanonical(const vector<string>& input_str,
+bool IsCanonical(absl::Span<const string> input_str,
                  const S2RegionCoverer::Options& options) {
   vector<S2CellId> input;
   for (const auto& str : input_str) {
@@ -430,8 +429,8 @@ TEST(IsCanonical, Normalized) {
        "1/1130", "1/1131", "1/1132", "1/1133"}, options));
 }
 
-void TestCanonicalizeCovering(const vector<string>& input_str,
-                              const vector<string>& expected_str,
+void TestCanonicalizeCovering(absl::Span<const string> input_str,
+                              absl::Span<const string> expected_str,
                               const S2RegionCoverer::Options& options,
                               const bool test_cell_union = true) {
   vector<S2CellId> actual, expected;

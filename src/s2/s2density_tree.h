@@ -16,11 +16,10 @@
 #ifndef S2_S2DENSITY_TREE_H_
 #define S2_S2DENSITY_TREE_H_
 
-#include <cstddef>
-#include <cstdint>
-
 #include <algorithm>
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <string>
@@ -84,7 +83,7 @@
 //   S2DensityTree tree;
 //   S2Error error;
 //   ABSL_DCHECK(tree.InitToVertexDensity(index, 10'000, 15, &error))
-//       << error.text();
+//       << error.message();
 //
 // An example of summing trees:
 //
@@ -99,7 +98,7 @@
 //   S2DensityTree sum_tree;
 //   S2Error error;
 //   ABSL_DCHECK(sum_tree.InitToSumDensity(tree_ptrs, 100'000, 15, &error))
-//       << error.text();
+//       << error.message();
 //
 // Example of getting equal sized shards from a given tree:
 //
@@ -109,7 +108,7 @@
 //   // Create shards of no more than 100MiB each.
 //   S2Error error;
 //   auto partitions = tree.GetPartitioning(100 * 2 << 10, &error);
-//   ABSL_DCHECK(error.ok()) << error.text();
+//   ABSL_DCHECK(error.ok()) << error.message();
 
 class S2DensityTree {
  public:
@@ -352,51 +351,6 @@ class S2DensityTree {
     S2CellId last_ = S2CellId::Sentinel();
   };
 
- private:
-  // A reusable measurer of shape index density that computes the weight at
-  // each cell the index intersects, as the sum of the weight_fn for each shape
-  // in the index that intersects a cell.
-  class IndexCellWeightFunction {
-   public:
-    IndexCellWeightFunction(const S2ShapeIndex* index,
-                            ShapeWeightFunction weight_fn)
-        : index_region_(index), weight_fn_(std::move(weight_fn)) {}
-
-    // Returns the weight of the given 'cell_id', calculated by summing the
-    // weight of the shapes intersecting with the cell.  This function can
-    // return negative weights, which indicates that the cell is fully contained
-    // by the index.
-    int64_t WeighCell(S2CellId cell_id, S2Error* error);
-
-   private:
-    S2ShapeIndexRegion<S2ShapeIndex> index_region_;
-    ShapeWeightFunction weight_fn_;
-  };
-
-  // A reusable measurer of feature density that computes the weight at each
-  // feature the index intersects, according to the weight of each feature.
-  template <typename T>
-  class FeatureCellWeightFunction {
-   public:
-    FeatureCellWeightFunction(const S2ShapeIndex* index,
-                              const FeatureLookupFunction<T>& feature_lookup_fn,
-                              const FeatureWeightFunction<T>& feature_weight_fn)
-        : index_region_(index),
-          feature_lookup_fn_(feature_lookup_fn),
-          feature_weight_fn_(feature_weight_fn) {}
-
-    // Returns the weight of the given 'cell_id', calculated by summing the
-    // weight of the features intersecting with the cell.  This function can
-    // return negative weights, which indicates that the cell is fully contained
-    // by the index.
-    int64_t WeighCell(S2CellId cell_id, S2Error* error);
-
-   private:
-    S2ShapeIndexRegion<S2ShapeIndex> index_region_;
-    const FeatureLookupFunction<T>& feature_lookup_fn_;
-    const FeatureWeightFunction<T>& feature_weight_fn_;
-  };
-
   // A collector of cell/weight pairs and an encoder of them.  Since the face
   // and cell encodings both require varint offsets to the children in the
   // header, we write everything backwards, and then reverse the array at the
@@ -442,9 +396,17 @@ class S2DensityTree {
 
     using CellWeightFunction = std::function<int64_t(S2CellId, S2Error*)>;
 
-    // Builds the density tree that forms from a breadth-first visitation of
-    // the given weight_fn, which must produce values greater than 0 for cells
-    // to have their children weighed.
+    // Builds the density tree that forms from a breadth-first visitation of the
+    // given weight_fn.  The behavior of the builder is steered by the weight
+    // returned:
+    //
+    //   Positive values - The weight is assigned to the cell and the builder
+    //     will visit the cell's children and weigh them.
+    //
+    //   Negative values - The absolute value of the weight is assigned to the
+    //     cell and the builder will -not- visit the cell's children.
+    //
+    //   Zero - The builder will skip the cell and its children.
     bool Build(const CellWeightFunction& weight_fn, S2DensityTree* tree,
                S2Error* error) const;
 
@@ -452,6 +414,51 @@ class S2DensityTree {
     const int64_t approximate_size_bytes_;
     const int max_level_;
     TreeEncoder& encoder_;
+  };
+
+ private:
+  // A reusable measurer of shape index density that computes the weight at
+  // each cell the index intersects, as the sum of the weight_fn for each shape
+  // in the index that intersects a cell.
+  class IndexCellWeightFunction {
+   public:
+    IndexCellWeightFunction(const S2ShapeIndex* index,
+                            ShapeWeightFunction weight_fn)
+        : index_region_(index), weight_fn_(std::move(weight_fn)) {}
+
+    // Returns the weight of the given 'cell_id', calculated by summing the
+    // weight of the shapes intersecting with the cell.  This function can
+    // return negative weights, which indicates that the cell is fully contained
+    // by the index.
+    int64_t WeighCell(S2CellId cell_id, S2Error* error);
+
+   private:
+    S2ShapeIndexRegion<S2ShapeIndex> index_region_;
+    ShapeWeightFunction weight_fn_;
+  };
+
+  // A reusable measurer of feature density that computes the weight at each
+  // feature the index intersects, according to the weight of each feature.
+  template <typename T>
+  class FeatureCellWeightFunction {
+   public:
+    FeatureCellWeightFunction(const S2ShapeIndex* index,
+                              const FeatureLookupFunction<T>& feature_lookup_fn,
+                              const FeatureWeightFunction<T>& feature_weight_fn)
+        : index_region_(index),
+          feature_lookup_fn_(feature_lookup_fn),
+          feature_weight_fn_(feature_weight_fn) {}
+
+    // Returns the weight of the given 'cell_id', calculated by summing the
+    // weight of the features intersecting with the cell.  This function can
+    // return negative weights, which indicates that the cell is fully contained
+    // by the index.
+    int64_t WeighCell(S2CellId cell_id, S2Error* error);
+
+   private:
+    S2ShapeIndexRegion<S2ShapeIndex> index_region_;
+    const FeatureLookupFunction<T>& feature_lookup_fn_;
+    const FeatureWeightFunction<T>& feature_weight_fn_;
   };
 
   friend class S2DensityClusterQueryTest;
@@ -490,7 +497,7 @@ bool S2DensityTree::InitToFeatureDensity(
     const FeatureWeightFunction<T>& feature_weight_fn,
     int64_t approximate_size_bytes, int max_level, S2Error* error) {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
 
   FeatureCellWeightFunction<T> index_cell_weight_fn(&index, feature_lookup_fn,
                                                     feature_weight_fn);

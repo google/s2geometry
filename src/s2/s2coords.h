@@ -120,21 +120,21 @@ namespace S2 {
 // The XYZ -> UV conversion is a single division per coordinate, which is
 // promised to be at most 0.5*DBL_EPSILON absolute error for values with
 // magnitude less than two.
-constexpr double kMaxXYZtoUVError = 0.5 * DBL_EPSILON;
+inline constexpr double kMaxXYZtoUVError = 0.5 * DBL_EPSILON;
 
 // This is the number of levels needed to specify a leaf cell.  This
 // constant is defined here so that the S2::Metric class and the conversion
 // functions below can be implemented without including s2cell_id.h.  Please
 // see s2cell_id.h for other useful constants and conversion functions.
-const int kMaxCellLevel = 30;
+inline constexpr int kMaxCellLevel = 30;
 
 // The maximum index of a valid leaf cell plus one.  The range of valid leaf
 // cell indices is [0..kLimitIJ-1].
-const int kLimitIJ = 1 << kMaxCellLevel;  // == S2CellId::kMaxSize
+inline constexpr int kLimitIJ = 1 << kMaxCellLevel;  // == S2CellId::kMaxSize
 
 // The maximum value of an si- or ti-coordinate.  The range of valid (si,ti)
 // values is [0..kMaxSiTi].
-unsigned const int kMaxSiTi = 1U << (kMaxCellLevel + 1);
+inline constexpr unsigned int kMaxSiTi = 1U << (kMaxCellLevel + 1);
 
 // Convert an s- or t-value to the corresponding u- or v-value.  This is
 // a non-linear transformation from [0,1] to [-1,1] that attempts to
@@ -340,8 +340,12 @@ inline double IJtoSTMin(int i) {
 }
 
 inline int STtoIJ(double s) {
-  return std::max(0, std::min(kLimitIJ - 1,
-                              MathUtil::FastIntRound(kLimitIJ * s - 0.5)));
+  // `static_cast` is acting as `floor` here, since we clamp to `0` on the
+  // low side.  This generates better code than `std::floor`.
+  // https://godbolt.org/z/xYxb5nfPs
+  // We need to clamp to `kLimitIJ - 1` since `s == 1.0` is a special case.
+  // TODO(b/362282346): See if we need `clamp` or can just use `min`.
+  return std::clamp(static_cast<int>(kLimitIJ * s), 0, kLimitIJ - 1);
 }
 
 inline double SiTitoST(unsigned int si) {
@@ -351,7 +355,7 @@ inline double SiTitoST(unsigned int si) {
 
 inline unsigned int STtoSiTi(double s) {
   // kMaxSiTi == 2^31, so the result doesn't fit in an int32_t when s == 1.
-  return static_cast<unsigned int>(MathUtil::FastInt64Round(s * kMaxSiTi));
+  return static_cast<unsigned int>(MathUtil::Round<int64_t>(s * kMaxSiTi));
 }
 
 inline S2Point FaceUVtoXYZ(int face, double u, double v) {

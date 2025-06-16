@@ -8,6 +8,8 @@ cc_library(
         "//s2:encoded_s2shape_index.cc",
         "//s2:encoded_string_vector.cc",
         "//s2:id_set_lexicon.cc",
+        "//s2:internal/s2index_cell_data.cc",
+        "//s2:internal/s2incident_edge_tracker.cc",
         "//s2:mutable_s2shape_index.cc",
         "//s2:r2rect.cc",
         "//s2:s1angle.cc",
@@ -90,6 +92,7 @@ cc_library(
         "//s2:s2shapeutil_contains_brute_force.cc",
         "//s2:s2shapeutil_conversion.cc",
         "//s2:s2shapeutil_edge_iterator.cc",
+        "//s2:s2shapeutil_edge_wrap.cc",
         "//s2:s2shapeutil_get_reference_point.cc",
         "//s2:s2shapeutil_visit_crossing_edge_pairs.cc",
         "//s2:s2text_format.cc",
@@ -104,6 +107,10 @@ cc_library(
         "//s2:encoded_string_vector.h",
         "//s2:encoded_uint_vector.h",
         "//s2:id_set_lexicon.h",
+        "//s2:internal/s2disjoint_set.h",
+        "//s2:internal/s2incident_edge_tracker.h",
+        "//s2:internal/s2index_cell_data.h",
+        "//s2:internal/s2meta.h",
         "//s2:mutable_s2shape_index.h",
         "//s2:r1interval.h",
         "//s2:r2.h",
@@ -213,12 +220,14 @@ cc_library(
         "//s2:s2shapeutil_conversion.h",
         "//s2:s2shapeutil_count_edges.h",
         "//s2:s2shapeutil_edge_iterator.h",
+        "//s2:s2shapeutil_edge_wrap.h",
         "//s2:s2shapeutil_get_reference_point.h",
         "//s2:s2shapeutil_shape_edge.h",
         "//s2:s2shapeutil_shape_edge_id.h",
         "//s2:s2shapeutil_testing.h",
         "//s2:s2shapeutil_visit_crossing_edge_pairs.h",
         "//s2:s2text_format.h",
+        "//s2:s2validation_query.h",
         "//s2:s2wedge_relations.h",
         "//s2:s2winding_operation.h",
         "//s2:s2wrapped_shape.h",
@@ -232,7 +241,6 @@ cc_library(
         "//s2/base:logging",
         "//s2/base:port",
         "//s2/base:spinlock",
-        "//s2/internal",
         "//s2/testing",
         "//s2/util/bitmap",
         "//s2/util/bits",
@@ -392,6 +400,16 @@ cc_library(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings:cord",
         "@googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "s2disjoint_set_test",
+    srcs = ["//s2:internal/s2disjoint_set_test.cc"],
+    deps = [
+        ":s2",
+        ":s2_testing_headers",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -976,6 +994,16 @@ cc_test(
 )
 
 cc_test(
+    name = "s2index_cell_data_test",
+    srcs = ["//s2:internal/s2index_cell_data_test.cc"],
+    deps = [
+        ":s2",
+        ":s2_testing_headers",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "s2latlng_test",
     srcs = ["//s2:s2latlng_test.cc"],
     deps = [
@@ -1416,6 +1444,16 @@ cc_test(
 )
 
 cc_test(
+    name = "s2shapeutil_edge_wrap_test",
+    srcs = ["//s2:s2shapeutil_edge_wrap_test.cc"],
+    deps = [
+        ":s2",
+        ":s2_testing_headers",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "s2shapeutil_get_reference_point_test",
     srcs = ["//s2:s2shapeutil_get_reference_point_test.cc"],
     deps = [
@@ -1448,6 +1486,16 @@ cc_test(
 cc_test(
     name = "s2text_format_test",
     srcs = ["//s2:s2text_format_test.cc"],
+    deps = [
+        ":s2",
+        ":s2_testing_headers",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "s2validation_query_test",
+    srcs = ["//s2:s2validation_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1504,5 +1552,3 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
-
-

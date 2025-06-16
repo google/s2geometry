@@ -13,6 +13,15 @@ cc_library(
 )
 
 cc_library(
+    name = "malloc_extension",
+    hdrs = ["malloc_extension.h"],
+    srcs = ["malloc_extension.cc"],
+    deps = [
+        "@abseil-cpp//absl/base:core_headers",
+    ],
+)
+
+cc_library(
     name = "types",
     hdrs = ["types.h"],
 )

@@ -19,13 +19,13 @@
 
 #include <cstddef>
 #include <cstdint>
-
 #include <memory>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -48,8 +48,8 @@ namespace {
 
 // Encodes the given vector and returns the corresponding
 // EncodedS2CellIdVector (which points into the Encoder's data buffer).
-EncodedS2CellIdVector MakeEncodedS2CellIdVector(const vector<S2CellId>& input,
-                                                Encoder* encoder) {
+EncodedS2CellIdVector MakeEncodedS2CellIdVector(
+    absl::Span<const S2CellId> input, Encoder* encoder) {
   EncodeS2CellIdVector(input, encoder);
   Decoder decoder(encoder->base(), encoder->length());
   EncodedS2CellIdVector cell_ids;
@@ -69,7 +69,7 @@ void TestEncodedS2CellIdVector(const vector<S2CellId>& expected,
 
 // Like the above, but accepts a vector<uint64_t> rather than a
 // vector<S2CellId>.
-void TestEncodedS2CellIdVector(const vector<uint64_t>& raw_expected,
+void TestEncodedS2CellIdVector(absl::Span<const uint64_t> raw_expected,
                                size_t expected_bytes) {
   vector<S2CellId> expected;
   for (uint64_t raw_id : raw_expected) {

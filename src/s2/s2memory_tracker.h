@@ -177,7 +177,7 @@ class S2MemoryTracker {
   // Resets usage() and max_usage() to zero and clears any error.  Leaves all
   // other parameters unchanged.
   void Reset() {
-    error_.Clear();
+    error_ = S2Error::Ok();
     usage_bytes_ = max_usage_bytes_ = alloc_bytes_ = 0;
     callback_alloc_limit_bytes_ = callback_alloc_delta_bytes_;
   }
@@ -360,7 +360,7 @@ template <typename... Args>
 void S2MemoryTracker::SetError(S2Error::Code code,
                                const absl::FormatSpec<Args...>& format,
                                const Args&... args) {
-  error_.Init(code, format, args...);
+  error_ = S2Error(code, absl::StrFormat(format, args...));
 }
 
 inline bool S2MemoryTracker::Tally(int64_t delta_bytes) {

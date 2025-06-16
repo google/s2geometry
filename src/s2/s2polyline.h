@@ -18,9 +18,8 @@
 #ifndef S2_S2POLYLINE_H_
 #define S2_S2POLYLINE_H_
 
-#include <cstddef>
-
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -44,8 +43,6 @@
 #include "s2/s2shape.h"
 #include "s2/util/coding/coder.h"
 
-class Decoder;
-class Encoder;
 class S1Angle;
 class S2Cap;
 class S2Cell;
@@ -324,7 +321,7 @@ class S2Polyline final : public S2Region {
 
   // Decodes an S2Polyline encoded with any of Encode*() methods. Returns true
   // on success.
-  bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* decoder);
 
   // Wrapper class for indexing a polyline (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
@@ -433,7 +430,7 @@ class S2Polyline final : public S2Region {
 
   // Decode a polyline encoded with EncodeUncompressed(). Used by the Decode
   // method above.
-  bool DecodeUncompressed(Decoder* const decoder);
+  bool DecodeUncompressed(Decoder* decoder);
 
   // Decodes a polyline encoded with EncodeCompressed(). Used by the Decode
   // method above.

@@ -15,11 +15,9 @@
 
 #include "s2/s1chord_angle.h"
 
-#include <cmath>
-
 #include <cfloat>
+#include <cmath>
 #include <limits>
-#include <string>
 
 #include <gtest/gtest.h>
 #include "absl/log/log_streamer.h"
@@ -30,6 +28,7 @@
 #include "s2/s2predicates.h"
 #include "s2/s2random.h"
 #include "s2/s2testing.h"
+#include "s2/util/math/matrix3x3.h"
 
 using std::numeric_limits;
 

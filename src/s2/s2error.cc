@@ -35,39 +35,39 @@ S2Error ToS2Error(const absl::Status& status) {
 
   switch (status.code()) {
     case absl::StatusCode::kCancelled:
-      error.Init(S2Error::CANCELLED, "%s", message);
+      error = S2Error::Cancelled(message);
       break;
 
     case absl::StatusCode::kInvalidArgument:
-      error.Init(S2Error::INVALID_ARGUMENT, "%s", message);
+      error = S2Error::InvalidArgument(message);
       break;
 
     case absl::StatusCode::kDataLoss:
-      error.Init(S2Error::DATA_LOSS, "%s", message);
+      error = S2Error::DataLoss(message);
       break;
 
     case absl::StatusCode::kResourceExhausted:
-      error.Init(S2Error::RESOURCE_EXHAUSTED, "%s", message);
+      error = S2Error::ResourceExhausted(message);
       break;
 
     case absl::StatusCode::kFailedPrecondition:
-      error.Init(S2Error::FAILED_PRECONDITION, "%s", message);
+      error = S2Error::FailedPrecondition(message);
       break;
 
     case absl::StatusCode::kOutOfRange:
-      error.Init(S2Error::OUT_OF_RANGE, "%s", message);
+      error = S2Error::OutOfRange(message);
       break;
 
     case absl::StatusCode::kUnimplemented:
-      error.Init(S2Error::UNIMPLEMENTED, "%s", message);
+      error = S2Error::Unimplemented(message);
       break;
 
     case absl::StatusCode::kInternal:
-      error.Init(S2Error::INTERNAL, "%s", message);
+      error = S2Error::Internal(message);
       break;
 
     default:
-      error.Init(S2Error::UNKNOWN, "%s", message);
+      error = S2Error::Unknown(message);
   }
 
   return error;
@@ -79,7 +79,7 @@ absl::Status ToStatus(const S2Error& error) {
   if (S2Error::USER_DEFINED_START <= error.code() &&
       error.code() <= S2Error::USER_DEFINED_END) {
     return absl::UnknownError(
-        absl::StrCat(error.text(), " (", error.code(), ")"));
+        absl::StrCat(error.message(), " (", error.code(), ")"));
   }
 
   switch (static_cast<S2Error::Code>(error.code())) {
@@ -87,19 +87,19 @@ absl::Status ToStatus(const S2Error& error) {
       return absl::OkStatus();
 
     case S2Error::CANCELLED:
-      return absl::CancelledError(error.text());
+      return absl::CancelledError(error.message());
 
     case S2Error::INVALID_ARGUMENT:
-      return absl::InvalidArgumentError(error.text());
+      return absl::InvalidArgumentError(error.message());
 
     case S2Error::DATA_LOSS:
-      return absl::DataLossError(error.text());
+      return absl::DataLossError(error.message());
 
     case S2Error::RESOURCE_EXHAUSTED:
-      return absl::ResourceExhaustedError(error.text());
+      return absl::ResourceExhaustedError(error.message());
 
     case S2Error::FAILED_PRECONDITION:
-      return absl::FailedPreconditionError(error.text());
+      return absl::FailedPreconditionError(error.message());
 
     // Custom error space are deprecated and not open-sourced, so we map
     // these to invalid argument errors.
@@ -127,23 +127,26 @@ absl::Status ToStatus(const S2Error& error) {
     case S2Error::BUILDER_EDGES_DO_NOT_FORM_POLYLINE:
     case S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED:
       return absl::InvalidArgumentError(
-          absl::StrCat(error.text(), " (", error.code(), ")"));
+          absl::StrCat(error.message(), " (", error.code(), ")"));
 
     case S2Error::OUT_OF_RANGE:
-      return absl::OutOfRangeError(error.text());
+      return absl::OutOfRangeError(error.message());
 
     case S2Error::UNIMPLEMENTED:
-      return absl::UnimplementedError(error.text());
+      return absl::UnimplementedError(error.message());
 
     case S2Error::INTERNAL:
-      return absl::InternalError(error.text());
+      return absl::InternalError(error.message());
 
     case S2Error::UNKNOWN:
+      return absl::UnknownError(
+          absl::StrCat(error.message(), " (", error.code(), ")"));
+
     case S2Error::USER_DEFINED_START:
     case S2Error::USER_DEFINED_END:
-      // USER_DEFINED_START/END can't happen here; they're handled above.
-      return absl::UnknownError(
-          absl::StrCat(error.text(), " (", error.code(), ")"));
+      // USER_DEFINED_START/END (or anything in between) can't happen here;
+      // they're handled above.
+      ABSL_UNREACHABLE();
   }
   ABSL_UNREACHABLE();
 }

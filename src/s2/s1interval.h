@@ -228,7 +228,7 @@ inline S1Interval::S1Interval(double lo, double hi) : bounds_(lo, hi) {
 }
 
 inline S1Interval::S1Interval(double lo, double hi, ArgsChecked dummy)
-  : bounds_(lo, hi) {
+    : bounds_(lo, hi) {
   ABSL_DCHECK(is_valid());
 }
 

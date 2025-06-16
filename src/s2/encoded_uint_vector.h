@@ -19,17 +19,16 @@
 #define S2_ENCODED_UINT_VECTOR_H_
 
 #include <cstddef>
-
 #include <cstdint>
 #include <limits>
 #include <type_traits>
 #include <vector>
 
-#include "s2/base/port.h"
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
-#include "s2/util/bits/bits.h"
+#include "s2/base/port.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
 
@@ -218,7 +217,8 @@ void EncodeUintVector(absl::Span<const T> v, Encoder* encoder) {
 
   T one_bits = 1;  // Ensures len >= 1.
   for (auto x : v) one_bits |= x;
-  int len = (Bits::FindMSBSetNonZero64(one_bits) >> 3) + 1;
+  ABSL_ASSUME(one_bits != 0);
+  int len = ((absl::bit_width(one_bits) - 1) >> 3) + 1;
   ABSL_DCHECK(len >= 1 && len <= 8);
 
   // Note that the multiplication is optimized into a bit shift.

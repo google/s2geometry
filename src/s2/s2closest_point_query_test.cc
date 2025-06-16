@@ -339,15 +339,6 @@ TEST(S2ClosestPointQueryTest, ConservativeCellDistanceIsUsed) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
       "CONSERVATIVE_CELL_DISTANCE_IS_USED",
       absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
-  const int saved_seed = absl::GetFlag(FLAGS_s2_random_seed);
-  // These specific test cases happen to fail if max_error() is not properly
-  // taken into account when measuring distances to S2PointIndex cells.  They
-  // all involve S2ShapeIndexTarget, which takes advantage of max_error() to
-  // optimize its distance calculation.
-  for (int seed : {16, 586, 589, 822, 1959, 2298, 3155, 3490, 3723, 4953}) {
-    absl::SetFlag(&FLAGS_s2_random_seed, seed);
-    TestWithIndexFactory(FractalPointIndexFactory(), 5, 100, 10, bitgen);
-  }
-  absl::SetFlag(&FLAGS_s2_random_seed, saved_seed);
+  TestWithIndexFactory(FractalPointIndexFactory(), 5, 100, 10, bitgen);
 }
 

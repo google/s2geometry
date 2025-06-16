@@ -27,8 +27,6 @@
 #include "s2/s2point.h"
 #include "s2/s2region.h"
 
-class Decoder;
-class Encoder;
 class S2Cap;
 class S2Cell;
 class S2LatLngRect;
@@ -55,7 +53,6 @@ class S2RegionUnion final : public S2Region {
   // Create a region representing the union of the given regions.
   explicit S2RegionUnion(std::vector<std::unique_ptr<S2Region>> regions);
 
-  // Use {} instead of = default to work around gcc bug.
   ~S2RegionUnion() override = default;
 
   // Initialize region by taking ownership of the given regions.

@@ -21,17 +21,21 @@ jobs:
     strategy:
       matrix:
         runs-on:
+          - ubuntu-22.04
           - ubuntu-latest
-          # macos-13 is an intel runner, macos-14 is apple silicon
           - macos-13
-          - macos-latest
+          # Can't add macos-13-xlarge due to
+          # https://github.com/zacharyburnett/setup-abseil-cpp/issues/4
+          - macos-latest-large
+          # Disable macos-latest-xlarge due to timouts:
+          # https://github.com/google/s2geometry/issues/409
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
     env:
       CTEST_OUTPUT_ON_FAILURE: ON
     steps:
-      - uses: zacharyburnett/setup-abseil-cpp@de39f445295c887839e30c864ffbbb1c0231bc83 # 1.0.5
+      - uses: zacharyburnett/setup-abseil-cpp@dfe299c5b1cad83ac96bb41461fea4296bf1a47c # Not a release, but has #423 fix.
         with:
           cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
           abseil-version: "20240722.0"
@@ -45,9 +49,11 @@ jobs:
       - run: mkdir build
       - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DGOOGLETEST_ROOT=${{ env.GOOGLETEST_ROOT }} -DGOOGLETEST_VERSION=${{ env.GOOGLETEST_VERSION }} ..
         working-directory: build/
-      - run: cmake --build . ${{ runner.os == 'macOS' && '--parallel' || '' }}
-        # building tests with `--parallel` is disabled on Linux because GitHub seems to automatically cancel the job due to resource limits(?) 
+      - run: cmake --build . --parallel 45
         working-directory: build/
       - if: always()
-        run: cmake --build . --parallel --target=test
+        run: cmake --build . --parallel 45 --target=test
+        env:
+          CTEST_OUTPUT_ON_FAILURE: ON
+          CTEST_PARALLEL_LEVEL: 45
         working-directory: build/

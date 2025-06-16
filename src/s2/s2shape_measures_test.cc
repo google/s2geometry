@@ -22,7 +22,6 @@
 #include "s2/s2shape_measures.h"
 
 #include <cmath>
-
 #include <memory>
 #include <string>
 #include <utility>

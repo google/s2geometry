@@ -33,11 +33,13 @@ R2Point Projection::WrapDestination(const R2Point& a, const R2Point& b) const {
   double x = b.x(), y = b.y();
   // The code below ensures that "b" is unmodified unless wrapping is required.
   if (wrap.x() > 0 && fabs(x - a.x()) > 0.5 * wrap.x()) {
-    x = a.x() + remainder(x - a.x(), wrap.x());
+    x -= std::round((x - a.x()) / wrap.x()) * wrap.x();
   }
+
   if (wrap.y() > 0 && fabs(y - a.y()) > 0.5 * wrap.y()) {
-    y = a.y() + remainder(y - a.y(), wrap.y());
+    y -= std::round((y - a.y()) / wrap.y()) * wrap.y();
   }
+
   return R2Point(x, y);
 }
 

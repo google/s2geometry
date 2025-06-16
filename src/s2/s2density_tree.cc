@@ -15,11 +15,10 @@
 
 #include "s2/s2density_tree.h"
 
-#include <cstdint>
-
 #include <algorithm>
 #include <array>
 #include <bitset>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -36,6 +35,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/numeric/int128.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
@@ -198,7 +198,7 @@ bool S2DensityTree::InitToShapeDensity(const S2ShapeIndex& index,
                                        int64_t approximate_size_bytes,
                                        int max_level, S2Error* error) {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
 
   IndexCellWeightFunction index_cell_weight_fn(&index, weight_fn);
 
@@ -236,7 +236,7 @@ bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
                                      int64_t approximate_size_bytes,
                                      int max_level, S2Error* error) {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
 
   vector<DecodedPath> cell_paths;
   cell_paths.reserve(trees.size());
@@ -271,7 +271,7 @@ bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
 bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
                                      int max_level, S2Error* error) {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
 
   TreeEncoder encoder;
 
@@ -299,7 +299,7 @@ bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
 bool S2DensityTree::VisitCells(const CellVisitor& visitor_fn,
                                S2Error* error) const {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
 
   for (int face = 0; face < decoded_faces_.size(); ++face) {
     const int64_t offset = decoded_faces_[face];
@@ -355,7 +355,7 @@ int64_t S2DensityTree::GetCellWeight(const S2CellId cell_id,
                                      DecodedPath* cell_path,
                                      S2Error* error) const {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
 
   const Cell* cell = cell_path->GetCell(cell_id, error);
   if (!error->ok()) {
@@ -369,7 +369,7 @@ int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
                                            DecodedPath* cell_path,
                                            S2Error* error) const {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
   ABSL_DCHECK(cell_path != nullptr) << "decoder must be non-nullptr";
 
   const Cell* cell = cell_path->GetCell(cell_id, error);
@@ -410,7 +410,7 @@ int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
 vector<S2CellUnion> S2DensityTree::GetPartitioning(int64_t max_weight,
                                                    S2Error* error) const {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
-  error->Clear();
+  *error = S2Error::Ok();
 
   // Sample cells at 1/16th of the desired size. This yields a more efficient
   // bin-packing of our S2CellUnions compared to sampling cells closer to the
@@ -629,8 +629,8 @@ bool S2DensityTree::BreadthFirstTreeBuilder::Build(
 bool S2DensityTree::Cell::Decode(Decoder& decoder, S2Error* error) {
   uint64_t bits;
   if (!decoder.get_varint64(&bits)) {
-    error->Init(S2Error::INTERNAL,
-                "Failed to decode bits for Cell at position %d", decoder.pos());
+    *error = S2Error::Internal(absl::StrCat(
+        "Failed to decode bits for Cell at position ", decoder.pos()));
     return false;
   }
 
@@ -660,9 +660,8 @@ bool S2DensityTree::Cell::Decode(Decoder& decoder, S2Error* error) {
         // the offset of the next child.
         uint64_t v;
         if (!decoder.get_varint64(&v)) {
-          error->Init(S2Error::INTERNAL,
-                      "Failed to decode child offset at position %d",
-                      decoder.pos());
+          *error = S2Error::Internal(absl::StrCat(
+              "Failed to decode child offset at position ", decoder.pos()));
           return false;
         }
         offset += v;
@@ -730,7 +729,7 @@ void S2DensityTree::TreeEncoder::Build(S2DensityTree* tree) {
 
   S2Error error;
   bool ok = tree->Init(&decoder, error);
-  ABSL_DCHECK(ok) << error.text();
+  ABSL_DCHECK(ok) << error.message();
 }
 
 void S2DensityTree::TreeEncoder::EncodeTreeReversed(ReversibleBytes* output) {
@@ -791,15 +790,15 @@ bool S2DensityTree::DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
   // Verify the version string.  Check the available length first because
   // Decoder::getn() does not check bounds for us.
   if (decoder->avail() < kVersion.size()) {
-    error->Init(S2Error::INVALID_ARGUMENT,
-                "Not enough bytes to decode magic value for S2DensityTree");
+    *error = S2Error::InvalidArgument(
+        "Not enough bytes to decode magic value for S2DensityTree");
     return false;
   }
 
   char magic[kVersion.size()];
   decoder->getn(magic, sizeof(magic));
   if (string_view(magic, sizeof(magic)) != kVersion) {
-    error->Init(S2Error::INVALID_ARGUMENT, "Bad magic value for S2DensityTree");
+    *error = S2Error::InvalidArgument("Bad magic value for S2DensityTree");
     return false;
   }
 
@@ -807,8 +806,8 @@ bool S2DensityTree::DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
 
   uint64_t bits;
   if (!decoder->get_varint64(&bits)) {
-    error->Init(S2Error::INVALID_ARGUMENT,
-                "Failed to decode face mask at position %d", decoder->pos());
+    *error = S2Error::InvalidArgument(absl::StrCat(
+        "Failed to decode face mask at position %d", decoder->pos()));
     return false;
   }
 
@@ -913,7 +912,7 @@ const S2DensityTree::Cell* S2DensityTree::DecodedPath::LoadCell(
 }
 
 S2DensityTree S2DensityTree::Normalize(absl::Nonnull<S2Error*> error) const {
-  error->Clear();
+  *error = S2Error::Ok();
 
   DecodedPath path(this);
 

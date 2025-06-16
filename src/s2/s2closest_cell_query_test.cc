@@ -17,9 +17,8 @@
 
 #include "s2/s2closest_cell_query.h"
 
-#include <cmath>
-
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <random>
@@ -439,15 +438,7 @@ TEST(S2ClosestCellQuery, ConservativeCellDistanceIsUsed) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
       "CONSERVATIVE_CELL_DISTANCE_IS_USED",
       absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
-  // Don't use absl::FlagSaver, so it works in opensource without gflags.
-  const int saved_seed = absl::GetFlag(FLAGS_s2_random_seed);
-  // These specific test cases happen to fail if max_error() is not properly
-  // taken into account when measuring distances to S2ShapeIndex cells.
-  for (int seed : {32, 109, 253, 342, 948, 1535, 1884, 1887, 2133}) {
-    absl::SetFlag(&FLAGS_s2_random_seed, seed);
-    TestWithIndexFactory(PointCloudCellIndexFactory(), 5, 100, 10, bitgen);
-  }
-  absl::SetFlag(&FLAGS_s2_random_seed, saved_seed);
+  TestWithIndexFactory(PointCloudCellIndexFactory(), 5, 100, 10, bitgen);
 }
 
 }  // namespace

@@ -17,10 +17,9 @@
 
 #include "s2/s2crossing_edge_query.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
-
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -33,6 +32,7 @@
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
+#include "absl/types/span.h"
 
 #include "s2/base/casts.h"
 #include "s2/mutable_s2shape_index.h"
@@ -122,7 +122,7 @@ void GetCapEdges(absl::BitGenRef bitgen, const S2Cap& center_cap,
 // Project ShapeEdges to ShapeEdgeIds.  Useful because
 // ShapeEdge does not have operator==, but ShapeEdgeId does.
 static vector<ShapeEdgeId> GetShapeEdgeIds(
-    const vector<ShapeEdge>& shape_edges) {
+    absl::Span<const ShapeEdge> shape_edges) {
   vector<ShapeEdgeId> shape_edge_ids;
   for (const auto& shape_edge : shape_edges) {
     shape_edge_ids.push_back(shape_edge.id());
@@ -130,7 +130,7 @@ static vector<ShapeEdgeId> GetShapeEdgeIds(
   return shape_edge_ids;
 }
 
-void TestAllCrossings(const vector<TestEdge>& edges) {
+void TestAllCrossings(absl::Span<const TestEdge> edges) {
   auto shape = new S2EdgeVectorShape;  // raw pointer since "shape" used below
   for (const TestEdge& edge : edges) {
     shape->Add(edge.first, edge.second);

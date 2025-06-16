@@ -17,11 +17,10 @@
 
 #include "s2/s2loop_measures.h"
 
-#include <cfloat>
-#include <cstdint>
-
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -43,7 +42,6 @@
 #include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include "s2/util/math/mathutil.h"
 
 using absl::string_view;
 using s2textformat::ParsePointsOrDie;
@@ -166,7 +164,7 @@ TEST(PruneDegeneracies, AllSmallCases) {
       // Do all base^exponent strings of length `exponent` using a `base`-letter
       // alphabet (as long as there are 5000 or fewer of them).
 
-      const int64_t num_strings = MathUtil::IPow<int64_t>(base, exponent);
+      const int64_t num_strings = std::pow(int64_t{base}, int64_t{exponent});
       if (num_strings > 5000) break;   // getting too many, for this base
       if (num_strings == 0) continue;  // base=0 and exponent>0 is not useful
       if (base > exponent) continue;  // more chars than positions is not useful
@@ -255,6 +253,9 @@ TEST(GetSignedArea, Underflow) {
 }
 
 TEST(GetSignedArea, ErrorAccumulation) {
+#if defined(__APPLE__)
+  GTEST_SKIP() << "https://github.com/google/s2geometry/issues/395";
+#endif
   // Loop encompassing half an octant of the sphere.
   vector<S2Point> loop{
       {1.0, 0.0, 0.0},

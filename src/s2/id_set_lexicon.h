@@ -19,7 +19,6 @@
 #define S2_ID_SET_LEXICON_H_
 
 #include <cstddef>
-
 #include <cstdint>
 #include <iterator>
 #include <limits>

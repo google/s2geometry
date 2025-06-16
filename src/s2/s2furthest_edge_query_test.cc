@@ -15,9 +15,8 @@
 
 #include "s2/s2furthest_edge_query.h"
 
-#include <cmath>
-
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <utility>
@@ -30,6 +29,7 @@
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/types/span.h"
 
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -371,7 +371,7 @@ using Result = pair<S2MaxDistance, s2shapeutil::ShapeEdgeId>;
 // of the following code may become redundant with that in
 // s2closest_edge_query.cc.
 vector<Result> ConvertResults(
-    const vector<S2FurthestEdgeQuery::Result>& edges) {
+    absl::Span<const S2FurthestEdgeQuery::Result> edges) {
   vector<Result> results;
   for (const auto& edge : edges) {
     results.push_back(

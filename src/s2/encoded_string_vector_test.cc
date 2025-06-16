@@ -18,12 +18,12 @@
 #include "s2/encoded_string_vector.h"
 
 #include <cstddef>
-
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 
 using absl::string_view;
@@ -32,7 +32,7 @@ using std::vector;
 
 namespace s2coding {
 
-void TestEncodedStringVector(const vector<string>& input,
+void TestEncodedStringVector(absl::Span<const string> input,
                              size_t expected_bytes) {
   Encoder encoder;
   StringVectorEncoder::Encode(input, &encoder);

@@ -20,8 +20,9 @@
 #include <algorithm>
 #include <cfloat>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
-#include "s2/util/bits/bits.h"
+#include "absl/numeric/bits.h"
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
 #include "s2/s2cell_id.h"
@@ -160,8 +161,9 @@ S2CellId S2PaddedCell::ShrinkToFit(const R2Rect& rect) const {
   // and then choose the cell level that includes both of these endpoints.  So
   // if both pairs of endpoints are equal we choose kMaxLevel; if they differ
   // only at bit 0, we choose (kMaxLevel - 1), and so on.
-  int level_msb = ((ij_xor[0] | ij_xor[1]) << 1) + 1;
-  int level = S2CellId::kMaxLevel - Bits::FindMSBSetNonZero(level_msb);
+  unsigned int level_msb = ((ij_xor[0] | ij_xor[1]) << 1) + 1;
+  ABSL_ASSUME(level_msb != 0);
+  int level = S2CellId::kMaxLevel - (absl::bit_width(level_msb) - 1);
   if (level <= level_) return id();
   return S2CellId::FromFaceIJ(id().face(), ij_min[0], ij_min[1]).parent(level);
 }

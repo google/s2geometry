@@ -27,6 +27,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
@@ -171,13 +172,13 @@ vector<S2Builder::InputEdgeId> Graph::GetMinInputEdgeIds() const {
 }
 
 vector<Graph::EdgeId> Graph::GetInputEdgeOrder(
-    const vector<InputEdgeId>& input_ids) const {
+    absl::Span<const InputEdgeId> input_ids) const {
   vector<EdgeId> order(input_ids.size());
   std::iota(order.begin(), order.end(), 0);
-  std::sort(order.begin(), order.end(), [&input_ids](EdgeId a, EdgeId b) {
-      // Comparison function ensures sort is stable.
-      return make_pair(input_ids[a], a) < make_pair(input_ids[b], b);
-    });
+  std::sort(order.begin(), order.end(), [input_ids](EdgeId a, EdgeId b) {
+    // Comparison function ensures sort is stable.
+    return make_pair(input_ids[a], a) < make_pair(input_ids[b], b);
+  });
   return order;
 }
 
@@ -231,7 +232,7 @@ static void AddVertexEdges(Graph::EdgeId out_begin, Graph::EdgeId out_end,
   }
 }
 
-bool Graph::GetLeftTurnMap(const vector<EdgeId>& in_edge_ids,
+bool Graph::GetLeftTurnMap(absl::Span<const EdgeId> in_edge_ids,
                            vector<EdgeId>* left_turn_map,
                            S2Error* error) const {
   left_turn_map->assign(num_edges(), -1);
@@ -307,8 +308,8 @@ bool Graph::GetLeftTurnMap(const vector<EdgeId>& in_edge_ids,
     // We only need to process unmatched incoming edges, since we are only
     // responsible for creating left turn map entries for those edges.
     if (!e_in.empty() && error->ok()) {
-      error->Init(S2Error::BUILDER_EDGES_DO_NOT_FORM_LOOPS,
-                  "Given edges do not form loops (indegree != outdegree)");
+      *error = S2Error(S2Error::BUILDER_EDGES_DO_NOT_FORM_LOOPS,
+                       "Given edges do not form loops (indegree != outdegree)");
     }
     e_in.clear();
     e_out.clear();
@@ -317,7 +318,7 @@ bool Graph::GetLeftTurnMap(const vector<EdgeId>& in_edge_ids,
   return error->ok();
 }
 
-void Graph::CanonicalizeLoopOrder(const vector<InputEdgeId>& min_input_ids,
+void Graph::CanonicalizeLoopOrder(absl::Span<const InputEdgeId> min_input_ids,
                                   vector<EdgeId>* loop) {
   if (loop->empty()) return;
   // Find the position of the element with the highest input edge id.  If
@@ -351,14 +352,16 @@ void Graph::CanonicalizeLoopOrder(const vector<InputEdgeId>& min_input_ids,
   std::rotate(loop->begin(), loop->begin() + pos, loop->end());
 }
 
-void Graph::CanonicalizeVectorOrder(const vector<InputEdgeId>& min_input_ids,
+void Graph::CanonicalizeVectorOrder(absl::Span<const InputEdgeId> min_input_ids,
                                     vector<vector<EdgeId>>* chains) {
-  std::sort(chains->begin(), chains->end(),
-    [&min_input_ids](const vector<EdgeId>& a, const vector<EdgeId>& b) {
-      // Comparison function ensures sort is stable.
-      return make_pair(min_input_ids[a[0]], a[0]) <
-             make_pair(min_input_ids[b[0]], b[0]);
-    });}
+  std::sort(
+      chains->begin(), chains->end(),
+      [min_input_ids](absl::Span<const EdgeId> a, absl::Span<const EdgeId> b) {
+        // Comparison function ensures sort is stable.
+        return make_pair(min_input_ids[a[0]], a[0]) <
+               make_pair(min_input_ids[b[0]], b[0]);
+      });
+}
 
 bool Graph::GetDirectedLoops(LoopType loop_type, vector<EdgeLoop>* loops,
                              S2Error* error) const {
@@ -558,8 +561,8 @@ bool Graph::GetUndirectedComponents(LoopType loop_type,
         } else if (left_turn_map[sibling] != MarkEdgeUsed(1 - slot)) {
           // Two siblings edges can only belong the same complement if the
           // given undirected edges do not form loops.
-          error->Init(S2Error::BUILDER_EDGES_DO_NOT_FORM_LOOPS,
-                      "Given undirected edges do not form loops");
+          *error = S2Error(S2Error::BUILDER_EDGES_DO_NOT_FORM_LOOPS,
+                           "Given undirected edges do not form loops");
           return false;
         }
         if (loop_type == LoopType::SIMPLE) {
@@ -1066,9 +1069,9 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
       if (error->ok() && options_.sibling_pairs() == SiblingPairs::REQUIRE &&
           (options_.edge_type() == EdgeType::DIRECTED ? (n_out != n_in)
                                                       : ((n_out & 1) != 0))) {
-        error->Init(S2Error::BUILDER_MISSING_EXPECTED_SIBLING_EDGES,
-                    "Expected all input edges to have siblings, "
-                    "but some were missing");
+        *error = S2Error(S2Error::BUILDER_MISSING_EXPECTED_SIBLING_EDGES,
+                         "Expected all input edges to have siblings, "
+                         "but some were missing");
       }
       if (options_.duplicate_edges() == DuplicateEdges::MERGE) {
         AddEdge(edge, MergeInputIds(out_begin, out));

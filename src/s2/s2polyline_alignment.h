@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "s2/s2polyline.h"
 
 // This library provides code to compute vertex alignments between S2Polylines.
@@ -183,7 +184,7 @@ class MedoidOptions {
   bool approx_ = true;
 };
 
-int GetMedoidPolyline(const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+int GetMedoidPolyline(absl::Span<const std::unique_ptr<S2Polyline>> polylines,
                       const MedoidOptions options);
 
 // GetConsensusPolyline allocates and returns a new "consensus" polyline from a

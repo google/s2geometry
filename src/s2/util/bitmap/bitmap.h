@@ -22,26 +22,32 @@
 #define UTIL_BITMAP_BITMAP_H__
 
 #include <algorithm>
+#include <atomic>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <limits>
-#include <memory>
+#include <numeric>
 #include <ostream>
 #include <string>
 #include <type_traits>
+#include <utility>
 
+#include "s2/base/port.h"
+#include "absl/base/prefetch.h"
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
+#include "absl/numeric/bits.h"
 #include "absl/types/span.h"
-#include "s2/util/bits/bits.h"
 
 namespace util {
 namespace bitmap {
 
+// Sets the bit at index to the given value.
+// Returns the previously set value.
 template <typename W>
-void SetBit(W* map, size_t index, bool value) {
+bool SetBit(W* map, size_t index, bool value) {
   static constexpr size_t kIntBits = CHAR_BIT * sizeof(W);
   // This is written in such a way that our current compiler generates
   // a conditional move instead of a conditional branch, which is data
@@ -51,25 +57,83 @@ void SetBit(W* map, size_t index, bool value) {
   const W old_value = map[index / kIntBits];
   const W new_value = value ? old_value | bit : old_value & ~bit;
   map[index / kIntBits] = new_value;
+  return old_value & bit;
 }
 
+// Specialization for atomic types.
+template <typename W>
+bool SetBit(std::atomic<W>* map, size_t index, bool value) {
+  static constexpr size_t kIntBits = CHAR_BIT * sizeof(W);
+  const W bit = W{1} << (index & (kIntBits - 1));
+  if (value) {
+    return map[index / kIntBits].fetch_or(bit) & bit;
+  } else {
+    return map[index / kIntBits].fetch_and(~bit) & bit;
+  }
+}
+
+// Gets the bit at index.
 template <typename W>
 bool GetBit(const W* map, size_t index) {
   static constexpr size_t kIntBits = CHAR_BIT * sizeof(W);
   return map[index / kIntBits] & (W{1} << (index & (kIntBits - 1)));
 }
 
+// Specialization for atomic types.
+template <typename W>
+bool GetBit(const std::atomic<W>* map, size_t index) {
+  static constexpr size_t kIntBits = CHAR_BIT * sizeof(W);
+  return map[index / kIntBits] & (W{1} << (index & (kIntBits - 1)));
+}
+
+// Prefetches the bit at index.
+template <typename W>
+void PrefetchBit(const W* map, size_t index) {
+  static constexpr size_t kIntBits = CHAR_BIT * sizeof(W);
+  absl::PrefetchToLocalCache(map + (index / kIntBits));
+}
+
+// Specialization for atomic types.
+template <typename W>
+void PrefetchBit(std::atomic<W>* map, size_t index) {
+  static constexpr size_t kIntBits = CHAR_BIT * sizeof(W);
+  absl::PrefetchToLocalCache(map + (index / kIntBits));
+}
+
 namespace internal {
 template <typename W>
 class BasicBitmap {
+ private:
+  // Template metaprogram to detect atomic types.
+  template <class T>
+  struct is_atomic : std::false_type {};
+  template <class T>
+  struct is_atomic<std::atomic<T>> : std::true_type {};
+  template <class T>
+  struct is_atomic<const std::atomic<T>> : std::true_type {};
+
+  // Template metaprogram to remove atomicity from a type.
+  template <class T>
+  struct remove_atomic {
+    using type = T;
+  };
+  template <class T>
+  struct remove_atomic<std::atomic<T>> {
+    using type = T;
+  };
+  template <class T>
+  struct remove_atomic<const std::atomic<T>> {
+    using type = const T;
+  };
+
  public:
   using size_type = size_t;
-  using Word = W;  // packed bit internal storage type.
-  using MutableWord = typename std::remove_const<W>::type;
+  using Word = typename remove_atomic<W>::type;  // packed bit storage type.
+  using MutableWord = typename std::remove_const<Word>::type;
 
   // Allocates a new bitmap with size bits set to the value fill.
   BasicBitmap(size_type size, bool fill) : size_(size), alloc_(true) {
-    map_ = std::allocator<Word>().allocate(array_size());
+    map_ = new W[array_size()];
     SetAll(fill);
   }
 
@@ -87,17 +151,14 @@ class BasicBitmap {
   // Borrows a reference to a region of memory that is the caller's
   // responsibility to manage for the life of the Bitmap. The map is expected
   // to have enough memory to store size bits.
-  BasicBitmap(Word* map, size_type size)
-      : map_(map), size_(size), alloc_(false) {}
+  BasicBitmap(W* map, size_type size) : map_(map), size_(size), alloc_(false) {}
 
   static BasicBitmap<const W> CreateConst(const W* map, size_type size) {
     return BasicBitmap<const W>(map, size);
   }
 
   // Default constructor: creates a bitmap with zero bits.
-  BasicBitmap() : size_(0), alloc_(true) {
-    map_ = std::allocator<Word>().allocate(array_size());
-  }
+  BasicBitmap() : size_(0), alloc_(true) { map_ = new W[array_size()]; }
 
   // Copy constructors.  The move constructor will steal the internal memory of
   // the `src` bitmap and change `src` to be a reference to the new bitmap.
@@ -112,7 +173,7 @@ class BasicBitmap {
   // Destructor : clean up if we allocated
   ~BasicBitmap() {
     if (alloc_) {
-      std::allocator<Word>().deallocate(map_, array_size());
+      DeleteMap(map_, array_size());
     }
   }
 
@@ -135,8 +196,9 @@ class BasicBitmap {
   // Also performs masking to insure no bits >= bits().
   Word GetMaskedMapElement(size_type array_index) const {
     return (array_index == array_size() - 1)
-               ? map_[array_size() - 1] & HighOrderMapElementMask()
-               : map_[array_index];
+               ? static_cast<Word>(map_[array_size() - 1]) &
+                     HighOrderMapElementMask()
+               : static_cast<Word>(map_[array_index]);
   }
 
   // Sets an element of the internal map. Requires array_index < array_size()
@@ -152,6 +214,12 @@ class BasicBitmap {
   // others will be 0)
   Word HighOrderMapElementMask() const {
     return (size_ == 0) ? 0 : kAllOnesWord >> (-size_ & (kIntBits - 1));
+  }
+
+  // Prefetches the bit at index.
+  void Prefetch(size_type index) const {
+    ABSL_DCHECK_LT(index, size_);
+    PrefetchBit(map_, index);
   }
 
   bool Get(size_type index) const {
@@ -192,15 +260,15 @@ class BasicBitmap {
   // Returns true if all bits are unset
   bool IsAllZeroes() const {
     return std::all_of(map_, map_ + array_size() - 1,
-                       [](Word w) { return w == W{0}; }) &&
-           (map_[array_size() - 1] & HighOrderMapElementMask()) == W{0};
+                       [](const W& w) { return w == Word{0}; }) &&
+           (map_[array_size() - 1] & HighOrderMapElementMask()) == Word{0};
   }
 
   // Returns true if all bits are set
   bool IsAllOnes() const {
     return std::all_of(map_, map_ + array_size() - 1,
-                       [](Word w) { return w == kAllOnesWord; }) &&
-           ((~map_[array_size() - 1]) & HighOrderMapElementMask()) == W{0};
+                       [](const W& w) { return w == kAllOnesWord; }) &&
+           ((~map_[array_size() - 1]) & HighOrderMapElementMask()) == Word{0};
   }
 
   // FindNextSetBitBeforeLimit: Finds the first offset >= "*index" and
@@ -232,7 +300,7 @@ class BasicBitmap {
   // "*bit_index" to the bit index and returns true.  Otherwise
   // returns false.  Will not dereference "words" past
   // "words[(bit_limit+31)/kIntBits]".
-  static bool FindNextSetBitInVector(const Word* words, size_t* bit_index,
+  static bool FindNextSetBitInVector(const W* words, size_t* bit_index,
                                      size_t bit_limit) {
     return FindNextBitInVector(/*complement=*/false, words, bit_index,
                                bit_limit);
@@ -261,6 +329,10 @@ class BasicBitmap {
   //    DoSomethingWith(index);
   //  }
   //
+  // Note that there is no locking involved. Therefore, even if using atomics,
+  // there is no guarantee that the bitmap will not be modified by another
+  // thread. The way to guarantee that your thread is the one setting a bit is
+  // to do a loop of FindNextUnsetBit and Set, and checking the return value.
   bool FindNextUnsetBitBeforeLimit(size_type* index, size_type limit) const;
 
   bool FindNextUnsetBit(size_type* index) const {
@@ -275,7 +347,7 @@ class BasicBitmap {
   // "*bit_index" to the bit index and returns true.  Otherwise
   // returns false.  Will not dereference "words" past
   // "words[(bit_limit+31)/kIntBits]".
-  static bool FindNextUnsetBitInVector(const Word* words, size_t* bit_index,
+  static bool FindNextUnsetBitInVector(const W* words, size_t* bit_index,
                                        size_t bit_limit) {
     return FindNextBitInVector(/*complement=*/true, words, bit_index,
                                bit_limit);
@@ -335,19 +407,25 @@ class BasicBitmap {
     return FindPreviousSetBitBeforeLimit(index, 0);
   }
 
-  void Set(size_type index, bool value) {
+  // Sets the bit at index to the given value.
+  // Returns the previously set value.
+  bool Set(size_type index, bool value) {
     ABSL_DCHECK_LT(index, size_);
-    SetBit(map_, index, value);
+    return SetBit(map_, index, value);
   }
 
   void Toggle(size_type index) {
     ABSL_DCHECK_LT(index, size_);
-    map_[index / kIntBits] ^= (W{1} << (index & (kIntBits - 1)));
+    if constexpr (is_atomic<W>::value) {
+      map_[index / kIntBits].fetch_xor(W{1} << (index & (kIntBits - 1)));
+    } else {
+      map_[index / kIntBits] ^= (W{1} << (index & (kIntBits - 1)));
+    }
   }
 
   // Sets all the bits to true or false
   void SetAll(bool value) {
-    std::fill(map_, map_ + array_size(), value ? kAllOnesWord : W{0});
+    std::fill(map_, map_ + array_size(), value ? kAllOnesWord : Word{0});
   }
 
   // Clears all bits in the bitmap
@@ -377,7 +455,7 @@ class BasicBitmap {
   // Sets "this" to be the "~" (Complement) of "this".
   void Complement() {
     std::transform(map_, map_ + array_size(), map_,
-                   [](Word w) -> Word { return ~w; });
+                   [](const W& w) { return ~w; });
   }
 
   // Sets "this" to be the set of bits in "this" but not in "other"
@@ -385,7 +463,7 @@ class BasicBitmap {
   void Difference(const BasicBitmap& other) {
     ABSL_CHECK_EQ(bits(), other.bits());
     std::transform(map_, map_ + array_size(), other.map_, map_,
-                   [](Word a, Word b) { return a & ~b; });
+                   [](const W& a, const W& b) { return a & ~b; });
   }
 
   // Sets "this" to be the set of bits which is set in either "this" or "other",
@@ -394,7 +472,7 @@ class BasicBitmap {
   void ExclusiveOr(const BasicBitmap& other) {
     ABSL_CHECK_EQ(bits(), other.bits());
     std::transform(map_, map_ + array_size(), other.map_, map_,
-                   [](Word a, Word b) { return a ^ b; });
+                   [](const W& a, const W& b) { return a ^ b; });
   }
 
   // Return true if any bit between begin inclusive and end exclusive
@@ -480,8 +558,16 @@ class BasicBitmap {
   template <typename H>
   friend H AbslHashValue(H state, const BasicBitmap& bitmap) {
     const size_t complete_map_entries = bitmap.size_ / bitmap.kIntBits;
-    state = H::combine_contiguous(std::move(state), bitmap.map_,
-                                  complete_map_entries);
+    if constexpr (is_atomic<W>::value) {
+      state =
+          std::accumulate(bitmap.map_, bitmap.map_ + complete_map_entries,
+                          std::move(state), [](H state, const W& word) {
+                            return H::combine(std::move(state), word.load());
+                          });
+    } else {
+      state = H::combine_contiguous(std::move(state), bitmap.map_,
+                                    complete_map_entries);
+    }
 
     if (complete_map_entries != bitmap.array_size()) {
       const Word last_map_entry = bitmap.map_[bitmap.array_size() - 1] &
@@ -543,7 +629,7 @@ class BasicBitmap {
     // a cached copy of the bitmap of the word from the bit array containing
     // the bit specified by bit_position_, but logically right shifted so that
     // the current bit is at position 0.
-    std::remove_const_t<W> current_;
+    std::remove_const_t<Word> current_;
     size_type bit_position_;
   };
 
@@ -591,7 +677,7 @@ class BasicBitmap {
  private:
   // An unsigned integral type that is not promoted and can represent all values
   // of `Word` (assuming `Word` is unsigned). Note that if `Word` does not get
-  // promoted, then this type is the same as `Word`. We occaisionally use this
+  // promoted, then this type is the same as `Word`. We occasionally use this
   // type to perform arithmetic, to avoid having `Word`-typed values promoted to
   // a signed type via integral promotions.
   // TODO(b/228178585)
@@ -611,10 +697,10 @@ class BasicBitmap {
 
   // Implements FindNextSetBitInVector if 'complement' is false,
   // and FindNextUnsetBitInVector if 'complement' is true.
-  static bool FindNextBitInVector(bool complement, const Word* words,
+  static bool FindNextBitInVector(bool complement, const W* words,
                                   size_t* bit_index_inout, size_t limit);
 
-  static bool FindPreviousBitInVector(bool complement, const Word* words,
+  static bool FindPreviousBitInVector(bool complement, const W* words,
                                       size_t* bit_index_inout, size_t limit);
 
   // The same semantics as CompareTo, except that we have the invariant that
@@ -626,11 +712,19 @@ class BasicBitmap {
     return (n <= 1) ? p : Log2(n / 2, p + 1);
   }
 
+  static void DeleteMap(W* map, size_t size) {
+    static_assert(std::is_trivially_destructible<W>::value,
+                  "W must be trivial");
+    base::sized_delete_array(
+        const_cast<typename std::remove_const<W>::type*>(map),
+        sizeof(W) * size);
+  }
+
   // NOTE: we make assumptions throughout the code that kIntBits is a power of
   // 2, so that we can use shift and mask instead of division and modulo.
   static constexpr int kIntBits = CHAR_BIT * sizeof(Word);  // bits in a Word
   static constexpr int kLogIntBits = Log2(kIntBits, 0);
-  Word* map_;       // the bitmap
+  W* map_;          // the bitmap
   size_type size_;  // the upper bound of the bitmap
   bool alloc_;      // whether or not *we* allocated the memory
 };
@@ -656,6 +750,21 @@ using ConstBitmap16 = ::util::bitmap::internal::BasicBitmap<const uint16_t>;
 using ConstBitmap32 = ::util::bitmap::internal::BasicBitmap<const uint32_t>;
 using ConstBitmap64 = ::util::bitmap::internal::BasicBitmap<const uint64_t>;
 
+// Atomic bitmap types.
+// Note: Only Get, Set and Toggle are really atomic. Other operations will not
+// fail, but the results may be incorrect (e.g. FindNextSetBit() may return a
+// bit that is was unset at the time of the call, or pass over a set bit).
+using AtomicBitmapChar =
+    ::util::bitmap::internal::BasicBitmap<std::atomic<char>>;
+using AtomicBitmap8 =
+    ::util::bitmap::internal::BasicBitmap<std::atomic<uint8_t>>;
+using AtomicBitmap16 =
+    ::util::bitmap::internal::BasicBitmap<std::atomic<uint16_t>>;
+using AtomicBitmap32 =
+    ::util::bitmap::internal::BasicBitmap<std::atomic<uint32_t>>;
+using AtomicBitmap64 =
+    ::util::bitmap::internal::BasicBitmap<std::atomic<uint64_t>>;
+
 // Implementations follow.
 
 namespace internal {
@@ -665,8 +774,14 @@ BasicBitmap<W>::BasicBitmap(const BasicBitmap& src)
     : size_(src.size_), alloc_(src.alloc_) {
   static_assert((kIntBits & (kIntBits - 1)) == 0, "kIntBits_not_power_of_2");
   if (alloc_) {
-    map_ = std::allocator<Word>().allocate(array_size());
-    std::copy(src.map_, src.map_ + array_size(), map_);
+    map_ = new W[array_size()];
+    if constexpr (is_atomic<W>::value) {
+      for (size_t i = 0; i < array_size(); ++i) {
+        map_[i].store(src.map_[i]);
+      }
+    } else {
+      std::copy(src.map_, src.map_ + array_size(), map_);
+    }
   } else {
     map_ = src.map_;
   }
@@ -686,11 +801,18 @@ void BasicBitmap<W>::Resize(size_type size, bool fill) {
   const size_type old_size = size_;
   const size_t new_array_size = RequiredArraySize(size);
   if (new_array_size != array_size()) {
-    Word* new_map = std::allocator<Word>().allocate(new_array_size);
-    std::copy(map_, map_ + std::min<size_t>(new_array_size, array_size()),
-              new_map);
+    W* new_map = new W[new_array_size];
+    const size_t copy_array_size =
+        std::min<size_t>(new_array_size, array_size());
+    if constexpr (is_atomic<W>::value) {
+      for (size_t i = 0; i < copy_array_size; ++i) {
+        new_map[i].exchange(map_[i]);
+      }
+    } else {
+      std::copy(map_, map_ + copy_array_size, new_map);
+    }
     if (alloc_) {
-      std::allocator<Word>().deallocate(map_, array_size());
+      DeleteMap(map_, array_size());
     }
     map_ = new_map;
     alloc_ = true;
@@ -705,19 +827,25 @@ template <typename W>
 BasicBitmap<W>& BasicBitmap<W>::operator=(const BasicBitmap<W>& src) {
   if (this != &src) {
     if (alloc_ && array_size() != src.array_size()) {
-      std::allocator<Word>().deallocate(map_, array_size());
-      map_ = std::allocator<Word>().allocate(src.array_size());
+      DeleteMap(map_, array_size());
+      map_ = new W[src.array_size()];
     }
     size_ = src.size_;
     if (src.alloc_) {
       if (!alloc_) {
-        map_ = std::allocator<Word>().allocate(src.array_size());
+        map_ = new W[src.array_size()];
       }
-      std::copy(src.map_, src.map_ + src.array_size(), map_);
+      if constexpr (is_atomic<W>::value) {
+        for (size_t i = 0; i < src.array_size(); ++i) {
+          map_[i].store(src.map_[i]);
+        }
+      } else {
+        std::copy(src.map_, src.map_ + src.array_size(), map_);
+      }
       alloc_ = true;
     } else {
       if (alloc_) {
-        std::allocator<Word>().deallocate(map_, array_size());
+        DeleteMap(map_, array_size());
       }
       map_ = src.map_;
       alloc_ = false;
@@ -758,20 +886,20 @@ bool BasicBitmap<W>::TestRange(size_type begin, size_type end) const {
 
   // Test the portion of the last word that lies within the range. (This logic
   // also handles the case where the entire range lies within a single word.)
-  const Word mask = (((W{1} << 1) << (jlast - j)) - 1) << j;
-  return (map_[ilast] & mask) != W{0};
+  const Word mask = (((Word{1} << 1) << (jlast - j)) - 1) << j;
+  return (map_[ilast] & mask) != Word{0};
 }
 
 template <typename W>
 bool BasicBitmap<W>::IsSubsetOf(const BasicBitmap& other) const {
   ABSL_CHECK_EQ(bits(), other.bits());
-  Word* mp = map_;
-  Word* endp = mp + array_size() - 1;
-  Word* op = other.map_;
+  W* mp = map_;
+  W* endp = mp + array_size() - 1;
+  W* op = other.map_;
   // A is a subset of B if A - B = {}, that is A & ~B = {}
   for (; mp != endp; ++mp, ++op)
     if (*mp & ~*op) return false;
-  return (*mp & ~*op & HighOrderMapElementMask()) == W{0};
+  return (*mp & ~*op & HighOrderMapElementMask()) == Word{0};
 }
 
 // Same semantics as CompareTo, except that we have the invariant that first
@@ -837,11 +965,12 @@ void BasicBitmap<W>::Union(const BasicBitmap<W>& other) {
   // Perform bitwise OR of all but the last common word.
   const size_t last = min_array_size - 1;
   std::transform(map_, map_ + last, other.map_, map_,
-                 [](Word a, Word b) { return a | b; });
+                 [](const W& a, const W& b) { return a | b; });
   // Perform bitwise OR of the last common word, applying mask if necessary.
   map_[last] |= other_array_size == min_array_size
-                    ? other.map_[last] & other.HighOrderMapElementMask()
-                    : other.map_[last];
+                    ? static_cast<Word>(other.map_[last]) &
+                          other.HighOrderMapElementMask()
+                    : static_cast<Word>(other.map_[last]);
 }
 
 // Note that bits > size end up in undefined states when sizes
@@ -853,7 +982,7 @@ void BasicBitmap<W>::Intersection(const BasicBitmap<W>& other) {
   const size_t min_array_size = std::min(this_array_size, other_array_size);
   // Perform bitwise AND of all common words.
   std::transform(map_, map_ + min_array_size, other.map_, map_,
-                 [](Word a, Word b) { return a & b; });
+                 [](const W& a, const W& b) { return a & b; });
   if (other_array_size == min_array_size) {
     // Zero out bits that are outside the range of 'other'.
     if (other_array_size != 0) {
@@ -897,7 +1026,7 @@ typename BasicBitmap<W>::size_type BasicBitmap<W>::GetOnesCountInRange(
   size_t start_word = start / kIntBits;
   size_t end_word = (end - 1) / kIntBits;  // Word containing the last bit.
 
-  Word* p = map_ + start_word;
+  W* p = map_ + start_word;
   ArithmeticWord c = static_cast<ArithmeticWord>(*p) &
                      (kAllOnesWord << (start & (kIntBits - 1)));
 
@@ -909,7 +1038,7 @@ typename BasicBitmap<W>::size_type BasicBitmap<W>::GetOnesCountInRange(
   size_type sum = absl::popcount(static_cast<Word>(c));
 
   for (++p; p < map_ + end_word; ++p) {
-    sum += absl::popcount(*p);
+    sum += absl::popcount(static_cast<Word>(*p));
   }
 
   return sum + absl::popcount(static_cast<Word>(
@@ -942,7 +1071,7 @@ bool BasicBitmap<W>::FindNextUnsetBitBeforeLimit(size_type* index,
 
 /*static*/
 template <typename W>
-bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
+bool BasicBitmap<W>::FindNextBitInVector(bool complement, const W* words,
                                          size_t* bit_index_inout,
                                          size_t limit) {
   const size_t bit_index = *bit_index_inout;
@@ -956,7 +1085,7 @@ bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
   // bit is set.  This helps for cases where many bits are set, and doesn't
   // hurt too much if not.
   const size_t first_bit_offset = bit_index & (kIntBits - 1);
-  if (one_word & (W{1} << first_bit_offset)) return true;
+  if (one_word & (Word{1} << first_bit_offset)) return true;
 
   // First word is special - we need to mask off leading bits
   one_word &= (kAllOnesWord << first_bit_offset);
@@ -967,9 +1096,9 @@ bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
   // valid, so we want to avoid reading words[1] when limit == kIntBits.
   const size_t last_int_index = (limit - 1) >> kLogIntBits;
   while (int_index < last_int_index) {
-    if (one_word != W{0}) {
+    if (one_word != Word{0}) {
       *bit_index_inout =
-          (int_index << kLogIntBits) + Bits::FindLSBSetNonZero64(one_word);
+          (int_index << kLogIntBits) + absl::countr_zero(one_word);
       return true;
     }
     one_word = words[++int_index];
@@ -981,8 +1110,7 @@ bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
   // multiple of kIntBits we want to check all bits in this word.
   one_word &= ~((kAllOnesWord - 1) << ((limit - 1) & (kIntBits - 1)));
   if (one_word != 0) {
-    *bit_index_inout =
-        (int_index << kLogIntBits) + Bits::FindLSBSetNonZero64(one_word);
+    *bit_index_inout = (int_index << kLogIntBits) + absl::countr_zero(one_word);
     return true;
   }
   return false;
@@ -990,21 +1118,22 @@ bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
 
 /*static*/
 template <typename W>
-bool BasicBitmap<W>::FindPreviousBitInVector(bool complement, const Word* words,
+bool BasicBitmap<W>::FindPreviousBitInVector(bool complement, const W* words,
                                              size_t* bit_index_inout,
                                              size_t limit) {
   const size_type bit_index = *bit_index_inout;
   size_t map_index = bit_index >> kLogIntBits;
   const size_t map_limit = limit >> kLogIntBits;
   const size_t bit_limit_mask = kAllOnesWord << (limit & (kIntBits - 1));
-  MutableWord one_word = complement ? ~words[map_index] : words[map_index];
+  MutableWord one_word = words[map_index];
+  if (complement) one_word = ~one_word;
 
   if (limit > *bit_index_inout) return false;
   // Simple optimization where we can immediately return true if the first
   // bit is set.  This helps for cases where many bits are set, and doesn't
   // hurt too much if not.
   const unsigned bit_offset = bit_index & (kIntBits - 1);
-  if (one_word & (W{1} << bit_offset)) return true;
+  if (one_word & (Word{1} << bit_offset)) return true;
 
   // First word is special - we need to mask off trailing bits
   one_word &= ~((kAllOnesWord - 1) << bit_offset);
@@ -1014,14 +1143,13 @@ bool BasicBitmap<W>::FindPreviousBitInVector(bool complement, const Word* words,
   // Loop through all empty words
   while (one_word == 0) {
     if (map_index == map_limit) return false;
-    --map_index;
-    one_word = complement ? ~words[map_index] : words[map_index];
+    one_word = words[--map_index];
+    if (complement) one_word = ~one_word;
     if (map_index == map_limit) one_word &= bit_limit_mask;
   }
 
   // Found a word with some set bits - return result
-  *bit_index_inout =
-      (map_index << kLogIntBits) + Bits::FindMSBSetNonZero64(one_word);
+  *bit_index_inout = (map_index << kLogIntBits) + absl::bit_width(one_word) - 1;
   return true;
 }
 
@@ -1075,7 +1203,7 @@ void BasicBitmap<W>::SetRange(size_type begin, size_type end, bool value) {
     // Set all the bits in the array elements between the begin
     // and end elements.
     std::fill(map_ + begin_element + 1, map_ + end_element,
-              value ? kAllOnesWord : W{0});
+              value ? kAllOnesWord : Word{0});
 
     // Update the appropriate bit-range in the last element.
     // Note end_bit is an exclusive bound, so if it's 0 none of the
@@ -1106,9 +1234,9 @@ auto BasicBitmap<W>::BitIndexIter::operator++() -> BitIndexIter& {
     }
     return *this;
   }
-  // If the bottom bit is zero, shift until we find a set bit.
+  // If the bottom bit is zero, shift to put a one there.
   if ((current_ & 1) == 0) {
-    const int first = Bits::FindLSBSetNonZero64(current_);
+    const int first = absl::countr_zero(current_);
     bit_position_ += first;
     current_ >>= first;
   }

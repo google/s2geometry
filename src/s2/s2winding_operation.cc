@@ -25,6 +25,7 @@
 
 #include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -206,8 +207,8 @@ class WindingLayer : public S2Builder::Layer {
  private:
   bool ComputeBoundary(const Graph& g, WindingOracle* oracle, S2Error* error);
   EdgeId GetContainingLoopEdge(VertexId v, EdgeId start, const Graph& g,
-                               const vector<EdgeId>& left_turn_map,
-                               const vector<EdgeId>& sibling_map) const;
+                               absl::Span<const EdgeId> left_turn_map,
+                               absl::Span<const EdgeId> sibling_map) const;
   bool MatchesRule(int winding) const;
   bool MatchesDegeneracy(int winding, int winding_minus, int winding_plus)
       const;
@@ -387,8 +388,8 @@ bool WindingLayer::ComputeBoundary(const Graph& g, WindingOracle* oracle,
 // that contains "v" with respect to the usual semi-open boundary rules.
 EdgeId WindingLayer::GetContainingLoopEdge(
     VertexId v, EdgeId start, const Graph& g,
-    const vector<EdgeId>& left_turn_map,
-    const vector<EdgeId>& sibling_map) const {
+    absl::Span<const EdgeId> left_turn_map,
+    absl::Span<const EdgeId> sibling_map) const {
   // If the given edge is degenerate, this is an isolated vertex.
   ABSL_DCHECK_EQ(g.edge(start).second, v);
   if (g.edge(start).first == v) return start;

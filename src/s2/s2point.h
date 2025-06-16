@@ -77,7 +77,7 @@ class S2Point : public Vector3_d {
   // Initialize S2Point from a Decoder instance.
   bool Init(Decoder* decoder, S2Error& error) {
     if (decoder->avail() < sizeof(S2Point)) {
-      error.Init(S2Error::DATA_LOSS, "Not enough data to decode S2Point");
+      error = S2Error::DataLoss("Not enough data to decode S2Point");
       return false;
     }
 

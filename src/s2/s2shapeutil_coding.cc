@@ -160,7 +160,7 @@ TaggedShapeFactory::TaggedShapeFactory(const ShapeDecoder& shape_decoder,
     : shape_decoder_(shape_decoder) {
   if (!encoded_shapes_.Init(decoder)) {
     encoded_shapes_.Clear();
-    error.Init(S2Error::DATA_LOSS, "Corrupted encoded shapes.");
+    error = S2Error::DataLoss("Corrupted encoded shapes.");
   }
 }
 

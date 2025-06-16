@@ -17,9 +17,8 @@
 
 #include "s2/s2polyline_simplifier.h"
 
-#include <cmath>
-
 #include <cfloat>
+#include <cmath>
 #include <vector>
 
 #include "absl/log/absl_check.h"

@@ -49,14 +49,14 @@ This issue may require revision of boringssl or exactfloat.
 
 ## Requirements for End Users using CMake
 
-* [CMake](http://www.cmake.org/)
-* A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
-* [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
-  [`20240116`](https://github.com/abseil/abseil-cpp/releases/tag/20240116.1)
-  (standard library extensions)
-* [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
-* [googletest testing framework >= 1.10](https://github.com/google/googletest)
-  (to build tests and example programs, optional)
+*   [CMake](http://www.cmake.org/) >= 3.5
+*   A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
+*   [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
+    [`20240722`](https://github.com/abseil/abseil-cpp/releases/tag/20240722.0)
+    (standard library extensions)
+*   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
+*   [googletest testing framework >= 1.10](https://github.com/google/googletest)
+    (to build tests and example programs, optional)
 
 On Ubuntu, all of these other than abseil can be installed via apt-get:
 
@@ -64,30 +64,26 @@ On Ubuntu, all of these other than abseil can be installed via apt-get:
 sudo apt-get install cmake googletest libssl-dev
 ```
 
-Otherwise, you may need to install some from source.
-
-Currently, Abseil must always be installed from source.  See the use of
-`-DCMAKE_PREFIX_PATH` in the [build instructions below](#building).
-This is likely to change.
+abseil-cpp may need to be installed from source if an LTS release is not
+packaged for the platform.  See the use of `-DCMAKE_PREFIX_PATH` in the
+[build instructions below](#building).
 
 On macOS, use [MacPorts](http://www.macports.org/) or
 [Homebrew](http://brew.sh/).  For MacPorts:
 
 ```
-sudo port install cmake openssl
+sudo port install cmake abseil gtest openssl
 ```
 
-Do not install `gtest` from MacPorts; instead download [release
-1.10.0](https://github.com/google/googletest/releases/tag/release-1.10.0), unpack,
-and substitute
+then use
 
 ```
-cmake -DGOOGLETEST_ROOT=/...absolute path to.../googletest-release-1.10.0 ..
+cmake -DGOOGLETEST_ROOT=/opt/local/src -DCMAKE_PREFIX_PATH=/opt/local ..
 ```
 
 in the build instructions below.
 
-Thorough testing has only been done on Ubuntu 14.04.3 and macOS 10.12.
+Thorough testing has only been done on Ubuntu 14.04.3 and macOS 10.13.
 
 ## Build and Install
 

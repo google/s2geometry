@@ -482,7 +482,9 @@ TEST(S2CellUnion, CapBoundContainsAllCells) {
     S2CellUnion cellunion(input);
     S2Cap cap = cellunion.GetCapBound();
     for (S2CellId id : cellunion) {
-      EXPECT_TRUE(cap.Contains(S2Cell(id)));
+      EXPECT_TRUE(cap.Contains(S2Cell(id)))
+          << "cap: " << cap << " cellunion: " << cellunion << " id: " << id
+          << " iter: " << i;
     }
   }
 }

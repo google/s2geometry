@@ -17,12 +17,12 @@
 
 #include "s2/s2latlng.h"
 
-#include <cmath>
-
 #include <algorithm>
+#include <cmath>
 #include <ostream>
 #include <string>
 
+#include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "s2/util/coding/coder.h"
@@ -43,7 +43,7 @@ void S2LatLng::Encode(Encoder* encoder) const {
 
 bool S2LatLng::Init(Decoder* decoder, S2Error& error) {
   if (decoder->avail() < 2 * sizeof(double)) {
-    error.Init(S2Error::DATA_LOSS, "Insufficient data to decode");
+    error = S2Error::DataLoss("Insufficient data to decode");
     return false;
   }
 
@@ -54,6 +54,11 @@ bool S2LatLng::Init(Decoder* decoder, S2Error& error) {
 }
 
 S2LatLng S2LatLng::Normalized() const {
+  if (!std::isfinite(lat().radians()) || !std::isfinite(lng().radians())) {
+    // Preserve invalidity.
+    return Invalid();
+  }
+
   // remainder(x, 2 * M_PI) reduces its argument to the range [-M_PI, M_PI]
   // inclusive, which is what we want here.
   return S2LatLng(max(-M_PI_2, min(M_PI_2, lat().radians())),
@@ -63,14 +68,15 @@ S2LatLng S2LatLng::Normalized() const {
 S2Point S2LatLng::ToPoint() const {
   ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid S2LatLng in S2LatLng::ToPoint: " << *this;
-  double phi = lat().radians();
-  double theta = lng().radians();
-  double cosphi = cos(phi);
-  return S2Point(cos(theta) * cosphi, sin(theta) * cosphi, sin(phi));
+  ABSL_DCHECK(std::isfinite(lat().radians())) << lat();
+  ABSL_DCHECK(std::isfinite(lng().radians())) << lng();
+  const S1Angle::SinCosPair phi = lat().SinCos();
+  const S1Angle::SinCosPair theta = lng().SinCos();
+  return S2Point(theta.cos * phi.cos, theta.sin * phi.cos, phi.sin);
 }
 
 S2LatLng::S2LatLng(const S2Point& p)
-  : coords_(Latitude(p).radians(), Longitude(p).radians()) {
+    : coords_(Latitude(p).radians(), Longitude(p).radians()) {
   // The latitude and longitude are already normalized.
   ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid S2LatLng in constructor: " << *this;
