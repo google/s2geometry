@@ -27,6 +27,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/cord.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/encoded_s2cell_id_vector.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/mutable_s2shape_index.h"

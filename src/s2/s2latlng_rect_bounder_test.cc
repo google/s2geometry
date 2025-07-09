@@ -98,8 +98,7 @@ TEST(RectBounder, MaxLatitudeRandom) {
   // latitudes near the equator and north pole since these are the extremes.
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MAX_LATITUDE_RANDOM",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MAX_LATITUDE_RANDOM", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 100;
   for (int iter = 0; iter < kIters; ++iter) {
     // Construct a right-handed coordinate frame (U,V,W) such that U points
@@ -186,9 +185,9 @@ TEST(RectBounder, NearlyIdenticalOrAntipodalPoints) {
   // Also test the corresponding situations for antipodal points, i.e. by
   // negating one of the points so that they are almost 180 degrees apart.
 
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "NEARLY_IDENTICAL_OR_ANTIPODAL_POINTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("NEARLY_IDENTICAL_OR_ANTIPODAL_POINTS",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 10000;
   for (int iter = 0; iter < kIters; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));

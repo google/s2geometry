@@ -16,6 +16,7 @@
 #ifndef S2_S2SHAPEUTIL_EDGE_WRAP_H_
 #define S2_S2SHAPEUTIL_EDGE_WRAP_H_
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2shape.h"
 
 namespace s2shapeutil {

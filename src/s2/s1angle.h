@@ -331,8 +331,8 @@ inline double tan(S1Angle a) {
 inline S1Angle::SinCosPair S1Angle::SinCos() const {
 // TODO(b/370513151): Remove once Clang can optimize this.
 // NB: __sincos() provided by __APPLE__ is not bit-identical to sin(), cos()
-// under `--config=darwin_arm64`.
-#if defined(__GLIBC__) || defined(__ANDROID__)
+// under `--config=darwin_arm64`.  Windows does not support sincos().
+#if !defined(__APPLE__) && !defined(_WIN32)
   double sin_angle, cos_angle;
   sincos(radians(), &sin_angle, &cos_angle);
   return {sin_angle, cos_angle};

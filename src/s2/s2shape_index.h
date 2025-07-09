@@ -302,8 +302,8 @@ class S2ShapeIndex {
     IteratorBase() = default;
     IteratorBase(const IteratorBase&) = default;
     IteratorBase& operator=(const IteratorBase&) = default;
-    IteratorBase(IteratorBase&&) = default;
-    IteratorBase& operator=(IteratorBase&&) = default;
+    IteratorBase(IteratorBase&&) noexcept = default;
+    IteratorBase& operator=(IteratorBase&&) noexcept = default;
   };
 
   // A type function to check if a type is derived from S2ShapeIndex.  This is
@@ -420,8 +420,8 @@ class S2ShapeIndex {
     // Iterators are copyable and movable.
     Iterator(const Iterator&);
     Iterator& operator=(const Iterator&);
-    Iterator(Iterator&&) = default;
-    Iterator& operator=(Iterator&&) = default;
+    Iterator(Iterator&&) noexcept = default;
+    Iterator& operator=(Iterator&&) noexcept = default;
 
     // Returns the S2CellId of the current index cell.  If done() is true,
     // returns a value larger than any valid S2CellId (S2CellId::Sentinel()).

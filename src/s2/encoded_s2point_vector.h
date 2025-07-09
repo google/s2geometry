@@ -23,11 +23,11 @@
 #include <cstdint>
 #include <vector>
 
-#include "absl/base/attributes.h"
 #include "absl/base/optimization.h"
 #include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/encoded_string_vector.h"
 #include "s2/encoded_uint_vector.h"
 #include "s2/s2coder.h"
@@ -70,13 +70,13 @@ class EncodedS2PointVector {
   // condition, at the cost of potentially more overhead when decoding.
   //
   // REQUIRES: The Decoder data buffer must outlive this object.
-  ABSL_MUST_USE_RESULT bool Init(Decoder* decoder);
+  [[nodiscard]] bool Init(Decoder* decoder);
 
   // Initializes the EncodedS2PointVector as above.  Setting S2Error if
   // initialization fails.  A true return status does -not- mean that the byte
   // stream is without errors.  The individual points must still be checked with
   // a checked accessor such as Decode(S2Error&).
-  ABSL_MUST_USE_RESULT bool Init(Decoder* decoder, S2Error& error);
+  [[nodiscard]] bool Init(Decoder* decoder, S2Error& error);
 
   // Returns the size of the original vector.
   size_t size() const;

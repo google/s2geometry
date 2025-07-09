@@ -117,7 +117,8 @@ void LaxPolygonLayer::AppendEdgeLabels(
 }
 
 // Returns all edges of "g" except for those identified by "edges_to_discard".
-static void DiscardEdges(const Graph& g, const vector<EdgeId>& edges_to_discard,
+static void DiscardEdges(const Graph& g,
+                         absl::Span<const EdgeId> edges_to_discard,
                          vector<Edge>* new_edges,
                          vector<InputEdgeIdSetId>* new_input_edge_id_set_ids) {
   ABSL_DCHECK(std::is_sorted(edges_to_discard.begin(), edges_to_discard.end()));

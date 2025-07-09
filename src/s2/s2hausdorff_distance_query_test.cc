@@ -126,7 +126,6 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
 
   EXPECT_FALSE(directed_empty_to_a);
   EXPECT_FALSE(directed_a_to_empty);
-  EXPECT_FALSE(directed_a_to_empty);
   EXPECT_TRUE(directed_a_to_empty_distance.is_infinity());
   EXPECT_FALSE(empty_to_a_directed_distance_less);
   EXPECT_FALSE(a_to_empty_directed_distance_less);
@@ -179,7 +178,7 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
   double average_a_and_b_distance =
       (larger_a_and_b_distance + smaller_a_and_b_distance) / 2.0;
 
-  // THis should be true if we add a small epsilon upwards to account for any
+  // This should be true if we add a small epsilon upwards to account for any
   // floating point error.
   bool distance_less_larger_distance = query.IsDistanceLess(
       &a, &b, S1ChordAngle::Radians(larger_a_and_b_distance + 0.001));

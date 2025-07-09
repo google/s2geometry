@@ -71,8 +71,7 @@ using std::vector;
 
 TEST(S2RegionCoverer, RandomCells) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_CELLS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_CELLS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionCoverer::Options options;
   options.set_max_cells(1);
@@ -93,7 +92,7 @@ static void CheckCovering(const S2RegionCoverer::Options& options,
                           const vector<S2CellId>& covering,
                           bool interior) {
   // Keep track of how many cells have the same options.min_level() ancestor.
-  flat_hash_map<S2CellId, int, S2CellIdHash> min_level_cells;
+  flat_hash_map<S2CellId, int> min_level_cells;
   for (S2CellId cell_id : covering) {
     int level = cell_id.level();
     EXPECT_GE(level, options.min_level());
@@ -104,10 +103,7 @@ static void CheckCovering(const S2RegionCoverer::Options& options,
   if (covering.size() > options.max_cells()) {
     // If the covering has more than the requested number of cells, then check
     // that the cell count cannot be reduced by using the parent of some cell.
-    // TODO(user,b/210097200): Use structured bindings when we require
-    // C++17 in opensource.
-    for (const auto& p : min_level_cells) {
-      const int cells = p.second;
+    for (const auto [_, cells] : min_level_cells) {
       EXPECT_EQ(cells, 1);
     }
   }
@@ -122,9 +118,8 @@ static void CheckCovering(const S2RegionCoverer::Options& options,
 }
 
 TEST(S2RegionCoverer, RandomCaps) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_CAPS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("RANDOM_CAPS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   static constexpr int kMaxLevel = S2CellId::kMaxLevel;
   S2RegionCoverer::Options options;
   for (int i = 0; i < 1000; ++i) {
@@ -163,8 +158,7 @@ TEST(S2RegionCoverer, RandomCaps) {
 
 TEST(S2RegionCoverer, SimpleCoverings) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SIMPLE_COVERINGS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SIMPLE_COVERINGS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   static constexpr int kMaxLevel = S2CellId::kMaxLevel;
   S2RegionCoverer::Options options;
   options.set_max_cells(std::numeric_limits<int32_t>::max());
@@ -194,8 +188,7 @@ struct WorstCap {
 static void TestAccuracy(int max_cells) {
   SCOPED_TRACE(StrCat(max_cells, " cells"));
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "TEST_ACCURACY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "TEST_ACCURACY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   static constexpr int kNumMethods = 1;
   // This code is designed to evaluate several approximation algorithms and
@@ -320,8 +313,7 @@ TEST(S2RegionCoverer, InteriorCovering) {
   // the best interior covering should contain 3 children of the initial cell,
   // that were not effected by removal of a grandchild.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INTERIOR_COVERING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INTERIOR_COVERING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int level = 12;
   S2CellId small_cell = S2CellId(s2random::Point(bitgen)).parent(level + 2);
   S2CellId large_cell = small_cell.parent(level);

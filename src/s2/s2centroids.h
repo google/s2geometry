@@ -47,6 +47,7 @@
 #ifndef S2_S2CENTROIDS_H_
 #define S2_S2CENTROIDS_H_
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2point.h"
 
 namespace S2 {

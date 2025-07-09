@@ -212,8 +212,7 @@ TEST(S2CellUnion, AddCellsSizes) {
   // statistics for normalization (to see if they agree with the
   // analysis above).
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "ADD_CELLS_SIZES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "ADD_CELLS_SIZES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   double in_sum = 0, out_sum = 0;
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
@@ -228,8 +227,7 @@ TEST(S2CellUnion, AddCellsSizes) {
 
 TEST(S2CellUnion, ContainsExpectedCells) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONTAINS_EXPECTED_CELLS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CONTAINS_EXPECTED_CELLS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
@@ -241,8 +239,7 @@ TEST(S2CellUnion, ContainsExpectedCells) {
 
 TEST(S2CellUnion, ContainsInputCells) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONTAINS_INPUT_CELLS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CONTAINS_INPUT_CELLS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
@@ -277,9 +274,9 @@ TEST(S2CellUnion, ContainsInputCells) {
 }
 
 TEST(S2CellUnion, DoesNotContainParentsOfExpectedCell) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "DOES_NOT_CONTAIN_PARENTS_OF_EXPECTED_CELL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("DOES_NOT_CONTAIN_PARENTS_OF_EXPECTED_CELL",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
@@ -296,9 +293,8 @@ TEST(S2CellUnion, DoesNotContainParentsOfExpectedCell) {
 }
 
 TEST(S2CellUnion, UnionIsOr) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "UNION_IS_OR",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("UNION_IS_OR", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
@@ -324,8 +320,7 @@ TEST(S2CellUnion, UnionIsOr) {
 
 TEST(S2CellUnion, IntersectionIsAnd) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INTERSECTION_IS_AND",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INTERSECTION_IS_AND", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
@@ -386,8 +381,7 @@ TEST(S2CellUnion, IntersectionWithCellIdNotInUnionIsEmpty) {
 
 TEST(S2CellUnion, DifferenceIsXAndNotY) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "DIFFERENCE_IS_X_AND_NOT_Y",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "DIFFERENCE_IS_X_AND_NOT_Y", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
@@ -415,8 +409,7 @@ TEST(S2CellUnion, DifferenceIsXAndNotY) {
 
 TEST(S2CellUnion, DifferenceInclusionExclusion) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "DIFFERENCE_INCLUSION_EXCLUSION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "DIFFERENCE_INCLUSION_EXCLUSION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
@@ -445,8 +438,7 @@ TEST(S2CellUnion, DifferenceInclusionExclusion) {
 
 TEST(S2CellUnion, ContainsIntersectsBruteForce) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONTAINS_INTERSECTS_BRUTE_FORCE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CONTAINS_INTERSECTS_BRUTE_FORCE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
@@ -471,8 +463,7 @@ TEST(S2CellUnion, ContainsIntersectsBruteForce) {
 
 TEST(S2CellUnion, CapBoundContainsAllCells) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CAP_BOUNDS_CONTAINS_ALL_CELLS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CAP_BOUNDS_CONTAINS_ALL_CELLS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
@@ -522,9 +513,8 @@ TEST(S2CellUnion, Expand) {
   // the coverings by a random radius, and then make sure that the new
   // covering covers the expanded cap.  It also makes sure that the
   // new covering is not too much larger than expected.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EXPAND",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("EXPAND", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionCoverer coverer;
   const int num_iters = absl::GetFlag(FLAGS_iters);
@@ -624,8 +614,7 @@ TEST(S2CellUnion, FromMinMax) {
 
   // Check random ranges of leaf cells.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FROM_MIN_MAX",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FROM_MIN_MAX", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100; ++iter) {
     S2CellId x = s2random::CellId(bitgen, S2CellId::kMaxLevel);
     S2CellId y = s2random::CellId(bitgen, S2CellId::kMaxLevel);

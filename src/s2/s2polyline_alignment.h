@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2polyline.h"
 
 // This library provides code to compute vertex alignments between S2Polylines.
@@ -151,7 +152,7 @@ double GetExactVertexAlignmentCost(const S2Polyline& a, const S2Polyline& b);
 // fewer cells, which leads to a faster (but worse) approximation.
 // This method is O(max(A, B)) in both space and time complexity.
 VertexAlignment GetApproxVertexAlignment(const S2Polyline& a,
-                                         const S2Polyline& b, const int radius);
+                                         const S2Polyline& b, int radius);
 
 // A convience overload for GetApproxVertexAlignment which computes and uses
 // suggested default parameter of radius = max(a.size(), b.size())^0.25
@@ -185,7 +186,7 @@ class MedoidOptions {
 };
 
 int GetMedoidPolyline(absl::Span<const std::unique_ptr<S2Polyline>> polylines,
-                      const MedoidOptions options);
+                      MedoidOptions options);
 
 // GetConsensusPolyline allocates and returns a new "consensus" polyline from a
 // non-empty collection of polylines. We iteratively apply Dynamic Timewarp
@@ -241,7 +242,7 @@ class ConsensusOptions {
 };
 
 std::unique_ptr<S2Polyline> GetConsensusPolyline(
-    const std::vector<std::unique_ptr<S2Polyline>>& polylines,
-    const ConsensusOptions options);
+    absl::Span<const std::unique_ptr<S2Polyline>> polylines,
+    ConsensusOptions options);
 }  // namespace s2polyline_alignment
 #endif  // S2_S2POLYLINE_ALIGNMENT_H_

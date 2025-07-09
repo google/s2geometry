@@ -53,6 +53,7 @@
 #define S2_S2DEBUG_H_
 
 #include "s2/base/commandlineflags_declare.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
 // Command line flag that enables extra validity checking throughout the S2
 // code.  It is turned on by default in debug-mode builds.

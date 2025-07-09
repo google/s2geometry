@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
@@ -637,9 +638,9 @@ class S2Builder::Graph {
   // times (e.g. to extract the vertices for different layers), since the
   // incremental running time for each layer becomes O(edges.size()) rather
   // than O(vertices.size() + edges.size()).
-  static std::vector<S2Point> FilterVertices(
-      const std::vector<S2Point>& vertices, std::vector<Edge>* edges,
-      std::vector<VertexId>* tmp);
+  static std::vector<S2Point> FilterVertices(absl::Span<const S2Point> vertices,
+                                             std::vector<Edge>* edges,
+                                             std::vector<VertexId>* tmp);
 
   // A comparison function that allows stable sorting with std::sort (which is
   // fast but not stable).  It breaks ties between equal edges by comparing

@@ -68,8 +68,7 @@ TEST(GetReferencePoint, InvertedLoops) {
 
 TEST(GetReferencePoint, PartiallyDegenerateLoops) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "PARTIALLY_DEGENERATE_LOOPS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "PARTIALLY_DEGENERATE_LOOPS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100; ++iter) {
     // First we construct a long convoluted edge chain that follows the
     // S2CellId Hilbert curve.  At some random point along the curve, we

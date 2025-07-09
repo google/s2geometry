@@ -665,7 +665,7 @@ bool S2Polygon::ApproxDisjoint(const S2Polygon& b, S1Angle tolerance) const {
 }
 
 bool S2Polygon::ApproxEquals(const S2Polygon& b, S1Angle tolerance) const {
-  // TODO(ericv): This can be implemented more cheaply with S2Builder, by
+  // TODO(b/401011903): This can be implemented more cheaply with S2Builder, by
   // simply adding all the edges from one polygon, adding the reversed edge
   // from the other polygon, and turning on the options to split edges and
   // discard sibling pairs.  Then the polygons are approximately equal if the
@@ -1269,8 +1269,11 @@ bool S2Polygon::Intersects(const S2Polyline& b) const {
 }
 
 bool S2Polygon::ApproxDisjoint(const S2Polyline& b, S1Angle tolerance) const {
-  auto intersection = ApproxIntersectWithPolyline(b, tolerance);
-  return intersection.empty();
+  MutableS2ShapeIndex polyline_index;
+  polyline_index.Add(make_unique<S2Polyline::Shape>(&b));
+
+  return S2BooleanOperation::IsEmpty(S2BooleanOperation::OpType::INTERSECTION,
+                                     index(), polyline_index);
 }
 
 unique_ptr<S2Polygon> S2Polygon::DestructiveUnion(

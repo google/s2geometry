@@ -22,6 +22,7 @@
 #define S2_S2EDGE_CROSSINGS_INTERNAL_H_
 
 #include "absl/strings/string_view.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
@@ -58,6 +59,11 @@ Vector3_d SymbolicCrossProd(const S2Point& a, const S2Point& b);
 // and rounded to the nearest representable S2Point.
 S2Point GetIntersectionExact(const S2Point& a0, const S2Point& a1,
                              const S2Point& b0, const S2Point& b1);
+
+
+bool GetIntersectionStableLD(const S2Point& a0, const S2Point& a1,
+                             const S2Point& b0, const S2Point& b1,
+                             S2Point* result);
 
 // The maximum error in the method above.
 extern const S1Angle kIntersectionExactError;

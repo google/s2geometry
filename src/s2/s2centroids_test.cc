@@ -44,8 +44,7 @@ TEST(PlanarCentroid, SemiEquator) {
 
 TEST(TriangleTrueCentroid, SmallTriangles) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SMALL_TRIANGLES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SMALL_TRIANGLES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Test TrueCentroid() with very small triangles.  This test assumes that
   // the triangle is small enough so that it is nearly planar.
@@ -78,8 +77,7 @@ TEST(EdgeTrueCentroid, SemiEquator) {
 
 TEST(EdgeTrueCentroid, GreatCircles) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GREAT_CIRCLES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GREAT_CIRCLES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Construct random great circles and divide them randomly into segments.
   // Then make sure that the centroid is approximately at the center of the

@@ -167,8 +167,7 @@ TEST(S2ClosestCellQuery, EmptyTargetOptimized) {
   // Ensure that the optimized algorithm handles empty targets when a distance
   // limit is specified.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EMPTY_TARGET_OPTIMIZED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "EMPTY_TARGET_OPTIMIZED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2CellIndex index;
   for (int i = 0; i < 1000; ++i) {
     index.Add(s2random::CellId(bitgen), i);
@@ -283,7 +282,7 @@ static void GetClosestCells(S2ClosestCellQuery::Target* target,
     // Check that it satisfies the max_distance() condition.
     EXPECT_LT(result.distance(), query->options().max_distance());
     results->push_back(TestingResult(
-        result.distance(), LabelledCell(result.cell_id(), result.label())));
+        result.distance(), LabelledCell{result.cell_id(), result.label()}));
   }
 }
 
@@ -417,16 +416,14 @@ static constexpr int kNumQueries = 100;
 
 TEST(S2ClosestCellQuery, PointCloudCells) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "POINT_CLOUD_CELLS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "POINT_CLOUD_CELLS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(PointCloudCellIndexFactory(), kNumIndexes, kNumCells,
                        kNumQueries, bitgen);
 }
 
 TEST(S2ClosestCellQuery, CapsCells) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CAPS_CELLS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("CAPS_CELLS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(
       CapsCellIndexFactory(16 /*max_cells_per_cap*/, 0.1 /*density*/),
       kNumIndexes, kNumCells, kNumQueries, bitgen);
@@ -434,8 +431,7 @@ TEST(S2ClosestCellQuery, CapsCells) {
 
 TEST(S2ClosestCellQuery, ConservativeCellDistanceIsUsed) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONSERVATIVE_CELL_DISTANCE_IS_USED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CONSERVATIVE_CELL_DISTANCE_IS_USED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(PointCloudCellIndexFactory(), 5, 100, 10, bitgen);
 }
 

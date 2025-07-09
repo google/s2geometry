@@ -81,7 +81,7 @@ void TestS2Polygon(absl::Span<const string_view> input_strs,
             s2textformat::ToString(output));
 }
 
-void TestS2Polygon(const vector<string_view>& input_strs,
+void TestS2Polygon(absl::Span<const string_view> input_strs,
                    string_view expected_str) {
   TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
   TestS2Polygon(input_strs, expected_str, EdgeType::UNDIRECTED);
@@ -109,14 +109,14 @@ void TestS2PolygonError(absl::Span<const string_view> input_strs,
   EXPECT_THAT(expected_codes, Contains(error.code()));
 }
 
-void TestS2PolygonError(const vector<string_view>& input_strs,
+void TestS2PolygonError(absl::Span<const string_view> input_strs,
                         S2Error::Code expected_code) {
   auto expected_codes = absl::Span<const S2Error::Code>(&expected_code, 1);
   TestS2PolygonError(input_strs, expected_codes, EdgeType::DIRECTED);
   TestS2PolygonError(input_strs, expected_codes, EdgeType::UNDIRECTED);
 }
 
-void TestS2PolygonError(const vector<string_view>& input_strs,
+void TestS2PolygonError(absl::Span<const string_view> input_strs,
                         absl::Span<const S2Error::Code> expected_codes) {
   TestS2PolygonError(input_strs, expected_codes, EdgeType::DIRECTED);
   TestS2PolygonError(input_strs, expected_codes, EdgeType::UNDIRECTED);

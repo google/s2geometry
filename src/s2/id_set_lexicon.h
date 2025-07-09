@@ -26,6 +26,7 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/sequence_lexicon.h"
 
 // IdSetLexicon is a class for compactly representing sets of non-negative
@@ -79,8 +80,8 @@ class IdSetLexicon {
   // IdSetLexicon is movable and copyable.
   IdSetLexicon(const IdSetLexicon&);
   IdSetLexicon& operator=(const IdSetLexicon&);
-  IdSetLexicon(IdSetLexicon&&);
-  IdSetLexicon& operator=(IdSetLexicon&&);
+  IdSetLexicon(IdSetLexicon&&) noexcept;
+  IdSetLexicon& operator=(IdSetLexicon&&) noexcept;
 
   // Clears all data from the lexicon.
   void Clear();

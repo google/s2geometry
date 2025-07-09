@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -212,6 +213,11 @@ bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error* error) {
   if (!decoder->get_varint32(&num_loops)) {
     return Error("Failed to decode number of loops");
   }
+  // `loop_starts_` is indexed by an integer, and contains an extra entry,
+  // so we limit num_loops to INT32_MAX - 1.
+  if (num_loops > std::numeric_limits<int32_t>::max() - 1u) {
+    return Error("Number of loops too large");
+  }
 
   num_loops_ = num_loops;
   s2coding::EncodedS2PointVector vertices;
@@ -295,6 +301,9 @@ bool EncodedS2LaxPolygonShape::Init(Decoder* decoder) {
 
   uint32_t num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
+  // `loop_starts_` is indexed by an integer, and contains an extra entry,
+  // so we limit num_loops to INT32_MAX - 1.
+  if (num_loops > std::numeric_limits<int32_t>::max() - 1u) return false;
   num_loops_ = num_loops;
 
   if (!vertices_.Init(decoder)) return false;

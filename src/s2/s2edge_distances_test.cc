@@ -77,9 +77,9 @@ TEST(S2, GetUpdateMinDistanceMaxError) {
 TEST(S2, GetUpdateMinInteriorDistanceMaxError) {
   // Check that the error bound returned by
   // GetUpdateMinInteriorDistanceMaxError() is large enough.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_UPDATE_MIN_INTERIOR_DISTANCE_MAX_ERROR",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("GET_UPDATE_MIN_INTERIOR_DISTANCE_MAX_ERROR",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 10000; ++iter) {
     S2Point a0 = s2random::Point(bitgen);
     S1Angle len =
@@ -277,8 +277,7 @@ S2Point ChoosePoint(absl::BitGenRef bitgen) {
 
 TEST(S2, ProjectError) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "PROJECT_ERROR",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "PROJECT_ERROR", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     S2Point a = ChoosePoint(bitgen);
     S2Point b = ChoosePoint(bitgen);
@@ -402,8 +401,7 @@ TEST(S2, RepeatedInterpolation) {
   // Check that points do not drift away from unit length when repeated
   // interpolations are done.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "REPEATED_INTERPOLATION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "REPEATED_INTERPOLATION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
     S2Point a = s2random::Point(bitgen);
     S2Point b = s2random::Point(bitgen);

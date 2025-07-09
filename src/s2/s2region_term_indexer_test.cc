@@ -122,9 +122,9 @@ void TestRandomCaps(absl::BitGenRef bitgen,
 // and indexing regions vs. only points.
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTime) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INDEX_REGIONS_QUERY_REGIONS_OPTIMIZE_TIME",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("INDEX_REGIONS_QUERY_REGIONS_OPTIMIZE_TIME",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(false);       // Optimize for time.
@@ -135,9 +135,9 @@ TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTime) {
 }
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryPointsOptimizeTime) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INDEX_REGIONS_QUERY_POINTS_OPTIMIZE_TIME",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("INDEX_REGIONS_QUERY_POINTS_OPTIMIZE_TIME",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(false);       // Optimize for time.
@@ -161,9 +161,9 @@ TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTimeWithLevelMod) {
 }
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeSpace) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INDEX_REGIONS_QUERY_REGIONS_OPTIMIZE_SPACE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("INDEX_REGIONS_QUERY_REGIONS_OPTIMIZE_SPACE",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(true);        // Optimize for space.
@@ -174,9 +174,9 @@ TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeSpace) {
 }
 
 TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INDEX_POINTS_QUERY_REGIONS_OPTIMIZE_TIME",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("INDEX_POINTS_QUERY_REGIONS_OPTIMIZE_TIME",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(false);       // Optimize for time.
@@ -189,9 +189,9 @@ TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
 }
 
 TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeSpace) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INDEX_POINTS_QUERY_REGIONS_OPTIMIZE_SPACE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("INDEX_POINTS_QUERY_REGIONS_OPTIMIZE_SPACE",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(true);        // Optimize for space.
@@ -229,8 +229,7 @@ TEST(S2RegionTermIndexer, MaxLevelSetLoosely) {
   S2RegionTermIndexer indexer2(options);
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MAX_LEVEL_SET_LOOSELY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MAX_LEVEL_SET_LOOSELY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2Point point = s2random::Point(bitgen);
   EXPECT_EQ(indexer1.GetIndexTerms(point, ""),

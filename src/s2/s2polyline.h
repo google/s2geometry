@@ -307,7 +307,7 @@ class S2Polyline final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder,
+  void Encode(Encoder* encoder,
               s2coding::CodingHint hint = s2coding::CodingHint::FAST) const;
 
   // Appends a serialized uncompressed representation of the S2Polyline to
@@ -330,10 +330,7 @@ class S2Polyline final : public S2Region {
   // data (see S2Shape for details).
   class Shape : public S2Shape {
    public:
-    // Define as enum so we don't have to declare storage.
-    // TODO(user, b/210097200): Use static constexpr when C++17 is
-    // allowed in opensource.
-    enum : TypeTag { kTypeTag = 2 };
+    static constexpr TypeTag kTypeTag = 2;
 
     Shape() = default;  // Must call Init().
 

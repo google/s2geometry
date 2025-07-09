@@ -24,6 +24,7 @@
 #include "absl/base/optimization.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/types/span.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/internal/s2meta.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"

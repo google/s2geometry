@@ -83,9 +83,8 @@ static void TestRotate(const S2Point& p, const S2Point& axis, S1Angle angle) {
 }
 
 TEST(S2, Rotate) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "ROTATE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("ROTATE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     S2Point axis = s2random::Point(bitgen);
     S2Point target = s2random::Point(bitgen);

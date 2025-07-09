@@ -270,8 +270,8 @@ class S2CellId {
   // of your key-value store and define "limit" as Successor(key).
   //
   // Note that Sentinel().range_min() == Sentinel.range_max() == Sentinel().
-  ABSL_MUST_USE_RESULT S2CellId range_min() const;
-  ABSL_MUST_USE_RESULT S2CellId range_max() const;
+  [[nodiscard]] S2CellId range_min() const;
+  [[nodiscard]] S2CellId range_max() const;
 
   // Return true if the given cell is contained within this one.
   bool contains(S2CellId other) const;
@@ -281,12 +281,12 @@ class S2CellId {
 
   // Return the cell at the previous level or at the given level (which must
   // be less than or equal to the current level).
-  ABSL_MUST_USE_RESULT S2CellId parent() const;
-  ABSL_MUST_USE_RESULT S2CellId parent(int level) const;
+  [[nodiscard]] S2CellId parent() const;
+  [[nodiscard]] S2CellId parent(int level) const;
 
   // Return the immediate child of this cell at the given traversal order
   // position (in the range 0 to 3).  This cell must not be a leaf cell.
-  ABSL_MUST_USE_RESULT S2CellId child(int position) const;
+  [[nodiscard]] S2CellId child(int position) const;
 
   // Iterator-style methods for traversing the immediate children of a cell or
   // all of the children at a given level (greater than or equal to the current
@@ -300,38 +300,40 @@ class S2CellId {
   // The convention for advancing the iterator is "c = c.next()" rather
   // than "++c" to avoid possible confusion with incrementing the
   // underlying 64-bit cell id.
-  ABSL_MUST_USE_RESULT S2CellId child_begin() const;
-  ABSL_MUST_USE_RESULT S2CellId child_begin(int level) const;
-  ABSL_MUST_USE_RESULT S2CellId child_end() const;
-  ABSL_MUST_USE_RESULT S2CellId child_end(int level) const;
+  [[nodiscard]] S2CellId child_begin() const;
+  [[nodiscard]] S2CellId child_begin(int level) const;
+  [[nodiscard]] S2CellId child_end() const;
+  [[nodiscard]] S2CellId child_end(int level) const;
 
   // Return the next/previous cell at the same level along the Hilbert curve.
   // Works correctly when advancing from one face to the next, but
   // does *not* wrap around from the last face to the first or vice versa.
-  ABSL_MUST_USE_RESULT S2CellId next() const;
-  ABSL_MUST_USE_RESULT S2CellId prev() const;
+  [[nodiscard]] S2CellId next() const;
+  [[nodiscard]] S2CellId prev() const;
 
   // This method advances or retreats the indicated number of steps along the
   // Hilbert curve at the current level, and returns the new position.  The
   // position is never advanced past End() or before Begin().
-  ABSL_MUST_USE_RESULT S2CellId advance(int64_t steps) const;
+  [[nodiscard]] S2CellId advance(int64_t steps) const;
 
   // Returns the number of steps that this cell is from Begin(level()). The
-  // return value is always non-negative.
+  // return value is always non-negative, specifically it is in the range
+  // range [0, 6 * 2**(2*level())].  May be called for End() as well as valid
+  // cell ids.
   int64_t distance_from_begin() const;
 
   // Like next() and prev(), but these methods wrap around from the last face
   // to the first and vice versa.  They should *not* be used for iteration in
   // conjunction with child_begin(), child_end(), Begin(), or End().  The
   // input must be a valid cell id.
-  ABSL_MUST_USE_RESULT S2CellId next_wrap() const;
-  ABSL_MUST_USE_RESULT S2CellId prev_wrap() const;
+  [[nodiscard]] S2CellId next_wrap() const;
+  [[nodiscard]] S2CellId prev_wrap() const;
 
   // This method advances or retreats the indicated number of steps along the
   // Hilbert curve at the current level, and returns the new position.  The
   // position wraps between the first and last faces as necessary.  The input
   // must be a valid cell id.
-  ABSL_MUST_USE_RESULT S2CellId advance_wrap(int64_t steps) const;
+  [[nodiscard]] S2CellId advance_wrap(int64_t steps) const;
 
   // Return the largest cell with the same range_min() and such that
   // range_max() < limit.range_min().  Returns "limit" if no such cell exists.
@@ -345,7 +347,7 @@ class S2CellId {
   // Note that in general the cells in the tiling will be of different sizes;
   // they gradually get larger (near the middle of the range) and then
   // gradually get smaller (as "limit" is approached).
-  ABSL_MUST_USE_RESULT S2CellId maximum_tile(S2CellId limit) const;
+  [[nodiscard]] S2CellId maximum_tile(S2CellId limit) const;
 
   // Returns the level of the lowest common ancestor of this cell and "other",
   // i.e. the maximum level where this->parent(level) == other.parent(level).
@@ -467,6 +469,12 @@ class S2CellId {
   // indicate that linear rather than binary search should be used.  This is
   // much faster when the comparison function is cheap.
   typedef std::true_type absl_btree_prefer_linear_node_search;
+
+  template <typename H>
+  friend H AbslHashValue(H h, S2CellId id) {
+    // Mix id_ twice and rotate to avoid collisions.
+    return H::combine(std::move(h), id.id_, absl::rotr(id.id_, 32));
+  }
 
  private:
   // This is the offset required to wrap around from the beginning of the
@@ -715,20 +723,6 @@ inline S2CellId S2CellId::End(int level) {
 }
 
 std::ostream& operator<<(std::ostream& os, S2CellId id);
-
-// Hasher for S2CellId.
-// Does *not* need to be specified explicitly; this will be used by default for
-// absl::flat_hash_map/set.
-//
-// TODO(b/259279783): Remove rotation once mixing function on 32-bit systems is
-// fixed.
-template <typename H>
-H AbslHashValue(H h, S2CellId id) {
-  if (sizeof(void*) == 4) {
-    return H::combine(std::move(h), id.id(), absl::rotr(id.id(), 32));
-  }
-  return H::combine(std::move(h), id.id());
-}
 
 // Legacy hash functor for S2CellId. This only exists for backwards
 // compatibility with old hash types like std::unordered_map that don't use

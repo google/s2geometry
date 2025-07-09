@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2polyline.h"
 #include "s2/s2polyline_alignment.h"
 
@@ -129,13 +130,13 @@ class Window {
 
   // Return a new, larger Window that is an upscaled version of this window
   // Used by ApproximateAlignment window expansion step.
-  Window Upsample(const int new_rows, const int new_cols) const;
+  Window Upsample(int new_rows, int new_cols) const;
 
   // Return a new, equal-size Window by dilating this window with a square
   // structuring element with half-length `radius`. Radius = 1 corresponds to
   // a 3x3 square morphological dilation.
   // Used by ApproximateAlignment window expansion step.
-  Window Dilate(const int radius) const;
+  Window Dilate(int radius) const;
 
   // Return a string representation of this window.
   std::string DebugString() const;

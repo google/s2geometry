@@ -106,9 +106,6 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/value_lexicon.h"
 
-// TODO(ericv): Remove this debugging output at some point.
-extern bool s2builder_verbose;
-
 namespace {  // Anonymous namespace for helper classes.
 
 using absl::flat_hash_map;
@@ -214,7 +211,7 @@ using CrossingGraphEdgeVector = absl::InlinedVector<CrossingGraphEdge, 2>;
 // must be kept in order to ensure that every output edge corresponds to
 // exactly one input edge.  (See also S2Builder::Graph::GetInputEdgeOrder.)
 static vector<EdgeId> GetInputEdgeChainOrder(
-    const Graph& g, const vector<InputEdgeId>& input_ids) {
+    const Graph& g, absl::Span<const InputEdgeId> input_ids) {
   ABSL_DCHECK(g.options().edge_type() == EdgeType::DIRECTED);
   ABSL_DCHECK(g.options().duplicate_edges() == DuplicateEdges::KEEP);
   ABSL_DCHECK(g.options().sibling_pairs() == SiblingPairs::KEEP);
@@ -423,10 +420,6 @@ void GraphEdgeClipper::Run() {
                           &b_edges);
     }
     --i;
-    if (s2builder_verbose) {
-      std::cout << "input edge " << a_input_id << " (inside=" << inside << "):";
-      for (VertexId id : a_vertices) std::cout << " " << id;
-    }
     // Now for each B edge chain, decide which vertex of the A chain it
     // crosses, and keep track of the sum of signed crossings at each A
     // vertex.  The sign of a crossing depends on whether the other edge
@@ -452,15 +445,6 @@ void GraphEdgeClipper::Run() {
       int a_index = GetCrossedVertexIndex(a_vertices, b_edges[bi],
                                           left_to_right);
       if (a_index >= 0) {
-        if (s2builder_verbose) {
-          std::cout << std::endl << "  " << "b input edge "
-                    << b_input_edges[bi].input_id() << " (l2r=" << left_to_right
-                    << ", crossing=" << a_vertices[a_index] << ")";
-          for (const auto& x : b_edges[bi]) {
-            const Graph::Edge& e = g_.edge(x.id);
-            std::cout << " (" << e.first << ", " << e.second << ")";
-          }
-        }
         // Keep track of the number of signed crossings (see above).
         bool is_line = input_dimensions_[b_input_edges[bi].input_id()] == 1;
         int sign = is_line ? 0 : (left_to_right == invert_b) ? -1 : 1;
@@ -474,7 +458,6 @@ void GraphEdgeClipper::Run() {
         ABSL_LOG(ERROR) << "Failed to get crossed vertex index.";
       }
     }
-    if (s2builder_verbose) std::cout << std::endl;
 
     // Finally, we iterate through the A edge chain, keeping track of the
     // number of signed crossings as we go along.  The "multiplicity" is
@@ -804,13 +787,6 @@ void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
   // Destroy the GraphEdgeClipper immediately to save memory.
   GraphEdgeClipper(g, input_dimensions_, input_crossings_,
                    &new_edges, &new_input_edge_ids).Run();
-  if (s2builder_verbose) {
-    std::cout << "Edges after clipping: " << std::endl;
-    for (size_t i = 0; i < new_edges.size(); ++i) {
-      std::cout << "  " << new_input_edge_ids[i] << " (" << new_edges[i].first
-                << ", " << new_edges[i].second << ")" << std::endl;
-    }
-  }
   // Construct one or more subgraphs from the clipped edges and pass them to
   // the given output layer(s).  We start with a copy of the input graph's
   // IdSetLexicon because this is necessary in general, even though in this
@@ -953,7 +929,7 @@ class S2BooleanOperation::Impl {
   // non-empty.
   bool AddBoundary(int a_region_id, bool invert_a, bool invert_b,
                    bool invert_result,
-                   const vector<ShapeEdgeId>& a_chain_starts,
+                   absl::Span<const ShapeEdgeId> a_chain_starts,
                    CrossingProcessor* cp);
   bool GetChainStarts(int a_region_id, bool invert_a, bool invert_b,
                       bool invert_result, CrossingProcessor* cp,
@@ -2048,7 +2024,7 @@ void S2BooleanOperation::Impl::CrossingProcessor::DoneBoundaryPair() {
 // as soon as the result is known to be non-empty.
 bool S2BooleanOperation::Impl::AddBoundary(
     int a_region_id, bool invert_a, bool invert_b, bool invert_result,
-    const vector<ShapeEdgeId>& a_chain_starts, CrossingProcessor* cp) {
+    absl::Span<const ShapeEdgeId> a_chain_starts, CrossingProcessor* cp) {
   const S2ShapeIndex& a_index = *op_->regions_[a_region_id];
   const S2ShapeIndex& b_index = *op_->regions_[1 - a_region_id];
   if (!InitIndexCrossings(a_region_id)) return false;

@@ -222,8 +222,7 @@ void TestAllCrossings(absl::Span<const TestEdge> edges) {
 // is set to zero.)
 TEST(GetCrossingCandidates, PerturbedCubeEdges) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "PERTURBED_CUBE_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "PERTURBED_CUBE_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<TestEdge> edges;
   for (int iter = 0; iter < 10; ++iter) {
     int face = absl::Uniform(bitgen, 0, 6);
@@ -244,8 +243,7 @@ TEST(GetCrossingCandidates, PerturbedCubeEdges) {
 // boundaries between the immediate child cells of the cube face.
 TEST(GetCrossingCandidates, PerturbedCubeFaceAxes) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "PERTURBED_CUBE_FACE_AXES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "PERTURBED_CUBE_FACE_AXES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<TestEdge> edges;
   for (int iter = 0; iter < 5; ++iter) {
     int face = absl::Uniform(bitgen, 0, 6);
@@ -262,8 +260,7 @@ TEST(GetCrossingCandidates, CapEdgesNearCubeVertex) {
   // Test a random collection of edges near the S2 cube vertex where the
   // Hilbert curve starts and ends.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CAP_EDGES_NEAR_CUBE_VERTEX",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CAP_EDGES_NEAR_CUBE_VERTEX", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<TestEdge> edges;
   GetCapEdges(bitgen,
               S2Cap(S2Point(-1, -1, 1).Normalize(), S1Angle::Radians(1e-3)),
@@ -285,8 +282,7 @@ TEST(GetCrossingCandidates, DegenerateEdgeOnCellVertexIsItsOwnCandidate) {
 
 TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COLLINEAR_EDGES_ON_CELL_BOUNDARIES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "COLLINEAR_EDGES_ON_CELL_BOUNDARIES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kNumEdgeIntervals = 8;  // 9*8/2 = 36 edges
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     S2Cell cell(s2random::CellId(bitgen, level));
@@ -366,8 +362,7 @@ TEST(GetCrossings, ShapeIdsAreCorrect) {
 // i.e. S2::kFaceClipErrorUVCoord.)
 TEST(VisitCells, QueryEdgeOnFaceBoundary) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "QUERY_EDGE_ON_FACE_BOUNDARY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "QUERY_EDGE_ON_FACE_BOUNDARY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 100;
   for (int iter = 0; iter < kIters; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));

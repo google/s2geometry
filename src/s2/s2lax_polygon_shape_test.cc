@@ -309,8 +309,7 @@ TEST(S2LaxPolygonShape, ManyLoopPolygon) {
   // Test a polygon with enough loops so that binary search is used to find
   // the loop containing a given edge.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MANY_LOOP_POLYGON",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MANY_LOOP_POLYGON", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<vector<S2Point>> loops;
   for (int i = 0; i < 100; ++i) {
     S2Point center(S2LatLng::FromDegrees(0, i));
@@ -346,11 +345,7 @@ TEST(S2LaxPolygonShape, ManyLoopPolygon) {
     }
   }
   std::shuffle(edges.begin(), edges.end(), std::mt19937_64());
-  // TODO(user,b/210097200): Use structured bindings when we require
-  // C++17 in opensource.
-  for (const auto t : edges) {
-    int e, i, j;
-    std::tie(e, i, j) = t;
+  for (const auto [e, i, j] : edges) {
     EXPECT_EQ(shape.chain_position(e), S2Shape::ChainPosition(i, j));
     auto v0 = loops[i][j];
     auto v1 = loops[i][(j + 1) % loops[i].size()];
@@ -392,8 +387,7 @@ void CompareS2LoopToShape(absl::BitGenRef bitgen, const S2Loop& loop,
 
 TEST(S2LaxPolygonShape, CompareToS2Loop) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COMPARE_TO_S2_LOOP",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "COMPARE_TO_S2_LOOP", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100; ++iter) {
     S2Fractal fractal(bitgen);
     fractal.set_max_level(absl::Uniform(bitgen, 0, 5));

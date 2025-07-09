@@ -18,26 +18,28 @@
 
 #include <atomic>
 
+#include "absl/base/thread_annotations.h"
 
-class SpinLock {
+
+class ABSL_LOCKABLE ABSL_ATTRIBUTE_WARN_UNUSED SpinLock {
  public:
   SpinLock() = default;
   ~SpinLock() = default;
   SpinLock(SpinLock const&) = delete;
   SpinLock& operator=(SpinLock const&) = delete;
 
-  inline void Lock() {
+  inline void Lock() ABSL_EXCLUSIVE_LOCK_FUNCTION() {
     while (locked_.exchange(true, std::memory_order_acquire)) {
       // Spin.
       continue;
     }
   }
 
-  inline void Unlock() {
+  inline void Unlock() ABSL_UNLOCK_FUNCTION() {
     locked_.store(false, std::memory_order_release);
   }
 
-  inline bool IsHeld() const {
+  ABSL_MUST_USE_RESULT inline bool IsHeld() const {
     return locked_.load(std::memory_order_relaxed);
   }
 
@@ -45,10 +47,13 @@ class SpinLock {
   std::atomic_bool locked_{false};
 };
 
-class SpinLockHolder {
+class ABSL_MUST_USE_RESULT ABSL_SCOPED_LOCKABLE SpinLockHolder {
  public:
-  inline explicit SpinLockHolder(SpinLock* l) : lock_(l) { lock_->Lock(); }
-  inline ~SpinLockHolder() { lock_->Unlock(); }
+  inline explicit SpinLockHolder(SpinLock* l) ABSL_EXCLUSIVE_LOCK_FUNCTION(l)
+      : lock_(l) {
+    l->Lock();
+  }
+  inline ~SpinLockHolder() ABSL_UNLOCK_FUNCTION() { lock_->Unlock(); }
 
   SpinLockHolder(const SpinLockHolder&) = delete;
   SpinLockHolder& operator=(const SpinLockHolder&) = delete;

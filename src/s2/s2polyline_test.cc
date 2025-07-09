@@ -128,8 +128,7 @@ TEST(S2Polyline, MoveAssign) {
 
 TEST(S2Polyline, GetLengthAndCentroid) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_LENGTH_AND_CENTROID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_LENGTH_AND_CENTROID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Construct random great circles and divide them randomly into segments.
   // Then make sure that the length and centroid are correct.  Note that
@@ -181,6 +180,8 @@ TEST(S2Polyline, GetSnapLevel) {
 }
 
 TEST(S2Polyline, MayIntersect) {
+  // This is a line from face 4 to face 2 crossing over face 0.
+  // https://boundingbox.googleplex.com/#PolygonLine%3A%2028.2863935%3A-47.7263110%2C%2040.6611177%3A-38.6598083
   vector<S2Point> vertices = {S2Point(1, -1.1, 0.8).Normalize(),
                               S2Point(1, -0.8, 1.1).Normalize()};
   S2Polyline line(vertices);

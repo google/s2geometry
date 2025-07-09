@@ -53,7 +53,7 @@ class S2Point : public Vector3_d {
   constexpr S2Point(const Base& base) : Base(base) {}
 
   // NOLINTNEXTLINE(google-explicit-constructor)
-  constexpr S2Point(Base&& base) : Base(std::move(base)) {}
+  constexpr S2Point(Base&& base) noexcept : Base(std::move(base)) {}
 
   // Initialize S2Point from a Decoder instance.
   bool Init(Decoder* decoder, S2Error& error) {
@@ -73,7 +73,7 @@ class S2Point : public Vector3_d {
     return *this;
   }
 
-  S2Point& operator=(Base&& base) {
+  S2Point& operator=(Base&& base) noexcept {
     Base::operator=(std::move(base));
     return *this;
   }

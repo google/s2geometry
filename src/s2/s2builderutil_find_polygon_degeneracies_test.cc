@@ -23,7 +23,9 @@
 #include <string>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/base/attributes.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
@@ -48,6 +50,9 @@ using absl::string_view;
 using std::make_unique;
 using std::string;
 using std::vector;
+using testing::Eq;
+using testing::Lt;
+using testing::Not;
 
 using EdgeType = S2Builder::EdgeType;
 using Graph = S2Builder::Graph;
@@ -59,12 +64,23 @@ using SiblingPairs = GraphOptions::SiblingPairs;
 
 namespace s2builderutil {
 
+TEST(PolygonDegeneracyTest, Equals) {
+  EXPECT_THAT(PolygonDegeneracy(0, false), Eq(PolygonDegeneracy(0, false)));
+  EXPECT_THAT(PolygonDegeneracy(0, false), Not(Eq(PolygonDegeneracy(0, true))));
+  EXPECT_THAT(PolygonDegeneracy(0, false),
+              Not(Eq(PolygonDegeneracy(1, false))));
+}
+
+TEST(PolygonDegeneracyTest, Less) {
+  EXPECT_THAT(PolygonDegeneracy(0, false),
+              Not(Lt(PolygonDegeneracy(0, false))));
+  EXPECT_THAT(PolygonDegeneracy(0, false), Lt(PolygonDegeneracy(0, true)));
+  EXPECT_THAT(PolygonDegeneracy(0, false), Lt(PolygonDegeneracy(1, false)));
+}
+
 struct TestDegeneracy {
   string edge_str;
-  bool is_hole;
-  TestDegeneracy(string _edge_str, bool _is_hole)
-      : edge_str(_edge_str), is_hole(_is_hole) {
-  }
+  bool is_hole ABSL_REQUIRE_EXPLICIT_INIT;
 };
 
 bool operator<(const TestDegeneracy& x, const TestDegeneracy& y) {
@@ -107,8 +123,8 @@ void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
   for (const auto& degeneracy : degeneracies) {
     Graph::Edge edge = g.edge(degeneracy.edge_id);
     vector<S2Point> points { g.vertex(edge.first), g.vertex(edge.second) };
-    actual.push_back(TestDegeneracy(s2textformat::ToString(points),
-                                    degeneracy.is_hole));
+    actual.push_back(TestDegeneracy{
+        s2textformat::ToString(points), degeneracy.is_hole != 0});
   }
   std::sort(actual.begin(), actual.end());
   std::sort(expected_.begin(), expected_.end());

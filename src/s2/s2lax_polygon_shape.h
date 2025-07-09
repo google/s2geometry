@@ -28,6 +28,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/encoded_s2point_vector.h"
 #include "s2/encoded_uint_vector.h"
 #include "s2/s2coder.h"
@@ -83,10 +84,7 @@ class S2LaxPolygonShape : public S2Shape {
  public:
   typedef s2coding::S2HintCoder<S2LaxPolygonShape> Coder;
 
-  // Define as enum so we don't have to declare storage.
-  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
-  // in opensource.
-  enum : TypeTag { kTypeTag = 5 };
+  static constexpr TypeTag kTypeTag = 5;
 
   // Constructs an empty polygon.
   S2LaxPolygonShape() = default;
@@ -169,7 +167,8 @@ class S2LaxPolygonShape : public S2Shape {
   bool Init(Decoder* decoder, S2Error* error);
 
   // Note that the parent class has a 4-byte S2Shape::id_ field so there is no
-  // wasted space in the following layout.
+  // wasted space in the following layout. num_loops_ cannot be INT32_MAX, as
+  // loop_starts_ has an extra entry, so INT32_MAX would cause integer overflow.
   int32_t num_loops_ = 0;
 
   // The loop that contained the edge returned by the previous call to the

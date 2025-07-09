@@ -25,6 +25,7 @@
 
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/encoded_s2point_vector.h"
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
@@ -42,10 +43,7 @@
 // or use S2LaxClosedPolylineShape defined in s2_lax_loop_shape.h.)
 class S2LaxPolylineShape : public S2Shape {
  public:
-  // Define as enum so we don't have to declare storage.
-  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
-  // in opensource.
-  enum : TypeTag { kTypeTag = 4 };
+  static constexpr TypeTag kTypeTag = 4;
 
   typedef s2coding::S2HintCoder<S2LaxPolylineShape> Coder;
 
@@ -112,10 +110,7 @@ class S2LaxPolylineShape : public S2Shape {
 // into a large contiguous buffer that contains other encoded data as well.
 class EncodedS2LaxPolylineShape : public S2Shape {
  public:
-  // Define as enum so we don't have to declare storage.
-  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
-  // in opensource.
-  enum : TypeTag { kTypeTag = S2LaxPolylineShape::kTypeTag };
+  static constexpr TypeTag kTypeTag = S2LaxPolylineShape::kTypeTag;
 
   // Constructs an uninitialized object; requires Init() to be called.
   EncodedS2LaxPolylineShape() = default;

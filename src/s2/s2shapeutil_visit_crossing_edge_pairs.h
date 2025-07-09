@@ -20,6 +20,7 @@
 
 #include <functional>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2crossing_edge_query.h"
 #include "s2/s2error.h"
 #include "s2/s2shape_index.h"

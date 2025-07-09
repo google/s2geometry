@@ -53,6 +53,7 @@
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
+#include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_s2polygon_layer.h"
@@ -419,8 +420,7 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
   constexpr int kIters = 10'000;
   int exact_contains = 0, exact_disjoint = 0;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "APPROX_CONTAINS_AND_DISJOINT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "APPROX_CONTAINS_AND_DISJOINT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     S2CellId id = s2random::CellId(bitgen, 10);
     S2Polygon parent_polygon((S2Cell(id)));
@@ -1632,7 +1632,7 @@ static void PolylineIntersectionSharedEdgeTest(const S2Polygon& p,
     ASSERT_EQ(2, polylines[0]->num_vertices());
     EXPECT_EQ(points[0], polylines[0]->vertex(0));
     EXPECT_EQ(points[1], polylines[0]->vertex(1));
-    EXPECT_FALSE(p.Intersects(polyline));
+    EXPECT_TRUE(p.Intersects(polyline));
     EXPECT_FALSE(p.Contains(polyline));
   } else {
     polylines = p.IntersectWithPolyline(polyline);
@@ -1709,6 +1709,51 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
     ASSERT_TRUE(builder.Build(&error)) << error;
     CheckEqual(a_and_b, *expected_a_and_b, kMaxError);
   }
+}
+
+// Intersects a polygon with a polyline where the intersection is degenerate.
+//
+// IntersectWithPolyline returns no polylines in this case, and we have decided
+// that is working as intended, because existing clients generally don't expect
+// degenerate polylines.  Clients that do want degenerate lines can construct
+// their own operation using S2BooleanOperation and S2Builder directly.
+//
+// However, when there is an intersection, Intersects should return true.  This
+// used to fail because S2Polygon::Intersects was based on IntersectWithPolyline
+// returning a non-empty result.  Now it simply uses S2BooleanOperation to check
+// if the intersection is empty.  Note that changing this also changed the
+// result of intersecting a polygon with a polyline edge: now it always returns
+// true, but before it only returned true if the edges were in the same
+// direction.
+TEST_F(S2PolygonTestBase, DegeneratePointIntersection) {
+  // A triangle with the southernmost vertex at 0:0
+  unique_ptr<S2Polygon> polygon(MakePolygon("1:-1, 0:0, 1:1"));
+  // A polyline that is very slightly north of the equator, and therefore barely
+  // intersects the southern tip of the triangle.
+  unique_ptr<S2Polyline> polyline =
+      s2textformat::MakePolylineOrDie("1e-15:-1, 1e-15:1");
+
+  // Verify that the polygon and the polyline actually do intersect, using
+  // S2BooleanOperation directly.
+  MutableS2ShapeIndex polyline_index;
+  polyline_index.Add(make_unique<S2Polyline::Shape>(polyline.get()));
+  bool disjoint = S2BooleanOperation::IsEmpty(
+      S2BooleanOperation::OpType::INTERSECTION,
+      polygon->index(), polyline_index);
+  EXPECT_FALSE(disjoint);
+
+  // After snapping, the intersection is a degenerate line or point. The
+  // IntersectWithPolyline method only returns non-degenerate polylines, so the
+  // result is empty -- this is working as intended.
+  vector<unique_ptr<S2Polyline>> intersection =
+      polygon->IntersectWithPolyline(*polyline);
+  ASSERT_EQ(0, intersection.size());
+
+  // When polygon->Intersects was based on IntersectWithPolyline, it returned
+  // an incorrect FALSE result. Now that it uses the same technique as the
+  // "Verify that the polygon and the polyline actually do intersect" above
+  // does, it returns the correct TRUE result.
+  EXPECT_TRUE(polygon->Intersects(*polyline));
 }
 
 static void CheckCoveringIsConservative(const S2Polygon& polygon,
@@ -1832,9 +1877,8 @@ TEST_F(S2PolygonTestBase, Splitting) {
   // It takes too long to test all the polygons in debug mode, so we just pick
   // out some of the more interesting ones.
 
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SPLITTING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("SPLITTING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   SplitAndAssemble(bitgen, *near_10_);
   SplitAndAssemble(bitgen, *near_H3210_);
   SplitAndAssemble(bitgen, *far_H3210_);
@@ -1854,8 +1898,7 @@ TEST(S2Polygon, InitToCellUnionBorder) {
   // merged correctly.  To do this we generate two random adjacent cells,
   // convert to polygon, and make sure the polygon only has a single loop.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INIT_TO_CELL_UNION_BORDER",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INIT_TO_CELL_UNION_BORDER", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 200; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
 
@@ -1922,11 +1965,10 @@ TEST(S2Polygon, UnionWithAmbgiuousCrossings) {
   EXPECT_FALSE(c.is_empty());
 }
 
-TEST(S2Polygon, InitToSloppySupportsEmptyPolygons) {
+TEST(S2Polygon, InitToSnappedSupportsEmptyPolygons) {
   S2Polygon empty_polygon;
   S2Polygon polygon;
   polygon.InitToSnapped(empty_polygon);
-  // InitToSloppy is further tested by SnapSplitsPolygon.
 }
 
 TEST(S2Polygon, InitToSnappedDoesNotRotateVertices) {
@@ -2282,8 +2324,7 @@ TEST_F(S2PolygonTestBase, GetDistance) {
 
   // All points on the boundary of the polygon should be at distance zero.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_DISTANCE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_DISTANCE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < nested->num_loops(); i++) {
     const S2Loop* loop = nested->loop(i);
     for (int j = 0; j < loop->num_vertices(); j++) {
@@ -2427,9 +2468,8 @@ TEST_F(IsValidTest, UnitLength) {
   // ubsan, etc).
   // TODO(b/168294614): Fix this, maybe by checking for NaN in S2Loop::Init.
   if (S2_DEBUG_MODE) return;
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "UNIT_LENGTH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("UNIT_LENGTH", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(bitgen, absl::Uniform(bitgen, 1, 7), 3 /*min_vertices*/);
     vector<S2Point>* vloop =
@@ -2450,8 +2490,7 @@ TEST_F(IsValidTest, UnitLength) {
 
 TEST_F(IsValidTest, VertexCount) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "VERTEX_COUNT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "VERTEX_COUNT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     vector<S2Point>* vloop = AddLoop();
     vloop->push_back(s2random::Point(bitgen));
@@ -2462,8 +2501,7 @@ TEST_F(IsValidTest, VertexCount) {
 
 TEST_F(IsValidTest, DuplicateVertex) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "DUPLICATE_VERTEX",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "DUPLICATE_VERTEX", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(bitgen, 1, 3 /*min_vertices*/);
     vector<S2Point>* vloop = vloops_[0].get();
@@ -2482,8 +2520,7 @@ TEST_F(IsValidTest, DuplicateVertex) {
 
 TEST_F(IsValidTest, SelfIntersection) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SELF_INTERSECTION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SELF_INTERSECTION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     // Use multiple loops so that we can test both holes and shells.  We need
     // at least 5 vertices so that the modified edges don't intersect any
@@ -2503,9 +2540,8 @@ TEST_F(IsValidTest, SelfIntersection) {
 TEST_F(IsValidTest, EmptyLoop) {
   const absl::Span<const S2Point> kEmptyLoop = S2Loop::kEmpty();
 
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EMPTY_LOOP",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("EMPTY_LOOP", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     Reset();
     int loops = absl::Uniform(bitgen, 1, 6);
@@ -2524,9 +2560,8 @@ TEST_F(IsValidTest, EmptyLoop) {
 }
 
 TEST_F(IsValidTest, FullLoop) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FULL_LOOP",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("FULL_LOOP", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     // This is only an error if there is at least one other loop.
     AddConcentricLoops(bitgen, absl::Uniform(bitgen, 1, 6), 3 /*min_vertices*/);
@@ -2543,8 +2578,7 @@ TEST_F(IsValidTest, FullLoop) {
 
 TEST_F(IsValidTest, LoopsCrossing) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "LOOPS_CROSSING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "LOOPS_CROSSING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(bitgen, 2, 4 /*min_vertices*/);
     // Both loops have the same number of vertices, and vertices at the same
@@ -2567,8 +2601,7 @@ TEST_F(IsValidTest, LoopsCrossing) {
 
 TEST_F(IsValidTest, DuplicateEdge) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "DUPLICATE_EDGE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "DUPLICATE_EDGE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(bitgen, 2, 4 /*min_vertices*/);
     int n = vloops_[0]->size();
@@ -2598,8 +2631,7 @@ TEST_F(IsValidTest, DuplicateEdge) {
 
 TEST_F(IsValidTest, InconsistentOrientations) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INCONSISTENT_ORIENTATIONS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INCONSISTENT_ORIENTATIONS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(bitgen, absl::Uniform(bitgen, 2, 7), 3 /*min_vertices*/);
     init_oriented_ = true;
@@ -2619,8 +2651,7 @@ static void SetInvalidLoopDepth(absl::BitGenRef bitgen, S2Polygon* polygon) {
 TEST_F(IsValidTest, LoopDepthNegative) {
   modify_polygon_hook_ = SetInvalidLoopDepth;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "LOOP_DEPTH_NEGATIVE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "LOOP_DEPTH_NEGATIVE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(bitgen, absl::Uniform(bitgen, 1, 5), 3 /*min_vertices*/);
     CheckInvalid(bitgen, S2Error::POLYGON_INVALID_LOOP_DEPTH);
@@ -2635,8 +2666,7 @@ static void SetInvalidLoopNesting(absl::BitGenRef bitgen, S2Polygon* polygon) {
 TEST_F(IsValidTest, LoopNestingInvalid) {
   modify_polygon_hook_ = SetInvalidLoopNesting;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "LOOP_NESTING_INVALID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "LOOP_NESTING_INVALID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(bitgen, absl::Uniform(bitgen, 2, 6), 3 /*min_vertices*/);
     // Randomly invert all the loops in order to generate cases where the
@@ -2659,9 +2689,8 @@ TEST_F(IsValidTest, FuzzTest) {
   // attempting to construct geometric objects.)
   if (S2_DEBUG_MODE)
     return;  // Requires unit length vertices.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FUZZ_TEST",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("FUZZ_TEST", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     int num_loops = absl::Uniform(bitgen, 2, 12);
     for (int i = 0; i < num_loops; ++i) {
@@ -2788,7 +2817,7 @@ TEST_F(S2PolygonSimplifierTest, SimplifiedLoopSelfIntersects) {
   SetInput("0:0, 0:20, 10:-0.1, 20:20, 20:0, 10:-0.2", 0.22);
 
   // The simplified polygon has the same number of vertices but it should now
-  // consists of two loops rather than one.
+  // consist of two loops rather than one.
   EXPECT_EQ(2, simplified->num_loops());
   EXPECT_GE(0.22, MaximumDistanceInDegrees(*simplified, *original, 0));
   EXPECT_GE(0.22, MaximumDistanceInDegrees(*original, *simplified, 0.22));
@@ -3081,8 +3110,7 @@ TEST_F(S2PolygonDecodeTest, FuzzUncompressedEncoding) {
   // only run this test in opt mode.
 #ifdef NDEBUG
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FUZZ_UNCOMPRESSED_ENCODING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FUZZ_UNCOMPRESSED_ENCODING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100000; ++i) {
     AppendFakeUncompressedEncodingData(bitgen);
     Test();
@@ -3098,8 +3126,7 @@ TEST_F(S2PolygonDecodeTest, FuzzCompressedEncoding) {
   // only run this test in opt mode.
 #ifdef NDEBUG
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FUZZ_COMPRESSED_ENCODING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FUZZ_COMPRESSED_ENCODING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100000; ++i) {
     AppendFakeCompressedEncodingData(bitgen);
     Test();
@@ -3114,8 +3141,7 @@ TEST_F(S2PolygonDecodeTest, FuzzEverything) {
   // only run this test in opt mode.
 #ifdef NDEBUG
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FUZZ_EVERYTHING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FUZZ_EVERYTHING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100000; ++i) {
     AppendRandomData(bitgen);
     Test();

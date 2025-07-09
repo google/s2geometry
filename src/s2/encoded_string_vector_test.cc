@@ -18,6 +18,7 @@
 #include "s2/encoded_string_vector.h"
 
 #include <cstddef>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -78,6 +79,37 @@ TEST(EncodedStringVectorTest, TwoStrings) {
 TEST(EncodedStringVectorTest, TwoBigStrings) {
   TestEncodedStringVector({string(10000, 'x'), string(100000, 'y')},
                           110007);
+}
+
+TEST(EncodedStringVectorTest, SubscriptOperator) {
+  const string kInput[] = {"pink lady", "gala"};
+
+  Encoder encoder;
+  StringVectorEncoder::Encode(kInput, &encoder);
+
+  Decoder decoder(encoder.base(), encoder.length());
+  EncodedStringVector v;
+  ASSERT_TRUE(v.Init(&decoder));
+
+  ASSERT_EQ(v.size(), 2);
+  EXPECT_EQ(v[0], "pink lady");
+  EXPECT_EQ(v[1], "gala");
+}
+
+TEST(EncodedStringVectorTest, GetStart) {
+  const string kInput[] = {"pink lady", "gala"};
+
+  Encoder encoder;
+  StringVectorEncoder::Encode(kInput, &encoder);
+
+  Decoder decoder(encoder.base(), encoder.length());
+  EncodedStringVector v;
+  ASSERT_TRUE(v.Init(&decoder));
+
+  ASSERT_EQ(v.size(), 2);
+  // `GetStart()` is not NUL-terminated, so can't use `testing::StartsWith`.
+  EXPECT_EQ(string_view(v.GetStart(0), std::strlen("pink lady")), "pink lady");
+  EXPECT_EQ(string_view(v.GetStart(1), std::strlen("gala")), "gala");
 }
 
 }  // namespace s2coding

@@ -17,6 +17,7 @@
 #define S2_S2RANDOM_H_
 
 #include "absl/random/bit_gen_ref.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng_rect.h"

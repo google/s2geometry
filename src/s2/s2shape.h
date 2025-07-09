@@ -18,11 +18,13 @@
 #ifndef S2_S2SHAPE_H_
 #define S2_S2SHAPE_H_
 
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 
 #include "absl/log/absl_log.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2coder.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
@@ -506,8 +508,8 @@ class S2Shape {
   // own move/copy semantics without exposing them to broader use.
   S2Shape(S2Shape&&) = default;
   S2Shape(const S2Shape&) = default;
-  S2Shape& operator=(const S2Shape&) = default;
-  S2Shape& operator=(S2Shape&&) = default;
+  S2Shape& operator=(const S2Shape&) noexcept = default;
+  S2Shape& operator=(S2Shape&&) noexcept = default;
 
  private:
   friend class EncodedS2ShapeIndex;

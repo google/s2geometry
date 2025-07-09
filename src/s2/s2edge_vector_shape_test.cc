@@ -49,8 +49,8 @@ TEST(S2EdgeVectorShape, Move) {
   // to be moved.
   S2EdgeVectorShape correct;
   S2EdgeVectorShape to_move;
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MOVE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("MOVE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kNumEdges = 100;
   for (int i = 0; i < kNumEdges; ++i) {
     const S2Point start_point = s2random::Point(bitgen);
@@ -71,9 +71,8 @@ TEST(S2EdgeVectorShape, Move) {
 
 TEST(S2EdgeVectorShape, EdgeAccess) {
   S2EdgeVectorShape shape;
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EDGE_ACCESS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("EDGE_ACCESS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kNumEdges = 100;
   vector<std::pair<S2Point, S2Point>> edges;
   for (int i = 0; i < kNumEdges; ++i) {

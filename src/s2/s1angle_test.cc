@@ -133,8 +133,8 @@ TEST(S1Angle, Trigonometry) {
     const S1Angle angle = S1Angle::Degrees(k);
     const S1Angle::SinCosPair sin_cos = angle.SinCos();
     // If this fails once, it will likely fail many times.
-    ASSERT_EQ(sin_cos.sin, sin(angle));
-    ASSERT_EQ(sin_cos.cos, cos(angle));
+    ASSERT_EQ(sin_cos.sin, sin(angle)) << k;
+    ASSERT_EQ(sin_cos.cos, cos(angle)) << k;
   }
 }
 
@@ -196,9 +196,8 @@ TEST(S1Angle, DegreesVsE7) {
 // The current implementation guarantees exact conversions between
 // E6() and E7() when the E6() argument is an integer.
 TEST(S1Angle, E6VsE7) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "E6_VS_E7",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("E6_VS_E7", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     int i = absl::Uniform(bitgen, 0, 180000000);
     EXPECT_EQ(S1Angle::E6(i), S1Angle::E7(10 * i));

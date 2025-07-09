@@ -79,6 +79,13 @@ void TestS2LaxPolylineShapeUnchanged(string_view input_str) {
   TestS2LaxPolylineShape(vector<string_view>{input_str}, input_str);
 }
 
+TEST(LaxPolylineLayerOptionsTest, SetEdgeType) {
+  LaxPolylineLayer::Options opts;
+  EXPECT_EQ(opts.edge_type(), S2Builder::EdgeType::DIRECTED);
+  opts.set_edge_type(S2Builder::EdgeType::UNDIRECTED);
+  EXPECT_EQ(opts.edge_type(), S2Builder::EdgeType::UNDIRECTED);
+}
+
 TEST(LaxPolylineLayer, NoEdges) {
   TestS2LaxPolylineShape({}, "");
 }

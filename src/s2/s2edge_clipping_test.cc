@@ -183,8 +183,7 @@ S2Point PerturbedCornerOrMidpoint(absl::BitGenRef bitgen, const S2Point& p,
 
 TEST(S2, FaceClipping) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FACE_CLIPPING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FACE_CLIPPING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Start with a few simple cases.
   // An edge that is entirely contained within one cube face:
   TestFaceClippingEdgePair(bitgen, S2Point(1, -0.5, -0.5),
@@ -350,8 +349,7 @@ void TestEdgeClipping(absl::BitGenRef bitgen, const R2Rect& clip) {
 
 TEST(S2, EdgeClipping) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EDGE_CLIPPING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "EDGE_CLIPPING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Test clipping against random rectangles.
   for (int i = 0; i < 5; ++i) {

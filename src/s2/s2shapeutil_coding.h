@@ -42,6 +42,7 @@
 #include "absl/base/attributes.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/encoded_string_vector.h"
 #include "s2/s2coder.h"
 #include "s2/s2shape.h"
@@ -156,7 +157,8 @@ class TaggedShapeFactory : public S2ShapeIndex::ShapeFactory {
   // Returns an empty vector and/or null S2Shapes on decoding errors.
   // Some but not all encoding errors are detected during factory construction,
   // and reported to `error` parameter.
-  TaggedShapeFactory(const ShapeDecoder& shape_decoder, Decoder* decoder,
+  TaggedShapeFactory(const ShapeDecoder& shape_decoder,
+                     Decoder* decoder ABSL_ATTRIBUTE_LIFETIME_BOUND,
                      S2Error& error);
 
   int size() const override { return encoded_shapes_.size(); }
@@ -254,7 +256,8 @@ template <class Shape>
 class HomogeneousShapeFactory : public S2ShapeIndex::ShapeFactory {
  public:
   // Returns an empty vector and/or null S2Shapes on decoding errors.
-  explicit HomogeneousShapeFactory(Decoder* decoder);
+  explicit HomogeneousShapeFactory(
+      Decoder* decoder ABSL_ATTRIBUTE_LIFETIME_BOUND);
 
   int size() const override { return encoded_shapes_.size(); }
 

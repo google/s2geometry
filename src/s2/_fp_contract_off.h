@@ -34,15 +34,17 @@
 // but it is not implemented in GCC because the standard pragma allows control
 // at the level of compound statements rather than entire functions.
 //
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=20785
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=37845
+//
 // This file may be included with other files in any order, as long as it
 // appears before the first non-inline function definition.  It is
 // named with an underscore so that it is included first among the S2 headers.
 
-#if defined(__clang__)
-// Clang supports the standard C++ pragma for turning off this optimization.
+// Assume all compilers support or ignore the standard pragma.
 #pragma STDC FP_CONTRACT OFF
 
-#elif defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__clang__)
 // GCC defines its own pragma that operates at the function level rather than
 // the statement level.
 #pragma GCC optimize("fp-contract=off")

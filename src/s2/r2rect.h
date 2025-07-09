@@ -29,8 +29,7 @@
 // An R2Rect represents a closed axis-aligned rectangle in the (x,y) plane.
 //
 // This class is intended to be copied by value as desired.  It uses
-// the default copy constructor and assignment operator, however it is
-// not a "plain old datatype" (POD) because it has virtual functions.
+// the default copy constructor and assignment operator.
 class R2Rect {
  public:
   // Construct a rectangle from the given lower-left and upper-right points.

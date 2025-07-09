@@ -268,8 +268,7 @@ TEST_F(TreeEncoderTest, EncodeEachFace) {
 
 TEST_F(TreeEncoderTest, EncodeRandomBranches) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "ENCODE_RANDOM_BRANCHES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "ENCODE_RANDOM_BRANCHES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int64_t weight = 1; weight < 1000; ++weight) {
     Clear();
 
@@ -343,9 +342,8 @@ TEST(S2DensityTreeTest, VisitUninitializedTree) {
 }
 
 TEST(S2DensityTreeTest, Encode) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "ENCODE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("ENCODE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   MutableS2ShapeIndex index;
   for (int i = 0; i < 10; ++i) {
@@ -468,8 +466,7 @@ TEST(S2DensityTreeTest, CanNormalizeTree) {
   constexpr int kNumPoints = 1000;
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CAN_NORMALIZE_TREE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CAN_NORMALIZE_TREE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   MutableS2ShapeIndex index;
   for (int i = 0; i < kNumPoints; ++i) {
@@ -606,8 +603,7 @@ TEST(S2DensityTreeTest, LeavesReturnsLeavesOfTree) {
   constexpr int kNumPoints = 1000;
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "LEAVES_ARE_SUBSET",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "LEAVES_ARE_SUBSET", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   MutableS2ShapeIndex index;
   for (int i = 0; i < kNumPoints; ++i) {
@@ -720,8 +716,7 @@ TEST_F(DecodedPathTest, DecodesPathsCorrectly) {
   ExpectWeight(kCell22.child(3), 120);
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "DECODES_PATH_CORRECTLY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "DECODES_PATH_CORRECTLY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Cells not in the tree should resolve to their deepest ancestral leaf cell.
   // Therefore, a random descendant of a non-leaf cell should return zero.
@@ -999,8 +994,7 @@ TEST_P(SumDensityTreesTest, SumMaxLevel) {
 
 TEST_P(SumDensityTreesTest, SumEmptyAndNonEmpty) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SUM_EMPTY_AND_NON_EMPTY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SUM_EMPTY_AND_NON_EMPTY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2DensityTree empty_tree;
   S2DensityTree tree;
@@ -1113,8 +1107,7 @@ TEST_F(CoveringsTest, ShapeIndexEmpty) {
 
 TEST_F(CoveringsTest, ShapeIndexPoint) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SHAPE_INDEX_POINT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SHAPE_INDEX_POINT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
   weights.emplace_back(
@@ -1126,8 +1119,7 @@ TEST_F(CoveringsTest, ShapeIndexPoint) {
 
 TEST_F(CoveringsTest, ShapeIndexLine) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SHAPE_INDEX_LINE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SHAPE_INDEX_LINE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
   weights.emplace_back(
@@ -1140,8 +1132,7 @@ TEST_F(CoveringsTest, ShapeIndexLine) {
 
 TEST_F(CoveringsTest, ShapeIndexPolygon) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SHAPE_INDEX_POLYGON",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SHAPE_INDEX_POLYGON", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
   weights.emplace_back(
@@ -1155,8 +1146,7 @@ TEST_F(CoveringsTest, ShapeIndexPolygon) {
 
 TEST_F(CoveringsTest, ShapeIndexMultiple) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SHAPE_INDEX_MULTIPLE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SHAPE_INDEX_MULTIPLE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
   weights.emplace_back(

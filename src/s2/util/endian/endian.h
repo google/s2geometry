@@ -19,14 +19,14 @@
 #include <cstdint>
 
 #include "s2/base/port.h"
-#include "absl/base/internal/endian.h"
+#include "absl/numeric/bits.h"
 #include "absl/numeric/int128.h"
 
 namespace s2endian {
 // TODO(user): Trim unused Encoder functions and drop int128 API.
-inline absl::uint128 gbswap_128(absl::uint128 host_int) {
-  return absl::MakeUint128(absl::gbswap_64(absl::Uint128Low64(host_int)),
-                           absl::gbswap_64(absl::Uint128High64(host_int)));
+inline absl::uint128 byteswap(absl::uint128 host_int) {
+  return absl::MakeUint128(absl::byteswap(absl::Uint128Low64(host_int)),
+                           absl::byteswap(absl::Uint128High64(host_int)));
 }
 }  // namespace s2endian
 
@@ -37,46 +37,25 @@ inline absl::uint128 gbswap_128(absl::uint128 host_int) {
 class LittleEndian {
  public:
   // Conversion functions.
-#ifdef IS_LITTLE_ENDIAN
+  static uint16_t FromHost16(uint16_t x) { return byteswap_if_big_endian(x); }
+  static uint16_t ToHost16(uint16_t x) { return byteswap_if_big_endian(x); }
 
-  static uint16_t FromHost16(uint16_t x) { return x; }
-  static uint16_t ToHost16(uint16_t x) { return x; }
+  static uint32_t FromHost32(uint32_t x) { return byteswap_if_big_endian(x); }
+  static uint32_t ToHost32(uint32_t x) { return byteswap_if_big_endian(x); }
 
-  static uint32_t FromHost32(uint32_t x) { return x; }
-  static uint32_t ToHost32(uint32_t x) { return x; }
-
-  static uint64_t FromHost64(uint64_t x) { return x; }
-  static uint64_t ToHost64(uint64_t x) { return x; }
-
-  static absl::uint128 FromHost128(absl::uint128 x) { return x; }
-  static absl::uint128 ToHost128(absl::uint128 x) { return x; }
-
-  static constexpr bool IsLittleEndian() { return true; }
-
-#elif defined IS_BIG_ENDIAN
-
-  static uint16_t FromHost16(uint16_t x) { return absl::gbswap_16(x); }
-  static uint16_t ToHost16(uint16_t x) { return absl::gbswap_16(x); }
-
-  static uint32_t FromHost32(uint32_t x) { return absl::gbswap_32(x); }
-  static uint32_t ToHost32(uint32_t x) { return absl::gbswap_32(x); }
-
-  static uint64_t FromHost64(uint64_t x) { return absl::gbswap_64(x); }
-  static uint64_t ToHost64(uint64_t x) { return absl::gbswap_64(x); }
+  static uint64_t FromHost64(uint64_t x) { return byteswap_if_big_endian(x); }
+  static uint64_t ToHost64(uint64_t x) { return byteswap_if_big_endian(x); }
 
   static absl::uint128 FromHost128(absl::uint128 x) {
-    return s2endian::gbswap_128(x);
+    return byteswap_if_big_endian(x);
   }
   static absl::uint128 ToHost128(absl::uint128 x) {
-    return s2endian::gbswap_128(x);
+    return byteswap_if_big_endian(x);
   }
 
-  static constexpr bool IsLittleEndian() { return false; }
-
-#else
-#error "Unsupported byte order: Either IS_BIG_ENDIAN or IS_LITTLE_ENDIAN "
-  "must be defined"
-#endif /* ENDIAN */
+  static constexpr bool IsLittleEndian() {
+    return absl::endian::native == absl::endian::little;
+  }
 
   // Functions to do unaligned loads and stores in little-endian order.
   static uint16_t Load16(const void* p) {
@@ -113,6 +92,20 @@ class LittleEndian {
     UNALIGNED_STORE64(p, FromHost64(absl::Uint128Low64(v)));
     UNALIGNED_STORE64(reinterpret_cast<uint64_t*>(p) + 1,
                       FromHost64(absl::Uint128High64(v)));
+  }
+
+ private:
+  template <typename T>
+  static T byteswap_if_big_endian(T x) {
+    static_assert(absl::endian::native == absl::endian::big ||
+                  absl::endian::native == absl::endian::little,
+                  "Unsupported endianness.");
+    if constexpr (absl::endian::native == absl::endian::big) {
+      using absl::byteswap;
+      using s2endian::byteswap;
+      x = byteswap(x);
+    }
+    return x;
   }
 };
 

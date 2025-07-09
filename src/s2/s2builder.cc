@@ -73,7 +73,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <ostream>
 #include <utility>
@@ -124,9 +123,6 @@ using std::max;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
-
-// Internal flag intended to be set from within a debugger.
-bool s2builder_verbose = false;
 
 S2Builder::Options::Options()
     : snap_function_(
@@ -445,7 +441,7 @@ void S2Builder::AddLoop(S2PointLoopSpan loop) {
 }
 
 void S2Builder::AddLoop(const S2Loop& loop) {
-  // Ignore loops that do not have a boundary.
+  // Ignore loops with a single vertex, as they do not have a boundary.
   if (loop.is_empty_or_full()) return;
 
   // For loops that represent holes, we add the edge from vertex n-1 to vertex
@@ -683,7 +679,9 @@ vector<S2Builder::InputVertexKey> S2Builder::SortInputVertices() {
             [this](const InputVertexKey& a, const InputVertexKey& b) {
       if (a.first < b.first) return true;
       if (b.first < a.first) return false;
-      return input_vertices_[a.second] < input_vertices_[b.second];
+      if (input_vertices_[a.second] < input_vertices_[b.second]) return true;
+      if (input_vertices_[b.second] < input_vertices_[a.second]) return false;
+      return a.second < b.second;  // Tie-break to ensure deterministic result.
     });
   return keys;
 }
@@ -828,10 +826,6 @@ void S2Builder::CollectSiteEdges(const S2PointIndex<SiteId>& site_index) {
     const InputEdge& edge = input_edges_[e];
     const S2Point& v0 = input_vertices_[edge.first];
     const S2Point& v1 = input_vertices_[edge.second];
-    if (s2builder_verbose) {
-      std::cout << "S2Polyline: " << s2textformat::ToString(v0)
-                << ", " << s2textformat::ToString(v1) << "\n";
-    }
     S2ClosestPointQueryEdgeTarget target(v0, v1);
     site_query.FindClosestPoints(&target, &results);
     auto* sites = &edge_sites_[e];
@@ -854,10 +848,13 @@ void S2Builder::CollectSiteEdges(const S2PointIndex<SiteId>& site_index) {
 // Sorts the sites in increasing order of distance to X.
 void S2Builder::SortSitesByDistance(const S2Point& x,
                                     compact_array<SiteId>* sites) const {
-  std::sort(sites->begin(), sites->end(),
-            [&x, this](SiteId i, SiteId j) {
-      return s2pred::CompareDistances(x, sites_[i], sites_[j]) < 0;
-    });
+  std::sort(sites->begin(), sites->end(), [&x, this](SiteId i, SiteId j) {
+    if (i == j) return false;
+    int diff = s2pred::CompareDistances(x, sites_[i], sites_[j]);
+    if (diff < 0) return true;
+    if (diff > 0) return false;
+    return i < j;  // Tie-break to ensure deterministic result.
+  });
 }
 
 // Like the above, but inserts "new_site_id" into an already-sorted list.
@@ -1254,11 +1251,6 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
       }
     }
   }
-  if (s2builder_verbose) {
-    std::cout << "(" << edge.first << "," << edge.second << "): ";
-    for (SiteId id : *chain) std::cout << id << " ";
-    std::cout << std::endl;
-  }
 }
 
 void S2Builder::BuildLayers() {
@@ -1324,17 +1316,6 @@ void S2Builder::BuildLayers() {
     layers_[i]->Build(graph, error_);
     // Don't free the layer data until all layers have been built, in order to
     // support building multiple layers at once (e.g. ClosedSetNormalizer).
-  }
-}
-
-static void DumpEdges(absl::Span<const S2Builder::Graph::Edge> edges,
-                      absl::Span<const S2Point> vertices) {
-  for (const auto& e : edges) {
-    vector<S2Point> v;
-    v.push_back(vertices[e.first]);
-    v.push_back(vertices[e.second]);
-    std::cout << "S2Polyline: " << s2textformat::ToString(v)
-              << "(" << e.first << "," << e.second << ")" << std::endl;
   }
 }
 
@@ -1424,7 +1405,6 @@ void S2Builder::AddSnappedEdges(
       }
     }
   }
-  if (s2builder_verbose) DumpEdges(*edges, sites_);
 }
 
 // If "site_vertices" is non-empty, ensures that (*site_vertices)[id] contains
@@ -1496,7 +1476,7 @@ class S2Builder::EdgeChainSimplifier {
   bool AvoidSites(VertexId v0, VertexId v1, VertexId v2,
                   flat_hash_set<VertexId>* used_vertices,
                   S2PolylineSimplifier* simplifier) const;
-  void MergeChain(const vector<VertexId>& vertices);
+  void MergeChain(absl::Span<const VertexId> vertices);
   void AssignDegenerateEdges(absl::Span<const InputEdgeId> degenerate_ids,
                              vector<vector<InputEdgeId>>* merged_ids) const;
 
@@ -1966,7 +1946,7 @@ bool S2Builder::EdgeChainSimplifier::AvoidSites(
 // there may be more than one copy of an edge chain (in either direction)
 // within a single layer.
 void S2Builder::EdgeChainSimplifier::MergeChain(
-    const vector<VertexId>& vertices) {
+    absl::Span<const VertexId> vertices) {
   // Suppose that all interior vertices have M outgoing edges and N incoming
   // edges.  Our goal is to group the edges into M outgoing chains and N
   // incoming chains, and then replace each chain by a single edge.

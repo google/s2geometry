@@ -22,8 +22,6 @@
 
 #include <cstdint>
 
-#include "s2/base/types.h"
-
 namespace util_bits {
 
 // These functions interleave the given arguments into the return value.

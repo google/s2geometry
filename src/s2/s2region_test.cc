@@ -174,7 +174,7 @@ constexpr string_view kEncodedPolyline3Segments =
 //////////////////////////////////////////////////////////////
 
 // HexEncodeStr returns the data in str in hex encoded form.
-const string HexEncodeStr(string_view str) {
+string HexEncodeStr(string_view str) {
   static constexpr string_view lut = "0123456789ABCDEF";
 
   string result;

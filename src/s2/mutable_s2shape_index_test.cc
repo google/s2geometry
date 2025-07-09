@@ -33,8 +33,6 @@
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/flags/reflection.h"
-#include <memory>
-
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -579,8 +577,7 @@ TEST_F(MutableS2ShapeIndexTest, RandomUpdates) {
 
   // Allow the seed to be varied from the command line.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_UPDATES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_UPDATES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // A few polylines.
   index_.Add(make_unique<S2Polyline::OwningShape>(

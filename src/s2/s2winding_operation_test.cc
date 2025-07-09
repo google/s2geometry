@@ -100,7 +100,7 @@ void ExpectWindingResult(const S2WindingOperation::Options& options,
 // Like ExpectWindingResult(), but with two different expected results
 // depending on whether options.include_degeneracies() is false or true.
 void ExpectDegenerateWindingResult(S2WindingOperation::Options options,
-                                   const vector<string>& loop_strs,
+                                   absl::Span<const string> loop_strs,
                                    string_view ref_point_str, int ref_winding,
                                    S2WindingOperation::WindingRule rule,
                                    string_view expected_str_false,
@@ -281,7 +281,7 @@ TEST(S2WindingOperation, UnionOfSquares) {
       "4:5, 4:6, 6:6, 6:4, 5:4, 5:5");
 }
 
-// This tests that WindingRule::ODD can be used to compute the symmtric
+// This tests that WindingRule::ODD can be used to compute the symmetric
 // difference even for input geometries with degeneracies, e.g. one geometry
 // has a degenerate hole or degenerate shell that the other does not.
 TEST(S2WindingOperation, SymmetricDifferenceDegeneracies) {

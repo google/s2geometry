@@ -263,8 +263,7 @@ TEST(S2CellIteratorJoin, TolerantJoinIsLeftDriven) {
   const Matrix3x3_d kFrame = UpFrameAt(0, -45);
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "TOLERANT_JOIN_IS_LEFT_DRIVEN",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "TOLERANT_JOIN_IS_LEFT_DRIVEN", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2Fractal fractal(bitgen);
   fractal.SetLevelForApproxMaxEdges(100);
 
@@ -297,8 +296,7 @@ TEST(S2CellIteratorJoin, AllPairsSeen) {
   const Matrix3x3_d kFrame = UpFrameAt(0, -45);
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "ALL_PAIRS_SEEN",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "ALL_PAIRS_SEEN", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2Fractal fractal(bitgen);
   fractal.SetLevelForApproxMaxEdges(1000);
 
@@ -353,8 +351,7 @@ TEST(S2CellIteratorJoin, b299938257Regression) {
   const Matrix3x3_d kFrame = UpFrameAt(0, 0);
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "BUG_299938257_REGRESSION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "BUG_299938257_REGRESSION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2Fractal fractal(bitgen);
   fractal.SetLevelForApproxMaxEdges(100);
 

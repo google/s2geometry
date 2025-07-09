@@ -125,15 +125,6 @@ class Varint {
   static void Append32(std::string* s, uint32_t value);
   static void Append64(std::string* s, uint64_t value);
 
-  // EFFECTS    Encodes a pair of values to "*s".  The encoding
-  //            is done by weaving together 4 bit groups of
-  //            each number into a single 64 bit value, and then
-  //            encoding this value as a Varint64 value.  This means
-  //            that if both a and b are small, both values can be
-  //            encoded in a single byte.
-  ABSL_DEPRECATED("Use TwoValuesVarint::Encode32.")
-  static void EncodeTwo32Values(std::string* s, uint32_t a, uint32_t b);
-
   // Decode and sum up a sequence of deltas until the sum >= goal.
   // It is significantly faster than calling ParseXXInline in a loop.
   // NOTE(user): The code does NO error checking, it assumes all the
@@ -156,11 +147,11 @@ class Varint {
 #if defined(__x86_64__)
   static std::pair<const char*, uint64_t> Parse64FallbackPair(const char* p,
                                                               int64_t res1);
+#else
+  static const char* Parse64Fallback(const char* p, uint64_t* val);
 #endif
   template <typename T>
   static int LengthImpl(T);
-  static const char* Parse64Fallback(const char* p, uint64_t* val);
-  static char* Encode32Fallback(char* ptr, uint32_t v);
 
   static const char* Parse32BackwardSlow(const char* ptr, const char* base,
                                          uint32_t* OUTPUT);
@@ -174,6 +165,8 @@ class Varint {
 };
 
 /***** Implementation details; clients should ignore *****/
+
+// NOLINTBEGIN(readability/braces) Many false positives.
 
 inline const char* Varint::Parse32FallbackInline(const char* p,
                                                  uint32_t* OUTPUT) {
@@ -190,31 +183,31 @@ inline const char* Varint::Parse32FallbackInline(const char* p,
  done:
   *OUTPUT = result;
   return reinterpret_cast<const char*>(ptr);
- }
+}
 
- inline const char* Varint::Parse32(const char* p, uint32_t* OUTPUT) {
-   // Fast path for inlining
-   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
-   uint32_t byte = *ptr;
-   if (byte < 128) {
-     *OUTPUT = byte;
-     return reinterpret_cast<const char*>(ptr) + 1;
-   } else {
-     return Parse32Fallback(p, OUTPUT);
-   }
- }
+inline const char* Varint::Parse32(const char* p, uint32_t* OUTPUT) {
+  // Fast path for inlining
+  const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
+  uint32_t byte = *ptr;
+  if (byte < 128) {
+    *OUTPUT = byte;
+    return reinterpret_cast<const char*>(ptr) + 1;
+  } else {
+    return Parse32Fallback(p, OUTPUT);
+  }
+}
 
- inline const char* Varint::Parse32Inline(const char* p, uint32_t* OUTPUT) {
-   // Fast path for inlining
-   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
-   uint32_t byte = *ptr;
-   if (byte < 128) {
-     *OUTPUT = byte;
-     return reinterpret_cast<const char*>(ptr) + 1;
-   } else {
-     return Parse32FallbackInline(p, OUTPUT);
-   }
- }
+inline const char* Varint::Parse32Inline(const char* p, uint32_t* OUTPUT) {
+  // Fast path for inlining
+  const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
+  uint32_t byte = *ptr;
+  if (byte < 128) {
+    *OUTPUT = byte;
+    return reinterpret_cast<const char*>(ptr) + 1;
+  } else {
+    return Parse32FallbackInline(p, OUTPUT);
+  }
+}
 
 inline const char* Varint::Skip32(const char* p) {
   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
@@ -223,7 +216,7 @@ inline const char* Varint::Skip32(const char* p) {
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 16) return reinterpret_cast<const char*>(ptr);
-  return nullptr; // value is too long to be a varint32
+  return nullptr;  // value is too long to be a varint32
 }
 
 inline const char* Varint::Parse32Backward(const char* p, const char* base,
@@ -243,8 +236,8 @@ inline const char* Varint::Parse32Backward(const char* p, const char* base,
     byte = *(--ptr); if (byte < 128) goto done;
     result <<= 7; result |= (byte & 127);
     byte = *(--ptr); if (byte < 128) goto done;
-    return nullptr; // Value is too long to be a varint32
- done:
+    return nullptr;  // Value is too long to be a varint32
+  done:
     *OUTPUT = result;
     return reinterpret_cast<const char*>(ptr+1);
   } else {
@@ -261,7 +254,7 @@ inline const char* Varint::Skip32Backward(const char* p, const char* base) {
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr+1);
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr+1);
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr+1);
-    return nullptr; // value is too long to be a varint32
+    return nullptr;  // value is too long to be a varint32
   } else {
     return Skip32BackwardSlow(p, base);
   }
@@ -289,9 +282,9 @@ inline const char* Varint::Parse32WithLimit(const char* p, const char* l,
  done:
   *OUTPUT = result;
   return reinterpret_cast<const char*>(ptr);
- }
+}
 
- inline const char* Varint::Parse64(const char* p, uint64_t* OUTPUT) {
+inline const char* Varint::Parse64(const char* p, uint64_t* OUTPUT) {
 #if defined(__x86_64__)
   auto ptr = reinterpret_cast<const int8_t*>(p);
   int64_t byte = *ptr;
@@ -313,7 +306,7 @@ inline const char* Varint::Parse32WithLimit(const char* p, const char* l,
     return Parse64Fallback(p, OUTPUT);
   }
 #endif
- }
+}
 
 inline const char* Varint::Skip64(const char* p) {
   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
@@ -327,7 +320,7 @@ inline const char* Varint::Skip64(const char* p) {
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 2) return reinterpret_cast<const char*>(ptr);
-  return nullptr; // value is too long to be a varint64
+  return nullptr;  // value is too long to be a varint64
 }
 
 inline const char* Varint::Parse64Backward(const char* p, const char* b,
@@ -386,7 +379,7 @@ inline const char* Varint::Skip64Backward(const char* p, const char* b) {
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr+1);
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr+1);
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr+1);
-    return nullptr; // value is too long to be a varint64
+    return nullptr;  // value is too long to be a varint64
   } else {
     return Skip64BackwardSlow(p, b);
   }
@@ -534,5 +527,7 @@ inline const char* Varint::FastDecodeDeltas(const char* ptr, int64_t goal,
   *out = goal + sum;
   return ptr;
 }
+
+// NOLINTEND(readability/braces)
 
 #endif  // S2_UTIL_CODING_VARINT_H_

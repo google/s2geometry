@@ -328,8 +328,7 @@ TEST(S2Cap, GetCentroid) {
 
   // Random caps.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_CENTROID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_CENTROID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
     S2Point center = s2random::Point(bitgen);
     double height = absl::Uniform(bitgen, 0.0, 2.0);

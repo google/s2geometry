@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "absl/base/nullability.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -44,7 +45,7 @@ class S2EdgeTessellator {
   // ------------------|------------------------|-----------------------
   // AppendProjected   | S2 geodesics           | Planar projected edges
   // AppendUnprojected | Planar projected edges | S2 geodesics
-  S2EdgeTessellator(absl::Nonnull<const S2::Projection*> projection,
+  S2EdgeTessellator(const S2::Projection* absl_nonnull projection,
                     S1Angle tolerance);
 
   // Converts the spherical geodesic edge AB to a chain of planar edges in the
@@ -95,7 +96,7 @@ class S2EdgeTessellator {
                        const R2Point& pb, const S2Point& b,
                        std::vector<R2Point>* vertices) const;
 
-  absl::Nonnull<const S2::Projection*> proj_;
+  const S2::Projection* absl_nonnull proj_;
 
   // The given tolerance scaled by a constant fraction so that it can be
   // compared against the result returned by EstimateMaxError().

@@ -387,7 +387,7 @@ int GetMedoidPolyline(absl::Span<const unique_ptr<S2Polyline>> polylines,
 //  This algorithm takes O(iteration_cap * num_polylines) pairwise alignments.
 
 unique_ptr<S2Polyline> GetConsensusPolyline(
-    const vector<unique_ptr<S2Polyline>>& polylines,
+    absl::Span<const unique_ptr<S2Polyline>> polylines,
     const ConsensusOptions options) {
   const int num_polylines = polylines.size();
   ABSL_CHECK_GT(num_polylines, 0);

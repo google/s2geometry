@@ -209,8 +209,7 @@ TEST(SortEdgesCcw, SortsEdges) {
   vector<S2Shape::Edge> sorted = CcwEdgesAbout(kOrigin, kNumEdges);
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SORT_EDGES_CCW_SORTS_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SORT_EDGES_CCW_SORTS_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < kNumEdges; ++i) {
     // Shift sorted edges by one.
     absl::c_rotate(sorted, sorted.begin() + 1);
@@ -238,8 +237,7 @@ TEST(SortEdgesCcw, SortsEdgesFlipped) {
   sorted[8] = sorted[8].Reversed();
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SORT_EDGES_CCW_SORTS_EDGES_FLIPPED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SORT_EDGES_CCW_SORTS_EDGES_FLIPPED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < kNumEdges; ++i) {
     // Shift sorted edges by one.
     absl::c_rotate(sorted, sorted.begin() + 1);
@@ -261,9 +259,9 @@ TEST(SortEdgesCcw, StartEdgeAlwaysFirst) {
   // Generate edges in order around the origin.
   vector<S2Shape::Edge> sorted = CcwEdgesAbout(kOrigin, kNumEdges);
 
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SORT_EDGES_CCW_START_EDGE_ALWAYS_FIRST",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("SORT_EDGES_CCW_START_EDGE_ALWAYS_FIRST",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < kNumEdges; ++i) {
     // Randomize the edges.
     vector<S2Shape::Edge> shuffled = sorted;
@@ -287,9 +285,9 @@ TEST(SortEdgesCcw, ReverseDuplicatesOrdered) {
   sorted.insert(sorted.begin() + 3, sorted[3].Reversed());
 
   // Randomize the edges.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SORT_EDGES_CCW_REVERSE_DUPLICATES_ORDERED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("SORT_EDGES_CCW_REVERSE_DUPLICATES_ORDERED",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<S2Shape::Edge> shuffled = sorted;
   absl::c_shuffle(shuffled, bitgen);
 
@@ -575,8 +573,7 @@ TYPED_TEST(AllValidationQueries, LoopsCrossing) {
   static constexpr int kIters = 100;
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "LOOPS_CROSSING",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "LOOPS_CROSSING", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   for (int iter = 0; iter < kIters; ++iter) {
     this->AddConcentricLoops(bitgen, 2, 4 /*min_vertices*/);

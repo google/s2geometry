@@ -52,8 +52,7 @@ void CompareS2CellToPadded(const S2Cell& cell, const S2PaddedCell& pcell,
 TEST(S2PaddedCell, S2CellMethods) {
   // Test the S2PaddedCell methods that have approximate S2Cell equivalents.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "S2CELL_METHODS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "S2CELL_METHODS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
     S2CellId id = s2random::CellId(bitgen);
@@ -76,8 +75,7 @@ TEST(S2PaddedCell, S2CellMethods) {
 
 TEST(S2PaddedCell, GetEntryExitVertices) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "ENTRY_EXIT_VERTICES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "ENTRY_EXIT_VERTICES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
     S2CellId id = s2random::CellId(bitgen);
@@ -111,8 +109,7 @@ static double SampleInterval(absl::BitGenRef bitgen, const R1Interval& x) {
 TEST(S2PaddedCell, ShrinkToFit) {
   constexpr int kIters = 1000;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SHRINK_TO_FIT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SHRINK_TO_FIT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     // Start with the desired result and work backwards.
     S2CellId result = s2random::CellId(bitgen);

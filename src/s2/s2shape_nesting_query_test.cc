@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -33,6 +34,7 @@
 #include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
+#include "s2/s2debug.h"
 #include "s2/s2latlng.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2point.h"
@@ -48,14 +50,9 @@ using std::vector;
 namespace {
 
 struct RingSpec {
-  // C++11 seems to be unhappy with aggregate initialization when
-  // no constructor is defined.
-  RingSpec(const S2LatLng& center, double radius_deg, bool reverse = false)
-      : center(center), radius_deg(radius_deg), reverse(reverse) {}
-
   S2LatLng center;
   double radius_deg;
-  bool reverse;  // Should we reverse the vertex order?
+  bool reverse = false;  // Should we reverse the vertex order?
 };
 
 // Builds an S2LaxPolygonShape out of nested rings according to given ring
@@ -278,6 +275,51 @@ TEST(S2ShapeNestingQuery, TwoChainsFormPair) {
   }
 }
 
+// Test case for two chains with a shared vertex.
+TEST(S2ShapeNestingQuery, TwoChainsWithSharedVertex) {
+  auto P = [](double lat, double lng) {
+    return S2LatLng::FromDegrees(lat, lng).ToPoint();
+  };
+
+  // A quadrangle and a pentagon sharing a vertex:
+  //                       ┌--*
+  //                       |    ╲
+  //                       |     *
+  //                   ┌---*-----┘
+  //                   |   |
+  //                   └---┘
+  std::vector<S2Point> loop1{P(0, 0), P(0, -1), P(-1, -1), P(-1, 0)};
+  std::vector<S2Point> loop2{P(0, 0), P(0, 1), P(1, 2), P(2, 1), P(1, 0)};
+
+  // Check all rotations of the two loops.
+  for (size_t i = 0; i < loop1.size(); ++i) {
+    for (size_t j = 0; j < loop2.size(); ++j) {
+      std::vector<std::unique_ptr<S2Loop>> loops;
+      loops.emplace_back(std::make_unique<S2Loop>(loop1));
+      loops.emplace_back(std::make_unique<S2Loop>(loop2));
+
+      S2Polygon bow_tie(std::move(loops));
+      EXPECT_EQ(bow_tie.GetParent(0), -1);
+      EXPECT_EQ(bow_tie.GetParent(1), -1);
+
+      MutableS2ShapeIndex index;
+      index.Add(std::make_unique<S2LaxPolygonShape>(bow_tie));
+
+      S2ShapeNestingQuery query(&index);
+      vector<S2ShapeNestingQuery::ChainRelation> relations =
+          query.ComputeShapeNesting(0);
+
+      // Each chain should be a shell with no holes.
+      ASSERT_EQ(relations.size(), 2);
+      EXPECT_TRUE(relations[0].is_shell());
+      EXPECT_TRUE(relations[1].is_shell());
+
+      std::rotate(begin(loop2), begin(loop2) + 1, end(loop2));
+    }
+    std::rotate(begin(loop1), begin(loop1) + 1, end(loop1));
+  }
+}
+
 TEST(S2ShapeNestingQuery, CanSetDatumShellOption) {
   constexpr int kNumEdges = 100;
   const S2LatLng kCenter = S2LatLng::FromDegrees(0.0, 0.0);
@@ -401,8 +443,7 @@ TEST_P(NestingTest, NestedChainsPartitionCorrectly) {
 
   if (test_case.shuffle) {
     absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-        "NESTED_CHAINS_PARTITION_CORRECTLY",
-        absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+        "NESTED_CHAINS_PARTITION_CORRECTLY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
     std::shuffle(rings.begin() + 1, rings.end(), bitgen);
   }
 

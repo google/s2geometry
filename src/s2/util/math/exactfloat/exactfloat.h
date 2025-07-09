@@ -563,7 +563,8 @@ class ExactFloat {
 
   // Convert the ExactFloat to a decimal value of the form 0.ddd * (10 ** x),
   // with at most "max_digits" significant digits (trailing zeros are removed).
-  // Set (*digits) to the ASCII digits and return the decimal exponent "x".
+  // Set (*digits) to the ASCII digits (just the "ddd" portion, without leading
+  // "0.") and return the decimal exponent "x".
   int GetDecimalDigits(int max_digits, std::string* digits) const;
 
   // Return a_sign * fabs(a) + b_sign * fabs(b).  Used to implement addition

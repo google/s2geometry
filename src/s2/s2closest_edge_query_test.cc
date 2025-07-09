@@ -270,6 +270,9 @@ class VisitClosestEdgesTest : public ::testing::Test {
     return polygon_->num_vertices();
   }
 
+  // Returns the configured query.
+  S2ClosestEdgeQuery& query() { return query_; }
+
   // Returns the number of edges visited.  If a visitor is given, results are
   // passed to it as well.  The given shape filter (if any) is passed to the
   // query.
@@ -348,8 +351,7 @@ TEST_F(VisitClosestEdgesTest, CanBreakFromBruteForce) {
 
 TEST_F(VisitClosestEdgesTest, CanBreakFromNormalIteration) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CAN_BREAK_FROM_NORMAL_ITERATION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CAN_BREAK_FROM_NORMAL_ITERATION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   FractalQuery(bitgen);
 
   S2ClosestEdgeQuery::Options options;
@@ -362,8 +364,7 @@ TEST_F(VisitClosestEdgesTest, CanBreakFromNormalIteration) {
 
 TEST_F(VisitClosestEdgesTest, DistanceIsMonotonic) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "DISTANCE_IS_MONOTONIC",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "DISTANCE_IS_MONOTONIC", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int num_vertices = FractalQuery(bitgen);
 
   S2ClosestEdgeQuery::Options options;
@@ -383,10 +384,23 @@ TEST_F(VisitClosestEdgesTest, DistanceIsMonotonic) {
   EXPECT_EQ(results, num_vertices);
 }
 
+TEST_F(VisitClosestEdgesTest, OnlyClosestEdgePerShapeIsReturned) {
+  PointTarget target(MakePointOrDie("0:4"));
+  vector<Result> results;
+  query().VisitClosestShapes(&target, {}, [&](const Result& result) {
+    results.push_back(result);
+    return true;
+  });
+  EXPECT_EQ(results.size(), 2);
+  EXPECT_EQ(results[0].shape_id(), 1);
+  EXPECT_EQ(results[0].edge_id(), 3);
+  EXPECT_EQ(results[1].shape_id(), 0);
+  EXPECT_EQ(results[1].edge_id(), 3);
+}
+
 TEST_F(VisitClosestEdgesTest, CanLimitByDistance) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CAN_LIMIT_BY_DISTANCE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CAN_LIMIT_BY_DISTANCE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int num_vertices = FractalQuery(bitgen);
 
   const S1ChordAngle kDistanceLimit = S1ChordAngle::Degrees(12);
@@ -414,8 +428,7 @@ TEST_F(VisitClosestEdgesTest, CanLimitByDistance) {
 
 TEST_F(VisitClosestEdgesTest, CanLimitByNumResults) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CAN_LIMIT_BY_NUM_RESULTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CAN_LIMIT_BY_NUM_RESULTS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   FractalQuery(bitgen);
 
   constexpr int kResultLimit = 3141;
@@ -565,9 +578,9 @@ TEST(S2ClosestEdgeQuery, IsConservativeDistanceLessOrEqual) {
   // Test
   int num_tested = 0;
   int num_conservative_needed = 0;
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "IS_CONSERVATIVE_DISTANCE_LESS_OR_EQUAL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("IS_CONSERVATIVE_DISTANCE_LESS_OR_EQUAL",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kNumIters = 10'000;
   for (int iter = 0; iter < kNumIters; ++iter) {
     S2Point x = s2random::Point(bitgen);
@@ -829,16 +842,14 @@ class S2ClosestEdgeQueryShapeTest : public ::testing::TestWithParam<int> {
 
 TEST_P(S2ClosestEdgeQueryShapeTest, CircleEdges) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CIRCLE_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CIRCLE_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(s2testing::RegularLoopShapeIndexFactory(), kNumIndexes,
                        kNumEdges, kNumQueries, allowed_shapes(), bitgen);
 }
 
 TEST_P(S2ClosestEdgeQueryShapeTest, FractalEdges) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRACTAL_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRACTAL_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(s2testing::FractalLoopShapeIndexFactory(bitgen),
                        kNumIndexes, kNumEdges, kNumQueries, allowed_shapes(),
                        bitgen);
@@ -846,8 +857,7 @@ TEST_P(S2ClosestEdgeQueryShapeTest, FractalEdges) {
 
 TEST_P(S2ClosestEdgeQueryShapeTest, PointCloudEdges) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "POINT_CLOUD_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "POINT_CLOUD_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(s2testing::PointCloudShapeIndexFactory(bitgen),
                        kNumIndexes, kNumEdges, kNumQueries, allowed_shapes(),
                        bitgen);
@@ -855,8 +865,7 @@ TEST_P(S2ClosestEdgeQueryShapeTest, PointCloudEdges) {
 
 TEST_P(S2ClosestEdgeQueryShapeTest, ConservativeCellDistanceIsUsed) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONSERVATIVE_CELL_DISTANCE_IS_USED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CONSERVATIVE_CELL_DISTANCE_IS_USED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // This test will be flaky if max_error() is not properly taken into
   // account when measuring distances to S2ShapeIndex cells.
   TestWithIndexFactory(s2testing::FractalLoopShapeIndexFactory(bitgen), 5, 100,
