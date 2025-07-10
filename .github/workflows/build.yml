@@ -35,7 +35,7 @@ jobs:
       - uses: zacharyburnett/setup-abseil-cpp@dfe299c5b1cad83ac96bb41461fea4296bf1a47c # Not a release, but has #423 fix.
         with:
           cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
-          abseil-version: "20240722.0"
+          abseil-version: "20250512.1"
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - run: mkdir build
       - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DBUILD_TESTS=OFF ..
