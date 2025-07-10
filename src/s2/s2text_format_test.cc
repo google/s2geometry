@@ -29,7 +29,6 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/types.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
@@ -104,8 +103,7 @@ TEST(ToString, NegativeZeros) {
 
 TEST(ToString, MinimalDigitsE5) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MINIMAL_DIGITS_E5",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MINIMAL_DIGITS_E5", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     S2LatLng ll(s2random::Point(bitgen));
     S2LatLng ll_e5 = S2LatLng::FromE5(ll.lat().e5(), ll.lng().e5());
@@ -115,8 +113,7 @@ TEST(ToString, MinimalDigitsE5) {
 
 TEST(ToString, MinimalDigitsE6) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MINIMAL_DIGITS_E6",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MINIMAL_DIGITS_E6", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
     S2LatLng ll(s2random::Point(bitgen));
     S2LatLng ll_e6 = S2LatLng::FromE6(ll.lat().e6(), ll.lng().e6());
@@ -126,8 +123,7 @@ TEST(ToString, MinimalDigitsE6) {
 
 TEST(ToString, MinimalDigitsE7) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MINIMAL_DIGITS_E7",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MINIMAL_DIGITS_E7", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   ExpectMaxDigits(S2LatLng::FromDegrees(0, 0), 7);
   for (int iter = 0; iter < kIters; ++iter) {
     S2LatLng ll(s2random::Point(bitgen));
@@ -138,8 +134,7 @@ TEST(ToString, MinimalDigitsE7) {
 
 TEST(ToString, MinimalDigitsDoubleConstants) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MINIMAL_DIGITS_DOUBLE_CONSTANTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MINIMAL_DIGITS_DOUBLE_CONSTANTS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Verify that points specified as floating-point literals in degrees using
   // up to 10 digits after the decimal point are formatted with the minimal
   // number of digits.

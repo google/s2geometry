@@ -18,6 +18,7 @@
 #ifndef S2_S2BUILDER_LAYER_H_
 #define S2_S2BUILDER_LAYER_H_
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2error.h"

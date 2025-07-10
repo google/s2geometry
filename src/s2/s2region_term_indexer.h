@@ -102,6 +102,7 @@
 
 #include "absl/strings/string_view.h"
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2point.h"
@@ -292,7 +293,7 @@ class S2RegionTermIndexer {
  private:
   enum TermType { ANCESTOR, COVERING };
 
-  std::string GetTerm(TermType term_type, const S2CellId id,
+  std::string GetTerm(TermType term_type, S2CellId id,
                       absl::string_view prefix) const;
 
   Options options_;

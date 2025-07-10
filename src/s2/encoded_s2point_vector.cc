@@ -307,7 +307,7 @@ inline int BaseShift(int level, int base_bits) {
 
 // Forward declarations.
 int ChooseBestLevel(Span<const S2Point> points, vector<CellPoint>* cell_points);
-vector<uint64_t> ConvertCellsToValues(const vector<CellPoint>& cell_points,
+vector<uint64_t> ConvertCellsToValues(absl::Span<const CellPoint> cell_points,
                                       int level, bool* have_exceptions);
 uint64_t ChooseBase(absl::Span<const uint64_t> values, int level,
                     bool have_exceptions, int* base_bits);
@@ -631,7 +631,7 @@ int ChooseBestLevel(Span<const S2Point> points,
 // represented losslessly as the center of an S2CellId at the chosen level are
 // indicated by the value "kException".  "have_exceptions" is set to indicate
 // whether any exceptions were present.
-vector<uint64_t> ConvertCellsToValues(const vector<CellPoint>& cell_points,
+vector<uint64_t> ConvertCellsToValues(absl::Span<const CellPoint> cell_points,
                                       int level, bool* have_exceptions) {
   vector<uint64_t> values;
   values.reserve(cell_points.size());

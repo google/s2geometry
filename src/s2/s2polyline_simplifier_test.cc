@@ -25,6 +25,7 @@
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
@@ -35,10 +36,9 @@
 #include "s2/s2text_format.h"
 
 using absl::string_view;
-using std::vector;
 
 void CheckSimplify(string_view src, string_view dst, string_view target,
-                   string_view avoid, const vector<bool>& disc_on_left,
+                   string_view avoid, absl::Span<const bool> disc_on_left,
                    double radius_degrees, bool expected_result) {
   S1ChordAngle radius(S1Angle::Degrees(radius_degrees));
   S2PolylineSimplifier s;
@@ -158,9 +158,8 @@ TEST(S2PolylineSimplifier, TargetAndAvoid) {
 }
 
 TEST(S2PolylineSimplifier, Precision) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "PRECISION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("PRECISION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // This is a rough upper bound on both the error in constructing the disc
   // locations (i.e., S2::GetPointOnLine, etc.), and also on the

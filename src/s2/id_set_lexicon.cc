@@ -37,15 +37,15 @@ IdSetLexicon::~IdSetLexicon() = default;
 IdSetLexicon::IdSetLexicon(const IdSetLexicon& x) : id_sets_(x.id_sets_) {
 }
 
-IdSetLexicon::IdSetLexicon(IdSetLexicon&& x) : id_sets_(std::move(x.id_sets_)) {
-}
+IdSetLexicon::IdSetLexicon(IdSetLexicon&& x) noexcept
+    : id_sets_(std::move(x.id_sets_)) {}
 
 IdSetLexicon& IdSetLexicon::operator=(const IdSetLexicon& x) {
   id_sets_ = x.id_sets_;
   return *this;
 }
 
-IdSetLexicon& IdSetLexicon::operator=(IdSetLexicon&& x) {
+IdSetLexicon& IdSetLexicon::operator=(IdSetLexicon&& x) noexcept {
   id_sets_ = std::move(x.id_sets_);
   return *this;
 }

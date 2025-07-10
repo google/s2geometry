@@ -911,7 +911,7 @@ const S2DensityTree::Cell* S2DensityTree::DecodedPath::LoadCell(
   return cell;
 }
 
-S2DensityTree S2DensityTree::Normalize(absl::Nonnull<S2Error*> error) const {
+S2DensityTree S2DensityTree::Normalize(S2Error* absl_nonnull error) const {
   *error = S2Error::Ok();
 
   DecodedPath path(this);
@@ -950,7 +950,7 @@ S2DensityTree S2DensityTree::Normalize(absl::Nonnull<S2Error*> error) const {
   return tree;
 }
 
-S2CellUnion S2DensityTree::Leaves(absl::Nonnull<S2Error*> error) const {
+S2CellUnion S2DensityTree::Leaves(S2Error* absl_nonnull error) const {
   std::vector<S2CellId> leaves;
 
   VisitCells(

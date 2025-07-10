@@ -61,7 +61,6 @@
 
 #include "absl/log/absl_log.h"
 
-#include "s2/base/types.h"
 
 class NthDerivativeCoder {
  public:

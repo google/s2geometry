@@ -469,9 +469,8 @@ TEST(S2BufferOperation, ZigZagLoop) {
 }
 
 TEST(S2BufferOperation, Fractals) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRACTALS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("FRACTALS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (double dimension : {1.02, 1.8}) {
     S2Fractal fractal(bitgen);
     fractal.SetLevelForApproxMaxEdges(3 * 64);

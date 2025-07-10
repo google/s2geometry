@@ -19,8 +19,7 @@ endif()
 # s2geometry needs to use the same C++ standard that absl used to avoid
 # undefined symbol errors since ABSL_HAVE_STD_STRING_VIEW etc will
 # end up defined differently.  There is probably a better way to achieve
-# this than assuming what absl used.  We default to c++17, but support
-# c++14 (like abseil).
+# this than assuming what absl used.  We require at least C++17.
 # Using CACHE allows the user to override the default.
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to build with")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -232,6 +231,7 @@ endif()
 target_link_libraries(
     s2
     ${OPENSSL_LIBRARIES}
+    absl::absl_vlog_is_on
     absl::base
     absl::btree
     absl::check
@@ -438,7 +438,6 @@ if(S2_ENABLE_INSTALL)
                 src/s2/base/malloc_extension.h
                 src/s2/base/port.h
                 src/s2/base/spinlock.h
-                src/s2/base/types.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
   install(FILES src/s2/testing/gtest_prod.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/testing")

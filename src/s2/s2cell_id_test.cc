@@ -31,6 +31,7 @@
 #include "absl/base/macros.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/marshalling.h"
+#include "absl/hash/hash_testing.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/log_streamer.h"
@@ -219,6 +220,7 @@ TEST(S2CellId, Advance) {
 
 TEST(S2CellId, DistanceFromBegin) {
   EXPECT_EQ(6, S2CellId::End(0).distance_from_begin());
+  EXPECT_EQ(6 * (1 << 20), S2CellId::End(10).distance_from_begin());
   EXPECT_EQ(6 * (int64_t{1} << (2 * S2CellId::kMaxLevel)),
             S2CellId::End(S2CellId::kMaxLevel).distance_from_begin());
 
@@ -231,10 +233,8 @@ TEST(S2CellId, DistanceFromBegin) {
 }
 
 TEST(S2CellId, MaximumTile) {
-  // This method is tested more thoroughly in s2cell_union_test.cc.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MAXIMUM_TILE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MAXIMUM_TILE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     S2CellId id = s2random::CellId(bitgen, 10);
 
@@ -298,9 +298,8 @@ TEST(S2CellId, GetCommonAncestorLevel) {
 
 TEST(S2CellId, Inverses) {
   // Check the conversion of random leaf cells to S2LatLngs and back.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INVERSES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("INVERSES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 200000; ++i) {
     S2CellId id = s2random::CellId(bitgen, S2CellId::kMaxLevel);
     EXPECT_TRUE(id.is_leaf());
@@ -312,9 +311,8 @@ TEST(S2CellId, Inverses) {
 
 TEST(S2CellId, Tokens) {
   // Test random cell ids at all levels.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "TOKENS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("TOKENS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 10000; ++i) {
     S2CellId id = s2random::CellId(bitgen);
     string token = id.ToToken();
@@ -446,9 +444,8 @@ TEST(S2CellId, LegacyCoderMany) {
 
 static constexpr int kMaxExpandLevel = 3;
 
-static void ExpandCell(
-    S2CellId parent, vector<S2CellId>* cells,
-    flat_hash_map<S2CellId, S2CellId, S2CellIdHash>* parent_map) {
+static void ExpandCell(S2CellId parent, vector<S2CellId>* cells,
+                       flat_hash_map<S2CellId, S2CellId>* parent_map) {
   cells->push_back(parent);
   if (parent.level() == kMaxExpandLevel) return;
   int i, j, orientation;
@@ -479,7 +476,7 @@ static void ExpandCell(
 
 TEST(S2CellId, Containment) {
   // Test contains() and intersects().
-  flat_hash_map<S2CellId, S2CellId, S2CellIdHash> parent_map;
+  flat_hash_map<S2CellId, S2CellId> parent_map;
   vector<S2CellId> cells;
   for (int face = 0; face < 6; ++face) {
     ExpandCell(S2CellId::FromFace(face), &cells, &parent_map);
@@ -535,9 +532,8 @@ TEST(S2CellId, Coverage) {
   // adjacent values of "i" or "j".  (It is sqrt(2/3) rather than 1/2 because
   // the cells at the corners of each face are stretched -- they have 60 and
   // 120 degree angles.)
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COVERAGE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("COVERAGE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   double max_dist = 0.5 * S2::kMaxDiag.GetValue(S2CellId::kMaxLevel);
   for (int i = 0; i < 1000000; ++i) {
@@ -619,9 +615,8 @@ TEST(S2CellId, Neighbors) {
 
   // Check that AppendAllNeighbors produces results that are consistent
   // with AppendVertexNeighbors for a bunch of random cells.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "NEIGHBORS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("NEIGHBORS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 1000; ++i) {
     S2CellId id = s2random::CellId(bitgen);
     if (id.is_leaf()) id = id.parent();
@@ -741,8 +736,7 @@ void TestExpandedByDistanceUV(absl::BitGenRef bitgen, S2CellId id,
 
 TEST(S2CellId, ExpandedByDistanceUV) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EXPANDED_BY_DISTANCE_UV",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "EXPANDED_BY_DISTANCE_UV", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   double max_dist_degrees = 10;
   for (int iter = 0; iter < 100; ++iter) {
     S2CellId id = s2random::CellId(bitgen);
@@ -810,3 +804,17 @@ TEST(S2CellId, AbslUnparseFlag) {
   EXPECT_THAT(absl::UnparseFlag(id), Eq(id.ToToken()));
 }
 
+TEST(S2CellId, SupportsAbslHash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+    S2CellId::None(),
+    S2CellId::Sentinel(),
+    S2CellId::FromFace(0),
+    S2CellId::FromFace(1),
+    S2CellId::FromFace(2),
+    S2CellId::FromFace(3),
+    S2CellId::FromFace(4),
+    S2CellId::FromFace(5),
+    S2CellId::FromFacePosLevel(0, 0, 0),
+    S2CellId::FromFacePosLevel(0, 0, 1),
+  }));
+}

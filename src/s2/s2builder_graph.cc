@@ -1095,7 +1095,7 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
 }
 
 // LINT.IfChange
-vector<S2Point> Graph::FilterVertices(const vector<S2Point>& vertices,
+vector<S2Point> Graph::FilterVertices(absl::Span<const S2Point> vertices,
                                       vector<Edge>* edges,
                                       vector<VertexId>* tmp) {
   // Gather the vertices that are actually used.

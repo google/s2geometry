@@ -90,8 +90,7 @@ TEST(S2ClosestPointQuery, EmptyTargetOptimized) {
   // Ensure that the optimized algorithm handles empty targets when a distance
   // limit is specified.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EMPTY_TARGET_OPTIMIZED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "EMPTY_TARGET_OPTIMIZED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestIndex index;
   for (int i = 0; i < 1000; ++i) {
     index.Add(s2random::Point(bitgen), i);
@@ -313,32 +312,28 @@ static constexpr int kNumQueries = 50;
 
 TEST(S2ClosestPointQueryTest, CirclePoints) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CIRCLE_POINTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CIRCLE_POINTS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(CirclePointIndexFactory(), kNumIndexes, kNumPoints,
                        kNumQueries, bitgen);
 }
 
 TEST(S2ClosestPointQueryTest, FractalPoints) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRACTAL_POINTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRACTAL_POINTS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(FractalPointIndexFactory(), kNumIndexes, kNumPoints,
                        kNumQueries, bitgen);
 }
 
 TEST(S2ClosestPointQueryTest, GridPoints) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GRID_POINT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("GRID_POINT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(GridPointIndexFactory(), kNumIndexes, kNumPoints,
                        kNumQueries, bitgen);
 }
 
 TEST(S2ClosestPointQueryTest, ConservativeCellDistanceIsUsed) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONSERVATIVE_CELL_DISTANCE_IS_USED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CONSERVATIVE_CELL_DISTANCE_IS_USED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(FractalPointIndexFactory(), 5, 100, 10, bitgen);
 }
 

@@ -24,6 +24,7 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -99,7 +100,7 @@ class DegeneracyFinder {
   void ComputeUnknownSignsIndexed(VertexId known_vertex, int known_vertex_sign,
                                   vector<Component>* components) const;
   vector<PolygonDegeneracy> MergeDegeneracies(
-      const vector<Component>& components) const;
+      absl::Span<const Component> components) const;
 
   const Graph& g_;
   Graph::VertexInMap in_;
@@ -350,7 +351,7 @@ void DegeneracyFinder::ComputeUnknownSignsIndexed(
 // final "is_hole" status of each edge (since up to this point, the "is_hole"
 // value has been expressed relative to the root vertex of each component).
 vector<PolygonDegeneracy> DegeneracyFinder::MergeDegeneracies(
-    const vector<Component>& components) const {
+    absl::Span<const Component> components) const {
   vector<PolygonDegeneracy> result;
   for (const Component& component : components) {
     ABSL_DCHECK_NE(component.root_sign, 0);

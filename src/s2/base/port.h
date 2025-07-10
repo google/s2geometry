@@ -24,6 +24,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <new>
 
 // -----------------------------------------------------------------------------
 // Utility Functions
@@ -45,7 +46,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 // -----------------------------------------------------------------------------
 
 // IS_LITTLE_ENDIAN, IS_BIG_ENDIAN
-#if defined(__linux__) || defined(__ANDROID__)
+#if defined(__linux__)
 #include <endian.h>
 
 #elif defined(__APPLE__)

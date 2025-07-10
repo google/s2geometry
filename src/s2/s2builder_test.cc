@@ -282,8 +282,7 @@ TEST(S2Builder, MaxEdgeDeviation) {
   // number of effective tests.
   int num_effective = 0;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MAX_EDGE_DEVIATION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MAX_EDGE_DEVIATION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < num_iters; ++iter) {
     S2LaxPolylineShape output;
     builder.StartLayer(make_unique<LaxPolylineLayer>(&output));
@@ -789,8 +788,7 @@ TEST(S2Builder, GraphPersistence) {
   // Ensure that the Graph objects passed to S2Builder::Layer::Build() methods
   // remain valid until all layers have been built.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GRAPH_PERSISTENCE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GRAPH_PERSISTENCE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<Graph> graphs;
   vector<unique_ptr<GraphClone>> clones;
   S2Builder builder{S2Builder::Options()};
@@ -1130,11 +1128,7 @@ class InputEdgeIdCheckingLayer : public S2Builder::Layer {
 
 void InputEdgeIdCheckingLayer::Build(const Graph& g, S2Error* error) {
   EdgeInputEdgeIds actual;
-  vector<S2Point> vertices;
   for (Graph::EdgeId e = 0; e < g.num_edges(); ++e) {
-    vertices.clear();
-    vertices.push_back(g.vertex(g.edge(e).first));
-    vertices.push_back(g.vertex(g.edge(e).second));
     string edge = s2textformat::ToString(
         vector<S2Point>{g.vertex(g.edge(e).first),
                         g.vertex(g.edge(e).second)});
@@ -1184,8 +1178,10 @@ TEST(S2Builder, UndirectedSiblingsDontHaveInputEdgeIds) {
   GraphOptions graph_options;
   graph_options.set_edge_type(EdgeType::UNDIRECTED);
   TestInputEdgeIds({"0:0, 0:1, 0:2"},
-                   {{"0:0, 0:1", {0}}, {"0:1, 0:2", {1}},
-                    {"0:1, 0:0", {}}, {"0:2, 0:1", {}}},
+                   {{"0:0, 0:1", {0}},
+                    {"0:1, 0:2", {1}},
+                    {"0:1, 0:0", {}},
+                    {"0:2, 0:1", {}}},
                    graph_options, S2Builder::Options());
 }
 
@@ -1194,8 +1190,12 @@ TEST(S2Builder, CreatedSiblingsDontHaveInputEdgeIds) {
   // InputEdgeIds.
   GraphOptions graph_options;
   graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::CREATE);
-  TestInputEdgeIds({"0:0, 0:1, 0:2"}, {{"0:0, 0:1", {0}}, {"0:1, 0:2", {1}}},
-                   GraphOptions(), S2Builder::Options());
+  TestInputEdgeIds({"0:0, 0:1, 0:2"},
+                   {{"0:0, 0:1", {0}},
+                    {"0:1, 0:2", {1}},
+                    {"0:1, 0:0", {}},
+                    {"0:2, 0:1", {}}},
+                   graph_options, S2Builder::Options());
 }
 
 TEST(S2Builder, EdgeMergingDirected) {
@@ -1363,8 +1363,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
       S2::GetUpdateMinDistanceMaxError(ca)).ToAngle();
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "HIGH_PRECISION_STRESS_TEST",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "HIGH_PRECISION_STRESS_TEST", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int non_degenerate = 0;
   const int num_iters = 8000 * absl::GetFlag(FLAGS_iteration_multiplier);
   for (int iter = 0; iter < num_iters; ++iter) {
@@ -1434,8 +1433,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
 
 TEST(S2Builder, SelfIntersectionStressTest) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SELF_INTERSECTION_STRESS_TEST",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SELF_INTERSECTION_STRESS_TEST", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = 50 * absl::GetFlag(FLAGS_iteration_multiplier);
   for (int iter = 0; iter < num_iters; ++iter) {
     CycleTimer timer;
@@ -1487,8 +1485,7 @@ TEST(S2Builder, SelfIntersectionStressTest) {
 
 TEST(S2Builder, FractalStressTest) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRACTAL_STRESS_TEST",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRACTAL_STRESS_TEST", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters =
       (S2_DEBUG_MODE ? 100 : 1000) * absl::GetFlag(FLAGS_iteration_multiplier);
   for (int iter = 0; iter < num_iters; ++iter) {
@@ -1722,8 +1719,14 @@ TEST(S2Builder, VoronoiSiteExclusionBug2) {
   // Snapping to the given vertices would cause the snapped edge to deviate
   // too far from the input edge, so S2Builder adds an extra site.  Given the
   // new site, snapping to the
+#ifndef _WIN32
   constexpr string_view expected =
       "47.06:-175.17, -34.4968065428191:69.7125289482374";
+#else
+  // TODO(b/387870507): Unclear if this difference is a bug.
+  constexpr string_view expected =
+      "47.06:-175.17, -34.4968065428191:69.7125289482373";
+#endif  // defined(_WIN32)
   EXPECT_EQ(expected, s2textformat::ToString(output));
 }
 

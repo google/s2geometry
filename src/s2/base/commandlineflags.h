@@ -22,7 +22,6 @@
 #include "absl/flags/flag.h"
 
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/base/types.h"
 
 #define S2_DEFINE_bool(name, default_value, description) \
   ABSL_FLAG(bool, name, default_value, description)

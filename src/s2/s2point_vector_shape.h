@@ -23,6 +23,7 @@
 
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/encoded_s2point_vector.h"
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
@@ -36,17 +37,13 @@
 // This class is useful for adding a collection of points to an S2ShapeIndex.
 class S2PointVectorShape : public S2Shape {
  public:
-  // Define as enum so we don't have to declare storage.
-  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
-  // in opensource.
-  enum : TypeTag { kTypeTag = 3 };
+  static constexpr TypeTag kTypeTag = 3;
 
   // Constructs an empty point vector.
   S2PointVectorShape() = default;
 
-  S2PointVectorShape(S2PointVectorShape&& other) = default;
-
-  S2PointVectorShape& operator=(S2PointVectorShape&& other) = default;
+  S2PointVectorShape(S2PointVectorShape&& other) noexcept = default;
+  S2PointVectorShape& operator=(S2PointVectorShape&& other) noexcept = default;
 
   // Constructs an S2PointVectorShape from a vector of points.
   explicit S2PointVectorShape(std::vector<S2Point> points) {
@@ -121,10 +118,7 @@ class S2PointVectorShape : public S2Shape {
 // into a large contiguous buffer that contains other encoded data as well.
 class EncodedS2PointVectorShape : public S2Shape {
  public:
-  // Define as enum so we don't have to declare storage.
-  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
-  // in opensource.
-  enum : TypeTag { kTypeTag = S2PointVectorShape::kTypeTag };
+  static constexpr TypeTag kTypeTag = S2PointVectorShape::kTypeTag;
 
   // Constructs an uninitialized object; requires Init() to be called.
   EncodedS2PointVectorShape() = default;

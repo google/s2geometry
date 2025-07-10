@@ -2000,8 +2000,8 @@ bool MutableS2ShapeIndex::Init(Decoder* decoder,
   for (size_t i = 0; i < cell_ids.size(); ++i) {
     S2CellId id = cell_ids[i];
     auto cell = make_unique<S2ShapeIndexCell>();
-    Decoder decoder = encoded_cells.GetDecoder(i);
-    if (!cell->Decode(num_shapes, &decoder)) {
+    Decoder cell_decoder = encoded_cells.GetDecoder(i);
+    if (!cell->Decode(num_shapes, &cell_decoder)) {
       return false;
     }
     cell_map_.insert(cell_map_.end(), make_pair(id, std::move(cell)));

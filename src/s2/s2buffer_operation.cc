@@ -141,10 +141,6 @@ static constexpr S1Angle kMinRequestedError = S1Angle::Radians(2 * DBL_ERR);
 static constexpr S1Angle kMaxAbsoluteInterpolationError =
     S2::kGetPointOnLineError + S2::kGetPointOnRayPerpendicularError;
 
-// TODO(user, b/210097200): Remove when we require c++17 for opensource.
-constexpr double S2BufferOperation::Options::kMinErrorFraction;
-constexpr double S2BufferOperation::Options::kMaxCircleSegments;
-
 S2BufferOperation::Options::Options()
     : snap_function_(
           make_unique<s2builderutil::IdentitySnapFunction>(S1Angle::Zero())) {
@@ -192,7 +188,7 @@ void S2BufferOperation::Options::set_error_fraction(double error_fraction) {
   error_fraction_ = max(kMinErrorFraction, min(1.0, error_fraction));
 }
 
-const S1Angle S2BufferOperation::Options::max_error() const {
+S1Angle S2BufferOperation::Options::max_error() const {
   // See comments for kMinRequestedError above.
   S2Builder::Options builder_options(*snap_function_);
   builder_options.set_split_crossing_edges(true);

@@ -391,9 +391,9 @@ TEST_F(LoopTestBase, GetAreaConsistentWithOrientation) {
   // contain almost no points, and an area near 4*Pi for degenerate loops that
   // contain almost all points.
 
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_AREA_CONSISTENT_WITH_ORIENTATION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("GET_AREA_CONSISTENT_WITH_ORIENTATION",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   static constexpr int kMaxVertices = 6;
   for (int i = 0; i < 50; ++i) {
     int num_vertices = absl::Uniform(bitgen, 3, kMaxVertices + 1);
@@ -434,8 +434,7 @@ TEST_F(LoopTestBase, GetAreaAndCentroid) {
   // with closely spaces vertices.  Then check that the area and centroid are
   // correct.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_AREA_AND_CENTROID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_AREA_AND_CENTROID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 50; ++iter) {
     // Choose a coordinate frame for the spherical cap.
     S2Point x, y, z;

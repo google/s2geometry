@@ -104,6 +104,7 @@
 #include <cstdint>
 
 #include "absl/log/absl_check.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
 #include "s2/s2coords_internal.h"
 #include "s2/s2point.h"

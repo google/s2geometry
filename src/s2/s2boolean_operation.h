@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "absl/log/absl_log.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
@@ -202,7 +203,7 @@
 //   S2Polygon polygon;
 //   S2BooleanOperation op(
 //       S2BooleanOperation::OpType::UNION,
-//       std::make_unique<s2builderutil::PointVectorLayer>(&points),
+//       std::make_unique<s2builderutil::S2PointVectorLayer>(&points),
 //       std::make_unique<s2builderutil::S2PolylineVectorLayer>(&polylines),
 //       std::make_unique<S2PolygonLayer>(&polygon));
 

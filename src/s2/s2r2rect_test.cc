@@ -30,7 +30,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/types.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/s2cap.h"
@@ -280,9 +279,8 @@ TEST(S2R2Rect, Bounds) {
   EXPECT_EQ(S2LatLngRect::FromPoint(S2LatLng::FromDegrees(0, 0)),
             S2R2Rect(R2Point(0.5, 0.5), R2Point(0.5, 0.5)).GetRectBound());
 
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "BOUNDS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("BOUNDS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 10; ++i) {
     SCOPED_TRACE(StrCat("i=", i));
     S2R2Rect rect = S2R2Rect::FromCellId(s2random::CellId(bitgen));

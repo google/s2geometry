@@ -19,6 +19,7 @@
 
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
 

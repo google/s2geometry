@@ -50,8 +50,7 @@ MATCHER_P2(NearPoint, P, tol,
 
 TEST(S2Point, HashSpreads) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "HASH_SPREADS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "HASH_SPREADS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int kTestPoints = 1 << 16;
   std::vector<size_t> hashes;
   hashes.reserve(kTestPoints);
@@ -93,9 +92,8 @@ TEST(S2Point, IsAVector) {
 }
 
 TEST(S2Point, CoderWorks) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CODER_WORKS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("CODER_WORKS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2Point point = s2random::Point(bitgen);
   S2Error error;

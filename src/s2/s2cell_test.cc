@@ -341,8 +341,7 @@ static void CheckMinMaxAvg(string_view label, int level, double count,
 
 TEST(S2Cell, TestSubdivide) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "TEST_SUBDIVIDE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "TEST_SUBDIVIDE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Only test a sample of faces to reduce the runtime.
   TestSubdivide(bitgen, S2Cell::FromFace(0));
@@ -437,8 +436,7 @@ TEST(S2Cell, CellVsLoopRectBound) {
   static S2LatLng kLoopError = S2LatLngRectBounder::MaxErrorForTests();
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CELL_VS_LOOP_RECT_BOUND",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CELL_VS_LOOP_RECT_BOUND", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     S2Cell cell(s2random::CellId(bitgen));
     S2Loop loop(cell);
@@ -453,8 +451,7 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
   // Construct many points that are nearly on an S2Cell edge, and verify that
   // whenever the cell contains a point P then its bound contains S2LatLng(P).
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RECT_BOUND_IS_LARGE_ENOUGH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RECT_BOUND_IS_LARGE_ENOUGH", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   for (int iter = 0; iter < 1000; /* advanced in loop below */) {
     S2Cell cell(s2random::CellId(bitgen));
@@ -473,19 +470,33 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
 TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
   // Construct many points that are nearly on an S2Cell edge, and verify that
   // S2Cell(S2CellId(p)).Contains(p) is always true.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONSISTENT_WITH_S2CELL_ID_FROM_POINT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("CONSISTENT_WITH_S2CELL_ID_FROM_POINT",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   for (int iter = 0; iter < 1000; ++iter) {
-    S2Cell cell(s2random::CellId(bitgen));
+    // Leaf cells are better at generating difficult cases near a boundary,
+    // so prefer them.
+    int level =
+        absl::Bernoulli(bitgen, 0.5) ? 30 : absl::Uniform(bitgen, 0, 30);
+    S2Cell cell(s2random::CellId(bitgen, level));
     int i = absl::Uniform(bitgen, 0, 4);
     S2Point v1 = cell.GetVertex(i);
     S2Point v2 = s2random::SamplePoint(
         bitgen, S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
     S2Point p = S2::Interpolate(v1, v2, absl::Uniform(bitgen, 0.0, 1.0));
-    EXPECT_TRUE(S2Cell(S2CellId(p)).Contains(p));
+    EXPECT_TRUE(S2Cell(S2CellId(p)).Contains(p))
+        << " original cell: " << cell.id() << " level: " << cell.level()
+        << " point: " << p << " cell: " << S2CellId(p);
   }
+}
+
+TEST(S2Cell, DISABLED_ConsistentWithS2CellIdFromPointExample1) {
+  // Failures can be generated for `ConsistentWithS2CellIdFromPoint` by
+  // increasing the number of iterations to 1M.  This is one such example.
+  S2Point p(0.38203141040035632, 0.030196609707941954, 0.9236558700239289);
+  S2Cell cell{S2CellId(p)};
+  EXPECT_TRUE(cell.Contains(p)) << " point: " << p << " cell: " << cell.id();
 }
 
 TEST(S2CellId, AmbiguousContainsPoint) {
@@ -532,8 +543,7 @@ static S1ChordAngle GetMaxDistanceToPointBruteForce(const S2Cell& cell,
 
 TEST(S2Cell, GetDistanceToPoint) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_DISTANCE_TO_POINT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_DISTANCE_TO_POINT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Cell cell(s2random::CellId(bitgen));
@@ -637,8 +647,7 @@ static S1ChordAngle GetMaxDistanceToEdgeBruteForce(
 
 TEST(S2Cell, GetDistanceToEdge) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_DISTANCE_TO_EDGE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_DISTANCE_TO_EDGE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Cell cell(s2random::CellId(bitgen));
@@ -691,8 +700,7 @@ TEST(S2Cell, GetMaxDistanceToCellAntipodal) {
 
 TEST(S2Cell, GetMaxDistanceToCell) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_MAX_DISTANCE_TO_CELL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_MAX_DISTANCE_TO_CELL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 1000; i++) {
     S2Cell cell(s2random::CellId(bitgen));
     S2Cell test_cell(s2random::CellId(bitgen));
@@ -744,8 +752,7 @@ TEST(S2Cell, GetUVCoordOfEdge) {
 
 TEST(S2Cell, GetSizeIJAgreesWithCellId) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_SIZE_IJ_AGREES_WITH_CELL_ID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_SIZE_IJ_AGREES_WITH_CELL_ID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
     S2CellId id = s2random::CellId(bitgen);
     S2Cell cell(id);
@@ -755,8 +762,7 @@ TEST(S2Cell, GetSizeIJAgreesWithCellId) {
 
 TEST(S2Cell, GetIJCoordOfEdge) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_IJ_COORD_OF_EDGE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_IJ_COORD_OF_EDGE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
     S2CellId id = s2random::CellId(bitgen);
     S2Cell cell(id);

@@ -63,10 +63,16 @@ using Vector3_xf = s2pred::Vector3_xf;
 
 namespace {
 
-enum Precision { DOUBLE, LONG_DOUBLE, EXACT, SYMBOLIC, NUM_PRECISIONS };
+enum Precision {
+  DOUBLE,
+  LONG_DOUBLE,
+  EXACT,
+  SYMBOLIC,
+  NUM_PRECISIONS
+};
 
-constexpr string_view kPrecisionNames[] = {"double", "long double", "exact",
-                                           "symbolic"};
+constexpr string_view kPrecisionNames[] = {"double", "long double",
+                                           "exact", "symbolic"};
 
 // A helper class that keeps track of how often each precision was used and
 // generates a string for logging purposes.
@@ -312,8 +318,7 @@ S2Point PerturbLength(absl::BitGenRef bitgen, const S2Point& p) {
 
 TEST(S2, RobustCrossProdError) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "ROBUST_CROSS_PROD_ERROR",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "ROBUST_CROSS_PROD_ERROR", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // We repeatedly choose two points (usually linearly dependent, or almost so)
   // and measure the distance between the cross product returned by
@@ -430,8 +435,7 @@ TEST(S2, IntersectionError) {
   GetIntersectionStats stats;
   S1Angle max_point_dist, max_edge_dist;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INTERSECTION_ERROR",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INTERSECTION_ERROR", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 5000; ++iter) {
     // We construct two edges AB and CD that intersect near "p".  The angle
     // between AB and CD (expressed as a slope) is chosen randomly between
@@ -516,8 +520,7 @@ TEST(S2, GrazingIntersections) {
   // points returned by GetIntersection() have the correct relative ordering
   // along AB (to within kIntersectionError).
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GRAZING_INTERSECTIONS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GRAZING_INTERSECTIONS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   GetIntersectionStats stats;
   for (int iter = 0; iter < 1000; ++iter) {
     S2Point x, y, z;
@@ -568,8 +571,7 @@ TEST(S2, ExactIntersectionSign) {
 
 TEST(S2, GetIntersectionInvariants) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_INTERSECTION_INVARIANTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_INTERSECTION_INVARIANTS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Test that the result of GetIntersection does not change when the edges
   // are swapped and/or reversed.  The number of iterations is high because it

@@ -31,6 +31,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_format.h"
 #include "absl/types/span.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/internal/s2disjoint_set.h"
 #include "s2/internal/s2incident_edge_tracker.h"
 #include "s2/internal/s2index_cell_data.h"
@@ -796,10 +797,12 @@ inline bool PolylineVertexIsBoundaryPoint(
     int vertex) {
   ABSL_DCHECK(vertex == 0 || vertex == 1);
 
-  if (edge.offset == 0) {
-    return s2shapeutil::PrevEdgeWrap(shape, edge.id) == -1 && vertex == 0;
-  } else if (edge.offset == shape.chain(edge.chain).length - 1) {
-    return s2shapeutil::NextEdgeWrap(shape, edge.id) == -1 && vertex == 1;
+  if (edge.offset == 0 && vertex == 0) {
+    // First vertex of first edge
+    return s2shapeutil::PrevEdgeWrap(shape, edge.id) == -1;
+  } else if (edge.offset == shape.chain(edge.chain).length - 1 && vertex == 1) {
+    // Last vertex of last edge
+    return s2shapeutil::NextEdgeWrap(shape, edge.id) == -1;
   }
 
   return false;

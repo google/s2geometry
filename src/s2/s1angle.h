@@ -331,7 +331,7 @@ inline double tan(S1Angle a) {
 inline S1Angle::SinCosPair S1Angle::SinCos() const {
 // TODO(b/370513151): Remove once Clang can optimize this.
 // NB: __sincos() provided by __APPLE__ is not bit-identical to sin(), cos()
-// under `--config=darwin_arm64`.
+// under `--config=darwin_arm64`.  Windows does not support sincos().
 // `sincos` gives different results on Ubuntu 22.  Disable for glibc until
 // this can be narrowed down further.
 // https://github.com/google/s2geometry/issues/413

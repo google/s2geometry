@@ -16,9 +16,11 @@
 #ifndef S2_S2REGION_SHARDER_H_
 #define S2_S2REGION_SHARDER_H_
 
+#include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell_index.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2region.h"
@@ -41,6 +43,23 @@ class S2RegionSharder {
   S2RegionSharder(const S2RegionSharder&) = delete;
   S2RegionSharder& operator=(const S2RegionSharder&) = delete;
 
+  S2RegionSharder(S2RegionSharder&& b) noexcept
+      : owned_index_(std::move(b.owned_index_)), index_(b.index_) {
+    if (b.index_ == &b.owned_index_) {
+      index_ = &owned_index_;
+    }
+  }
+
+  S2RegionSharder& operator=(S2RegionSharder&& b) noexcept {
+    owned_index_ = std::move(b.owned_index_);
+    index_ = b.index_;
+
+    if (b.index_ == &b.owned_index_) {
+      index_ = &owned_index_;
+    }
+    return *this;
+  }
+
   // Returns an index into the original vector of S2CellUnions indicating the
   // covering with the most overlap to the input region.  If no shards overlap
   // with the input region, returns 'default_shard'.
@@ -55,6 +74,8 @@ class S2RegionSharder {
   absl::flat_hash_map<int, S2CellUnion> GetIntersectionsByShard(
       const S2Region& region) const;
 
+  // Only index_ is used directly, but it may point to an internal S2CellIndex
+  // constructed from coverings, or a user provided pointer.
   S2CellIndex owned_index_;
   const S2CellIndex* index_ = &owned_index_;
 };

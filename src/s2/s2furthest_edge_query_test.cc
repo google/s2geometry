@@ -532,24 +532,21 @@ static constexpr int kNumQueries = 200;
 
 TEST(S2FurthestEdgeQuery, CircleEdges) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CIRCLE_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CIRCLE_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(s2testing::RegularLoopShapeIndexFactory(), kNumIndexes,
                        kNumEdges, kNumQueries, bitgen);
 }
 
 TEST(S2FurthestEdgeQuery, FractalEdges) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRACTAL_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRACTAL_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(s2testing::FractalLoopShapeIndexFactory(bitgen),
                        kNumIndexes, kNumEdges, kNumQueries, bitgen);
 }
 
 TEST(S2FurthestEdgeQuery, PointCloudEdges) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "POINT_CLOUD_EDGES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "POINT_CLOUD_EDGES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestWithIndexFactory(s2testing::PointCloudShapeIndexFactory(bitgen),
                        kNumIndexes, kNumEdges, kNumQueries, bitgen);
 }

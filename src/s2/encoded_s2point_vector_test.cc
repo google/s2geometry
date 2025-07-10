@@ -31,7 +31,6 @@
 #include "absl/strings/str_format.h"
 
 #include "s2/base/log_severity.h"
-#include "s2/base/types.h"
 #include "s2/util/bits/bit-interleave.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s2cell_id.h"
@@ -394,8 +393,7 @@ TEST(EncodedS2PointVectorTest, ManyDuplicatePointsAtAllLevels) {
 
 TEST(EncodedS2PointVectorTest, SnappedFractalLoops) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SNAPPED_FRACTAL_LOOPS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SNAPPED_FRACTAL_LOOPS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int kMaxPoints = 3 << 14;
   for (int num_points = 3; num_points <= kMaxPoints; num_points *= 4) {
     size_t s2polygon_size = 0, lax_polygon_size = 0;

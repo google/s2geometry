@@ -19,6 +19,7 @@
 #include <type_traits>
 
 #include "absl/meta/type_traits.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
 // This file contains functions for meta programming, primarily related to
 // checking that the type of an opaque template parameter is an instance of some

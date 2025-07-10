@@ -19,9 +19,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <utility>
 
+#include "absl/base/casts.h"
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/strings/string_view.h"
@@ -639,9 +642,15 @@ static bool GetIntersectionStable(const Vector3<T>& a0, const Vector3<T>& a1,
   }
 }
 
-static bool GetIntersectionStableLD(const S2Point& a0, const S2Point& a1,
-                                    const S2Point& b0, const S2Point& b1,
-                                    S2Point* result) {
+inline static S2Point ToS2Point(const Vector3_xf& xf) {
+  return NormalizableFromExact(xf).Normalize();
+}
+
+namespace internal {
+
+bool GetIntersectionStableLD(const S2Point& a0, const S2Point& a1,
+                             const S2Point& b0, const S2Point& b1,
+                             S2Point* result) {
   Vector3_ld result_ld;
   if (GetIntersectionStable(ToLD(a0), ToLD(a1), ToLD(b0), ToLD(b1),
                             &result_ld)) {
@@ -650,12 +659,6 @@ static bool GetIntersectionStableLD(const S2Point& a0, const S2Point& a1,
   }
   return false;
 }
-
-inline static S2Point ToS2Point(const Vector3_xf& xf) {
-  return NormalizableFromExact(xf).Normalize();
-}
-
-namespace internal {
 
 // Compute the intersection point of (a0, a1) and (b0, b1) using exact
 // arithmetic.  Note that the result is not exact because it is rounded to
@@ -771,7 +774,7 @@ S2Point GetIntersection(const S2Point& a0, const S2Point& a1,
   } else if (GetIntersectionStable(a0, a1, b0, b1, &result)) {
     method = IntersectionMethod::STABLE;
   } else if (kUseLongDoubleInIntersection &&
-             GetIntersectionStableLD(a0, a1, b0, b1, &result)) {
+             internal::GetIntersectionStableLD(a0, a1, b0, b1, &result)) {
     method = IntersectionMethod::STABLE_LD;
   } else {
     result = GetIntersectionExact(a0, a1, b0, b1);

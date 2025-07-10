@@ -27,7 +27,6 @@
 
 #include "absl/log/absl_check.h"
 
-#include "s2/base/types.h"
 #include "s2/s2point.h"
 
 using std::make_unique;

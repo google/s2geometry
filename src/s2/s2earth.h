@@ -117,10 +117,13 @@ class S2Earth {
   // 6371.01 +/- 0.02 km.  The equatorial radius is 6378.136 km, and the polar
   // radius is 6356.752 km.  They differ by one part in 298.257.
   //
-  // Reference: http://ssd.jpl.nasa.gov/phys_props_earth.html, which quotes
-  // Yoder, C.F. 1995. "Astrometric and Geodetic Properties of Earth and the
-  // Solar System" in Global Earth Physics, A Handbook of Physical Constants,
-  // AGU Reference Shelf 1, American Geophysical Union, Table 2.
+  // Reference:
+  // https://web.archive.org/web/20050811075950/http://ssd.jpl.nasa.gov/phys_props_earth.html,
+  // which quotes Yoder, C.F. 1995. "Astrometric and Geodetic Properties of
+  // Earth and the Solar System" in Global Earth Physics, A Handbook of
+  // Physical Constants, AGU Reference Shelf 1, American Geophysical Union,
+  // Table 2.
+  // https://web.archive.org/web/20050325224755/http://www.agu.org/reference/gephys/4_yoder.pdf
   static constexpr double RadiusMeters();
   static constexpr double RadiusKm();
 

@@ -39,8 +39,7 @@ namespace {
 
 TEST(LogUniform, InRange) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "LOG_UNIFORM_IN_RANGE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "LOG_UNIFORM_IN_RANGE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     // 1e-30 to 1e30 is in the range of values we typically use.
     const double log10_lo = absl::Uniform(bitgen, -30.0, 30.0);
@@ -57,8 +56,7 @@ TEST(LogUniform, InRange) {
 
 TEST(SkewedInt, InRange) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SKEWED_INT_IN_RANGE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SKEWED_INT_IN_RANGE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const int max_log = absl::Uniform(bitgen, 1, 32);
     const int v = s2random::SkewedInt(bitgen, max_log);
@@ -69,8 +67,7 @@ TEST(SkewedInt, InRange) {
 
 TEST(RandomPoint, UnitLength) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_POINT_VALID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_POINT_VALID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point p = s2random::Point(bitgen);
     EXPECT_TRUE(S2::IsUnitLength(p));
@@ -90,8 +87,7 @@ constexpr double kFrameRightHandedEps2 = 1e-25;
 
 TEST(FrameVectors, UnitLength) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_VECTORS_UNIT_LENGTH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_VECTORS_UNIT_LENGTH", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     S2Point x, y, z;
     s2random::Frame(bitgen, x, y, z);
@@ -103,8 +99,7 @@ TEST(FrameVectors, UnitLength) {
 
 TEST(FrameVectors, Orthogonal) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_VECTORS_ORTHOGONAL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_VECTORS_ORTHOGONAL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     S2Point x, y, z;
     s2random::Frame(bitgen, x, y, z);
@@ -116,8 +111,7 @@ TEST(FrameVectors, Orthogonal) {
 
 TEST(FrameVectors, RightHanded) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_VECTORS_RIGHT_HANDED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_VECTORS_RIGHT_HANDED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     S2Point x, y, z;
     s2random::Frame(bitgen, x, y, z);
@@ -138,8 +132,7 @@ TEST(FrameVectors, RightHanded) {
 
 TEST(FrameMatrix, UnitLength) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_MATRIX_UNIT_LENGTH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_MATRIX_UNIT_LENGTH", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const Matrix3x3_d frame = s2random::Frame(bitgen);
     EXPECT_TRUE(S2::IsUnitLength(frame.Col(0)));
@@ -150,8 +143,7 @@ TEST(FrameMatrix, UnitLength) {
 
 TEST(FrameMatrix, Orthogonal) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_MATRIX_ORTHOGONAL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_MATRIX_ORTHOGONAL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const Matrix3x3_d frame = s2random::Frame(bitgen);
     EXPECT_LE(std::abs(frame.Col(0).DotProd(frame.Col(1))), kFrameOrthoEps);
@@ -162,8 +154,7 @@ TEST(FrameMatrix, Orthogonal) {
 
 TEST(FrameMatrix, RightHanded) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_MATRIX_RIGHT_HANDED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_MATRIX_RIGHT_HANDED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const Matrix3x3_d frame = s2random::Frame(bitgen);
     const S2Point x_cross_y = frame.Col(0).CrossProd(frame.Col(1));
@@ -177,8 +168,7 @@ TEST(FrameMatrix, RightHanded) {
 
 TEST(FrameAtVectors, UnitLength) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_AT_VECTORS_UNIT_LENGTH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_AT_VECTORS_UNIT_LENGTH", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point z = s2random::Point(bitgen);
     S2Point x, y;
@@ -190,8 +180,7 @@ TEST(FrameAtVectors, UnitLength) {
 
 TEST(FrameAtVectors, Orthogonal) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_AT_VECTORS_ORTHOGONAL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_AT_VECTORS_ORTHOGONAL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point z = s2random::Point(bitgen);
     S2Point x, y;
@@ -204,8 +193,7 @@ TEST(FrameAtVectors, Orthogonal) {
 
 TEST(FrameAtVectors, RightHanded) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_AT_VECTORS_RIGHT_HANDED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_AT_VECTORS_RIGHT_HANDED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point z = s2random::Point(bitgen);
     S2Point x, y;
@@ -221,8 +209,7 @@ TEST(FrameAtVectors, RightHanded) {
 
 TEST(FrameAtMatrix, ZIsCopy) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_AT_MATRIX_Z_IS_COPY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_AT_MATRIX_Z_IS_COPY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point z = s2random::Point(bitgen);
     const Matrix3x3_d frame = s2random::FrameAt(bitgen, z);
@@ -233,8 +220,7 @@ TEST(FrameAtMatrix, ZIsCopy) {
 
 TEST(FrameAtMatrix, UnitLength) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_AT_MATRIX_UNIT_LENGTH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_AT_MATRIX_UNIT_LENGTH", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point z = s2random::Point(bitgen);
     const Matrix3x3_d frame = s2random::FrameAt(bitgen, z);
@@ -246,8 +232,7 @@ TEST(FrameAtMatrix, UnitLength) {
 
 TEST(FrameAtMatrix, Orthogonal) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_AT_MATRIX_ORTHOGONAL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_AT_MATRIX_ORTHOGONAL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point z = s2random::Point(bitgen);
     const Matrix3x3_d frame = s2random::FrameAt(bitgen, z);
@@ -259,8 +244,7 @@ TEST(FrameAtMatrix, Orthogonal) {
 
 TEST(FrameAtMatrix, RightHanded) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRAME_AT_MATRIX_RIGHT_HANDED",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRAME_AT_MATRIX_RIGHT_HANDED", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2Point z = s2random::Point(bitgen);
     const Matrix3x3_d frame = s2random::FrameAt(bitgen, z);
@@ -275,8 +259,7 @@ TEST(FrameAtMatrix, RightHanded) {
 
 TEST(RandomCap, AreaInRange) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_CAP_AREA_IN_RANGE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_CAP_AREA_IN_RANGE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const double min_area =
         absl::Uniform(absl::IntervalOpenClosed, bitgen, 1e-16, 4 * M_PI);
@@ -290,8 +273,7 @@ TEST(RandomCap, AreaInRange) {
 
 TEST(SamplePoint, InsideCap) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SAMPLE_POINT_INSIDE_CAP",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SAMPLE_POINT_INSIDE_CAP", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     // We must avoid empty caps, so set a small min_area.
     const S2Cap cap =
@@ -303,8 +285,7 @@ TEST(SamplePoint, InsideCap) {
 
 TEST(SamplePoint, InsideRect) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SAMPLE_POINT_INSIDE_RECT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SAMPLE_POINT_INSIDE_RECT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // There is no s2random::Rect(), so just use a fixed rect.
   const S2LatLngRect rect(S2LatLng::FromDegrees(-10, 15),
                           S2LatLng::FromDegrees(30, 50));
@@ -316,8 +297,7 @@ TEST(SamplePoint, InsideRect) {
 
 TEST(CellId, AtSpecifiedLevel) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CELL_ID_AT_SPECIFIED_LEVEL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CELL_ID_AT_SPECIFIED_LEVEL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const int level = absl::Uniform(absl::IntervalClosedClosed, bitgen, 0,
                                     S2CellId::kMaxLevel);
@@ -329,8 +309,7 @@ TEST(CellId, AtSpecifiedLevel) {
 
 TEST(CellId, Valid) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CELL_ID_VALID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CELL_ID_VALID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < absl::GetFlag(FLAGS_num_samples); ++i) {
     const S2CellId cell_id = s2random::CellId(bitgen);
     EXPECT_TRUE(cell_id.is_valid());

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/log/absl_log.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2builder.h"
@@ -111,7 +112,7 @@ class S2BufferOperation {
     // absolute error is about 10 nanometers on the Earth's surface and is
     // defined internally.  The error due to snapping is defined by the
     // specified snap_function().
-    const S1Angle max_error() const;
+    S1Angle max_error() const;
 
     // Alternatively, error_fraction() may be specified as the number of
     // polyline segments used to approximate a planar circle.  These two

@@ -26,6 +26,7 @@
 
 #include "absl/base/macros.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/hash/hash_testing.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
@@ -103,8 +104,7 @@ TEST(S2LatLng, TestConversion) {
 
   // Test a bunch of random points.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "TEST_CONVERSION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "TEST_CONVERSION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100000; ++i) {
     S2Point p = s2random::Point(bitgen);
     EXPECT_TRUE(S2::ApproxEquals(p, S2Point(S2LatLng(p)))) << p;
@@ -232,3 +232,16 @@ TEST(S2LatLng, S2CoderWorks) {
   EXPECT_EQ(pnt, decoded);
 }
 
+TEST(S2LatLng, SupportsAbslHash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+    S2LatLng(),
+    S2LatLng::Invalid(),
+    S2LatLng::FromDegrees(0, 0),
+    S2LatLng::FromDegrees(0, 10),
+    S2LatLng::FromDegrees(2, 12),
+    S2LatLng::FromDegrees(90, 180),
+    S2LatLng::FromDegrees(90, -180),
+    S2LatLng::FromDegrees(-90, 180),
+    S2LatLng::FromDegrees(-90, -180),
+  }));
+}

@@ -481,8 +481,7 @@ TEST(S2PolylineAlignmentTest, DifferentPathForDistanceVersusSquaredDistance) {
 // the cost from the brute force solver equals the cost from the DP solvers.
 TEST(S2PolylineAlignmentTest, FuzzedWithBruteForce) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FUZZED_WITH_BRUTE_FORCE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FUZZED_WITH_BRUTE_FORCE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kNumPolylines = 10;
   constexpr int kNumVertices = 8;
   const double kPerturbation = 1.5;
@@ -563,8 +562,7 @@ TEST(S2PolylineAlignmentTest, MedoidPolylineDifferentLengthPolylines) {
 
 TEST(S2PolylineAlignmentTest, MedoidPolylineFewLargePolylines) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MEDIOD_POLYLINE_FEW_LARGE_POLYLINES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MEDIOD_POLYLINE_FEW_LARGE_POLYLINES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // We pick num_vertices to be large so that the approx and exact vertex
   // alignment computations are likely to give different results.
   const int num_polylines = 3;

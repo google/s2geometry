@@ -246,8 +246,7 @@ TEST(S2, Crossings) {
 
 TEST(S2, CollinearEdgesThatDontTouch) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COLLINEAR_EDGES_THAT_DONT_TOUCH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "COLLINEAR_EDGES_THAT_DONT_TOUCH", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 500;
   for (int iter = 0; iter < kIters; ++iter) {
     S2Point a = s2random::Point(bitgen);
@@ -280,9 +279,9 @@ TEST(S2, CoincidentZeroLengthEdgesThatDontTouch) {
   // obvious, since it depends on the particular symbolic perturbations used
   // by s2pred::Sign().  It would be better to replace this with a test that
   // says that the CCW results must be consistent with each other.)
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COINCIDENT_ZERO_LENGTH_EDGES_THAT_DONT_TOUCH",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("COINCIDENT_ZERO_LENGTH_EDGES_THAT_DONT_TOUCH",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
     // Construct a point P where every component is zero or a power of 2.

@@ -266,9 +266,8 @@ class VisitIntersectingShapesTest {
 };
 
 TEST(VisitIntersectingShapes, Points) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "POINTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("POINTS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<S2Point> vertices;
   for (int i = 0; i < 100; ++i) {
     vertices.push_back(s2random::Point(bitgen));
@@ -279,9 +278,8 @@ TEST(VisitIntersectingShapes, Points) {
 }
 
 TEST(VisitIntersectingShapes, Polylines) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "POLYLINES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("POLYLINES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   MutableS2ShapeIndex index;
   S2Cap center_cap(S2Point(1, 0, 0), S1Angle::Radians(0.5));
   for (int i = 0; i < 50; ++i) {
@@ -300,9 +298,8 @@ TEST(VisitIntersectingShapes, Polylines) {
 }
 
 TEST(VisitIntersectingShapes, Polygons) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "POLYGONS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("POLYGONS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   MutableS2ShapeIndex index;
   S2Cap center_cap(S2Point(1, 0, 0), S1Angle::Radians(0.5));
   S2Fractal fractal(bitgen);

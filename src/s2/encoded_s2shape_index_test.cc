@@ -269,8 +269,7 @@ class IndexedLaxPolylineLayer : public S2Builder::Layer {
 
 TEST(EncodedS2ShapeIndex, SnappedFractalPolylines) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "SNAPPED_FRACTAL_POLYLINES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "SNAPPED_FRACTAL_POLYLINES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   MutableS2ShapeIndex index;
   S2Builder builder{S2Builder::Options{S2CellIdSnapFunction()}};
   for (int i = 0; i < 5; ++i) {

@@ -38,6 +38,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"

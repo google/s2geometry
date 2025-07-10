@@ -48,8 +48,7 @@ TEST(S2PointVectorShape, Empty) {
 TEST(S2PointVectorShape, ConstructionAndAccess) {
   vector<S2Point> points;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CONSTRUCTION_AND_ACCESS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CONSTRUCTION_AND_ACCESS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kNumPoints = 100;
   for (int i = 0; i < kNumPoints; ++i) {
     points.push_back(s2random::Point(bitgen));
@@ -75,8 +74,8 @@ TEST(S2PointVectorShape, ConstructionAndAccess) {
 TEST(S2PointVectorShape, Move) {
   // Construct a shape to use as the correct answer and a second identical shape
   // to be moved.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MOVE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("MOVE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<S2Point> points;
   constexpr int kNumPoints = 100;
   for (int i = 0; i < kNumPoints; ++i) {

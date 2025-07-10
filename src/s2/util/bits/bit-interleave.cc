@@ -40,8 +40,6 @@
 
 #include <cstdint>
 
-#include "s2/base/types.h"
-
 namespace util_bits {
 
 static const uint16_t kInterleaveLut[256] = {

@@ -433,8 +433,7 @@ TEST(GetSnappedWindingDelta, RandomLoops) {
   int num_not_isolated = 0;
   WindingTally winding_tally;
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_LOOPS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_LOOPS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < numIters; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
 
@@ -470,11 +469,14 @@ TEST(GetSnappedWindingDelta, RandomLoops) {
           loop.push_back(vertices_used[absl::Uniform<size_t>(
               bitgen, 0, vertices_used.size())]);
         } else if (absl::Bernoulli(bitgen, 1.0 / 3)) {
-          loop.push_back(s2random::SamplePoint(
-              bitgen, S2Cap(ref, S1Angle::Radians(M_PI) - snap_radius)));
+          S2Point v = s2random::SamplePoint(
+            bitgen, S2Cap(ref, S1Angle::Radians(M_PI) - snap_radius));
+          loop.push_back(v);
+          vertices_used.push_back(v);
         } else {
-          loop.push_back(
-              s2random::SamplePoint(bitgen, S2Cap(ref, snap_radius)));
+          S2Point v = s2random::SamplePoint(bitgen, S2Cap(ref, snap_radius));
+          loop.push_back(v);
+          vertices_used.push_back(v);
         }
       }
       builder.AddShape(S2LaxLoopShape(loop));

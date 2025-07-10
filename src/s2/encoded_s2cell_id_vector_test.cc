@@ -198,8 +198,7 @@ TEST(EncodedS2CellIdVector, FourLevel10Children) {
 
 TEST(EncodedS2CellIdVector, FractalS2ShapeIndexCells) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "FRACTAL_S2_SHAPE_INDEX_CELLS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "FRACTAL_S2_SHAPE_INDEX_CELLS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2Fractal fractal(bitgen);
   fractal.SetLevelForApproxMaxEdges(3 * 1024);
   S2Point center = s2textformat::MakePointOrDie("47.677:-122.206");

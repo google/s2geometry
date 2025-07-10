@@ -24,6 +24,7 @@
 #include <limits>
 
 #include "absl/base/casts.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1chord_angle.h"
 #include "s2/s2point.h"
 #include "s2/s2predicates.h"
@@ -33,7 +34,7 @@
 namespace s2pred {
 
 // Returns 2 ** (-digits).  This could be implemented using "ldexp" except
-// that std::ldexp is not constexpr in C++11.
+// that std::ldexp is not constexpr until C++23.
 constexpr double epsilon_for_digits(int digits) {
   return (digits < 64 ? 1.0 / (1ULL << digits) :
           epsilon_for_digits(digits - 63) / (1ULL << 63));

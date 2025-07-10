@@ -93,7 +93,6 @@
 #include <string>
 #include <type_traits>
 
-#include "s2/base/types.h"
 #include "absl/base/macros.h"
 
 namespace util {

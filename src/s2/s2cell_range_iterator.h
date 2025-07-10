@@ -19,6 +19,7 @@
 #include <type_traits>
 
 #include "absl/meta/type_traits.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/internal/s2meta.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_iterator.h"

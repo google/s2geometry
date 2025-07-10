@@ -26,6 +26,7 @@
 
 #include "absl/base/macros.h"
 #include "absl/log/absl_check.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
@@ -250,7 +251,7 @@ bool IsEdgeBNearEdgeA(const S2Point& a0, const S2Point& a1,
 
 //////////////////   Implementation details follow   ////////////////////
 
-
+// TODO(user): Remove this in favor of s2pred::CompareEdgeDistance()?
 inline bool IsDistanceLess(const S2Point& x, const S2Point& a,
                            const S2Point& b, S1ChordAngle limit) {
   return UpdateMinDistance(x, a, b, &limit);

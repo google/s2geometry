@@ -22,8 +22,6 @@
 
 #include <cstdint>
 
-#include "s2/base/types.h"
-
 // ZigZag Transform
 //
 // Good for varint coding small signed integers centered around 0.

@@ -645,8 +645,7 @@ static void TestCentroidSplitting(absl::BitGenRef bitgen, const S2LatLngRect& r,
 
 TEST(S2LatLngRect, GetCentroid) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_CENTROID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_CENTROID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Empty and full rectangles.
   EXPECT_EQ(S2Point(), S2LatLngRect::Empty().GetCentroid());
@@ -878,8 +877,7 @@ TEST(S2LatLngRect, GetDistanceRectVsRect) {
 TEST(S2LatLngRect, GetDistanceRandomPairs) {
   // Test random pairs.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_DISTANCE_RANDOM_PAIRS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_DISTANCE_RANDOM_PAIRS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 10000; ++i) {
     S2LatLngRect a = S2LatLngRect::FromPointPair(
         S2LatLng(s2random::Point(bitgen)), S2LatLng(s2random::Point(bitgen)));
@@ -933,9 +931,9 @@ static void VerifyGetDirectedHausdorffDistance(const S2LatLngRect& a,
 
 TEST(S2LatLngRect, GetDirectedHausdorffDistanceRandomPairs) {
   // Test random pairs.
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_DIRECTED_HAUSDORFF_DISTANCE_RANDOM_PAIRS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("GET_DIRECTED_HAUSDORFF_DISTANCE_RANDOM_PAIRS",
+                              absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kIters = 1000;
   for (int i = 0; i < kIters; ++i) {
     S2LatLngRect a = S2LatLngRect::FromPointPair(

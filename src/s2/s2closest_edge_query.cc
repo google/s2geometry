@@ -101,3 +101,22 @@ bool S2ClosestEdgeQuery::IsConservativeDistanceLessOrEqual(Target* target,
   tmp_options.set_max_error(S1ChordAngle::Straight());
   return !base_.FindClosestEdge(target, tmp_options, filter).is_empty();
 }
+
+void S2ClosestEdgeQuery::VisitClosestShapes(Target* target, Options options,
+                      ResultVisitor visitor, const ShapeFilter filter) {
+  // Often we'll see the same shape's edges consecutively, caching the last
+  // accepted shape id will prevent us from having to hit the hash set most of
+  // the time.
+  int last_shape = -1;
+  absl::flat_hash_set<int> seen_shapes;
+  VisitClosestEdges(target, options,
+      [&](const Result& result) {
+        const int shape_id = result.shape_id();
+        if (shape_id != last_shape && seen_shapes.insert(shape_id).second) {
+          last_shape = shape_id;
+          return visitor(result);
+        }
+        return true;
+      },
+      filter);
+}

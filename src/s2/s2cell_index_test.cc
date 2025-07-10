@@ -56,7 +56,7 @@ class S2CellIndexTest : public ::testing::Test {
   // used for independent validation).
   void Add(S2CellId cell_id, Label label) {
     index_.Add(cell_id, label);
-    contents_.push_back(LabelledCell(cell_id, label));
+    contents_.push_back(LabelledCell{cell_id, label});
   }
 
   void Add(string_view cell_str, Label label) {
@@ -66,7 +66,7 @@ class S2CellIndexTest : public ::testing::Test {
   void Add(const S2CellUnion& cell_union, Label label) {
     index_.Add(cell_union, label);
     for (S2CellId cell_id : cell_union) {
-      contents_.push_back(LabelledCell(cell_id, label));
+      contents_.push_back(LabelledCell{cell_id, label});
     }
   }
 
@@ -109,8 +109,8 @@ void ExpectEqual(vector<LabelledCell> expected, vector<LabelledCell> actual) {
 void S2CellIndexTest::VerifyCellIterator() const {
   vector<LabelledCell> actual;
   for (S2CellIndex::CellIterator it(&index_); !it.done(); it.Next()) {
-    EXPECT_EQ(LabelledCell(it.cell_id(), it.label()), it.labelled_cell());
-    actual.push_back(LabelledCell(it.cell_id(), it.label()));
+    EXPECT_EQ((LabelledCell{it.cell_id(), it.label()}), it.labelled_cell());
+    actual.push_back(LabelledCell{it.cell_id(), it.label()});
   }
   ExpectEqual(contents_, std::move(actual));
 }
@@ -211,7 +211,7 @@ void S2CellIndexTest::VerifyIndexContents() const {
     vector<LabelledCell> actual;
     S2CellIndex::ContentsIterator contents(&index_);
     for (contents.StartUnion(range); !contents.done(); contents.Next()) {
-      const LabelledCell labelled_cell(contents.cell_id(), contents.label());
+      const LabelledCell labelled_cell{contents.cell_id(), contents.label()};
       EXPECT_EQ(labelled_cell, contents.labelled_cell());
       actual.push_back(labelled_cell);
     }
@@ -279,8 +279,7 @@ S2CellUnion GetRandomCellUnion(absl::BitGenRef bitgen) {
 
 TEST_F(S2CellIndexTest, RandomCellUnions) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_CELL_UNIONS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_CELL_UNIONS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Construct cell unions from random S2CellIds at random levels.  Note that
   // because the cell level is chosen uniformly, there is a very high
   // likelihood that the cell unions will overlap.
@@ -301,10 +300,10 @@ void S2CellIndexTest::ExpectContents(
   vector<LabelledCell> expected, actual;
   for (const auto& p : expected_strs) {
     expected.push_back(
-        LabelledCell(S2CellId::FromDebugString(p.first), p.second));
+        LabelledCell{S2CellId::FromDebugString(p.first), p.second});
   }
   for (contents->StartUnion(range); !contents->done(); contents->Next()) {
-    actual.push_back(LabelledCell(contents->cell_id(), contents->label()));
+    actual.push_back(LabelledCell{contents->cell_id(), contents->label()});
   }
   ExpectEqual(expected, actual);
 }
@@ -359,7 +358,7 @@ void S2CellIndexTest::TestIntersection(const S2CellUnion& target) {
   flat_hash_set<Label> expected_labels;
   for (S2CellIndex::CellIterator it(&index_); !it.done(); it.Next()) {
     if (target.Intersects(it.cell_id())) {
-      expected.push_back(LabelledCell(it.cell_id(), it.label()));
+      expected.push_back(LabelledCell{it.cell_id(), it.label()});
       expected_labels.insert(it.label());
     }
   }
@@ -373,7 +372,7 @@ void S2CellIndexTest::TestIntersection(const S2CellUnion& target) {
   EXPECT_EQ(expected_labels, actual_labels);
 }
 
-S2CellUnion MakeCellUnion(const vector<string>& strs) {
+S2CellUnion MakeCellUnion(absl::Span<const string> strs) {
   vector<S2CellId> ids;
   for (const auto& str : strs) {
     ids.push_back(S2CellId::FromDebugString(str));
@@ -396,8 +395,7 @@ TEST_F(S2CellIndexTest, IntersectionOptimization) {
 
 TEST_F(S2CellIndexTest, IntersectionRandomUnions) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INTERSECTION_RANDOM_UNIONS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INTERSECTION_RANDOM_UNIONS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Construct cell unions from random S2CellIds at random levels.  Note that
   // because the cell level is chosen uniformly, there is a very high
   // likelihood that the cell unions will overlap.
@@ -415,8 +413,7 @@ TEST_F(S2CellIndexTest, IntersectionSemiRandomUnions) {
   // This test also uses random S2CellUnions, but the unions are specially
   // constructed so that interesting cases are more likely to arise.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INTERSECTION_SEMI_RANDOM_UNIONS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INTERSECTION_SEMI_RANDOM_UNIONS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 200; ++iter) {
     index_.Clear();
     S2CellId id = S2CellId::FromDebugString("1/0123012301230123");

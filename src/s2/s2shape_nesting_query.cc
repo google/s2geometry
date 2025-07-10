@@ -117,20 +117,29 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
   // the first vertex of edge 1 so we can easily get the next and previous
   // points to check for orientation.
   int32_t datum_shell = options().datum_strategy()(shape);
+  // Degenerate chains are not supported.
+  ABSL_DCHECK_GE(shape->chain(datum_shell).length, 3);
   const S2Point vertices[3] = {
       shape->chain_edge(datum_shell, 0).v0,
       shape->chain_edge(datum_shell, 1).v0,
       shape->chain_edge(datum_shell, 2).v0,
   };
   const S2Point start_point = vertices[1];
+  // Degenerate edges are not supported.
+  ABSL_DCHECK_NE(start_point, vertices[0]);
+  ABSL_DCHECK_NE(start_point, vertices[2]);
 
   S2CrossingEdgeQuery crossing_query(index_);
   vector<s2shapeutil::ShapeEdge> edges;
   for (int chain = 0; chain < num_chains; ++chain) {
     if (chain == datum_shell) {
+      ABSL_VLOG(1) << "Skipping datum chain " << chain;
       continue;
     }
     ABSL_VLOG(1) << "Processing chain " << chain;
+
+    // Degenerate chains are not supported.
+    ABSL_DCHECK_GE(shape->chain(chain).length, 3);
 
     // Find a close point on the target chain out of 4 equally spaced ones.
     int end_idx = ClosestOfNPoints(start_point, *shape, chain, 4);
@@ -143,40 +152,51 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     //
     // As we cross edges from the datum to the target chain the total number of
     // datum shell _or_ target chain edges we'll cross is either even or odd.
-    // Each of these edges toggles our "insideness" relative to the datum shell,
-    if (s2pred::OrderedCCW(vertices[2], end_point, vertices[0], start_point)) {
+    // Each of these edges toggles our "insideness" relative to the datum shell.
+
+    // Two chains may share a vertex, and we may happen to choose it as the
+    // start and end vertices of the line between two chains. This vertex is
+    // neither in the interior not exterior of either chain, and we will use
+    // a neighbor vertex to determine the nesting relationship.
+    const bool start_end_same = end_point == start_point;
+
+    S2Point next = NextChainEdge(shape, chain, end_idx).v0;
+    S2Point prev = PrevChainEdge(shape, chain, end_idx).v0;
+    S2Point safe_end = start_end_same ? prev : end_point;
+    if (s2pred::OrderedCCW(vertices[2], safe_end, vertices[0], start_point)) {
       ABSL_VLOG(1) << "  Edge starts into interior of datum chain";
       parents[chain].Set(datum_shell, true);
       children[datum_shell].Set(chain, true);
     }
 
     // Arriving from the interior of the target chain?
-    S2Point next = NextChainEdge(shape, chain, end_idx).v0;
-    S2Point prev = PrevChainEdge(shape, chain, end_idx).v0;
-    if (s2pred::OrderedCCW(next, start_point, prev, end_point)) {
+    S2Point safe_start = start_end_same ? vertices[0] : start_point;
+    if (s2pred::OrderedCCW(next, safe_start, prev, end_point)) {
       ABSL_VLOG(1) << "  Edge ends from interior of target chain";
       parents[chain].Set(chain, true);
     }
     ABSL_VLOG(2) << "    Initial set: " << parents[chain].ToString(8);
 
-    // Query all the edges crossed by the line from the datum shell to a point
-    // on this chain.  Only look at edges that belong to the requested shape.
-    // Using INTERIOR here will avoid returning the two edges on the datum and
-    // target shells that are touched by the endpoints of our line segment.
-    crossing_query.GetCrossingEdges(start_point, end_point, shape_id, *shape,
-                                    s2shapeutil::CrossingType::INTERIOR,
-                                    &edges);
+    if (!start_end_same) {
+      // Query all the edges crossed by the line from the datum shell to a point
+      // on this chain.  Only look at edges that belong to the requested shape.
+      // Using INTERIOR here will avoid returning the two edges on the datum and
+      // target shells that are touched by the endpoints of our line segment.
+      crossing_query.GetCrossingEdges(start_point, end_point, shape_id, *shape,
+                                      s2shapeutil::CrossingType::INTERIOR,
+                                      &edges);
 
-    // Walk through the intersected chains and toggle corresponding bits.
-    for (const auto& edge : edges) {
-      int32_t other_chain = shape->chain_position(edge.id().edge_id).chain_id;
+      // Walk through the intersected chains and toggle corresponding bits.
+      for (const auto& edge : edges) {
+        int32_t other_chain = shape->chain_position(edge.id().edge_id).chain_id;
 
-      parents[chain].Toggle(other_chain);
-      if (other_chain != chain) {
-        children[other_chain].Toggle(chain);
+        parents[chain].Toggle(other_chain);
+        if (other_chain != chain) {
+          children[other_chain].Toggle(chain);
+        }
+        ABSL_VLOG(1) << "  Crosses chain " << other_chain;
+        ABSL_VLOG(2) << "    Parent set: " << parents[chain].ToString(8);
       }
-      ABSL_VLOG(1) << "  Crosses chain " << other_chain;
-      ABSL_VLOG(2) << "    Parent set: " << parents[chain].ToString(8);
     }
 
     // Now set the final state.  Remove the target chain from its own parent set

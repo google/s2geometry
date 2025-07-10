@@ -27,6 +27,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/encoded_uint_vector.h"
 
 namespace s2coding {

@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "absl/log/absl_log.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2error.h"
@@ -184,10 +185,10 @@ class S2WindingOperation {
   // Note that additional winding rules may be created by adjusting the
   // winding number of the reference point.  For example, to select regions
   // whose winding number is at least 10, simply subtract 9 from ref_winding
-  // and then use WindingRule::POSITIVE.  (This can be used to implement to
-  // implement N-way polygon intersection).  Similarly, additional behaviors
-  // can be obtained by reversing some of the input loops (e.g., this can be
-  // used to compute one polygon minus the union of several other polygons).
+  // and then use WindingRule::POSITIVE.  (This can be used to implement N-way
+  // polygon intersection).  Similarly, additional behaviors can be obtained by
+  // reversing some of the input loops (e.g., this can be used to compute one
+  // polygon minus the union of several other polygons).
   enum class WindingRule {
     POSITIVE,  // Winding number > 0
     NEGATIVE,  // Winding number < 0
@@ -205,7 +206,7 @@ class S2WindingOperation {
   // its winding number matches the given rule (e.g. WindingRule::POSITIVE).
   //
   // The output consists of the boundary of this interior region plus possibly
-  // certain degeneraices (as controlled by the include_degeneracies() option).
+  // certain degeneracies (as controlled by the include_degeneracies() option).
   // The boundary edges are sent to the S2Builder result layer specified in the
   // constructor, along with an appropriate IsFullPolygonPredicate that can be
   // used to distinguish whether the result is empty or full (even when

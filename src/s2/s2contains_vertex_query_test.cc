@@ -32,6 +32,7 @@ TEST(S2ContainsVertexQuery, Undetermined) {
   q.AddEdge(MakePointOrDie("3:4"), 1);
   q.AddEdge(MakePointOrDie("3:4"), -1);
   EXPECT_EQ(0, q.ContainsSign());
+  EXPECT_FALSE(q.DuplicateEdges());
 }
 
 TEST(S2ContainsVertexQuery, ContainedWithDuplicates) {
@@ -43,6 +44,15 @@ TEST(S2ContainsVertexQuery, ContainedWithDuplicates) {
   q.AddEdge(MakePointOrDie("2:-4"), 1);
   q.AddEdge(MakePointOrDie("1:-5"), -1);
   EXPECT_EQ(1, q.ContainsSign());
+  EXPECT_FALSE(q.DuplicateEdges());
+
+  // Incoming and outgoing edges to 1:-5 cancel, so one more isn't a duplicate.
+  q.AddEdge(MakePointOrDie("1:-5"), -1);
+  EXPECT_FALSE(q.DuplicateEdges());
+
+  // 3:3 has only been seen once incoming, another time is a duplicate.
+  q.AddEdge(MakePointOrDie("3:-3"), -1);
+  EXPECT_TRUE(q.DuplicateEdges());
 }
 
 TEST(S2ContainsVertexQuery, NotContainedWithDuplicates) {
@@ -54,6 +64,15 @@ TEST(S2ContainsVertexQuery, NotContainedWithDuplicates) {
   q.AddEdge(MakePointOrDie("3:-3"), 1);
   q.AddEdge(MakePointOrDie("1:-5"), -1);
   EXPECT_EQ(-1, q.ContainsSign());
+  EXPECT_FALSE(q.DuplicateEdges());
+
+  // Incoming and outgoing edges to 1:-5 cancel, so one more isn't a duplicate.
+  q.AddEdge(MakePointOrDie("1:-5"), -1);
+  EXPECT_FALSE(q.DuplicateEdges());
+
+  // 3:3 has only been seen once outgoing, another time is a duplicate.
+  q.AddEdge(MakePointOrDie("3:-3"), 1);
+  EXPECT_TRUE(q.DuplicateEdges());
 }
 
 // Tests that S2ContainsVertexQuery is compatible with S2::AngleContainsVertex.
@@ -69,6 +88,7 @@ TEST(S2ContainsVertexQuery, CompatibleWithAngleContainsVertex) {
     q.AddEdge(a, -1);
     q.AddEdge(c, 1);
     EXPECT_EQ(q.ContainsSign() > 0, S2::AngleContainsVertex(a, b, c));
+    EXPECT_FALSE(q.DuplicateEdges());
   }
 }
 
@@ -79,4 +99,5 @@ TEST(S2ContainsVertexQuery, CompatibleWithAngleContainsVertexDegenerate) {
   q.AddEdge(a, -1);
   q.AddEdge(a, 1);
   EXPECT_EQ(q.ContainsSign() > 0, S2::AngleContainsVertex(a, b, a));
+  EXPECT_FALSE(q.DuplicateEdges());
 }

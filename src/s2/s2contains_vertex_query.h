@@ -21,6 +21,7 @@
 #include <cstdlib>
 
 #include "absl/container/flat_hash_map.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2point.h"
 
 // This class determines whether a polygon contains one of its vertices given

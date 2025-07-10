@@ -214,8 +214,7 @@ class SignTest : public testing::Test {
 
   // Test exhaustively whether the points in "sorted" are sorted circularly
   // CCW around "origin".
-  static void TestCCW(const vector<S2Point>& sorted,
-                      const S2Point& origin) {
+  static void TestCCW(absl::Span<const S2Point> sorted, const S2Point& origin) {
     const int n = sorted.size();
     int total_num_ccw = 0;
     int last_num_ccw = CountCCW(sorted, origin, n - 1);
@@ -323,7 +322,7 @@ class SignTest : public testing::Test {
 
   // Sort the points around the given origin, and then do some consistency
   // checks to verify that they are actually sorted.
-  static void SortAndTest(const vector<S2Point>& points,
+  static void SortAndTest(absl::Span<const S2Point> points,
                           const S2Point& origin) {
     vector<S2Point> sorted;
     SortCCW(points, origin, &sorted);
@@ -359,9 +358,8 @@ class SignTest : public testing::Test {
 };
 
 TEST_F(SignTest, StressTest) {
-  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "STRESS_TEST",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  absl::BitGen bitgen(
+      S2Testing::MakeTaggedSeedSeq("STRESS_TEST", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // The run time of this test is *cubic* in the parameter below.
   static constexpr int kNumPointsPerCircle = 17;
   // We will fail the min unique points test ~0.5% `kMinUniquePoints == 8`,
@@ -401,8 +399,7 @@ class StableSignTest : public testing::Test {
   // that are as collinear as possible and spaced the given distance apart.
   double GetFailureRate(double km) {
     absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-        "STABLE_SIGN_TEST_FAILURE_RATE",
-        absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+        "STABLE_SIGN_TEST_FAILURE_RATE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
     constexpr int kIters = 10000;
     int failure_count = 0;
     double m = tan(S2Testing::KmToAngle(km).radians());
@@ -739,8 +736,7 @@ TEST(CompareDistances, Consistency) {
   TestCompareDistancesConsistency<CosDistances>(
       S2Point(1, 0, 0), S2Point(0, -1, 0), S2Point(0, 1, 0));
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COMPARE_DISTANCES_CONSISTENCY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "COMPARE_DISTANCES_CONSISTENCY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats sin2_stats, cos_stats, minus_sin2_stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
     S2Point x = ChoosePoint(bitgen);
@@ -892,8 +888,7 @@ TEST(CompareDistance, Consistency) {
   // the answer given at the next higher level of precision.  See also the
   // comments in the CompareDistances consistency test.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COMPARE_DISTANCE_CONSISTENCY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "COMPARE_DISTANCE_CONSISTENCY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats sin2_stats, cos_stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
     S2Point x = ChoosePoint(bitgen);
@@ -1029,8 +1024,7 @@ TEST(CompareEdgeDistance, Consistency) {
   // consistent with the answer given at the next higher level of precision.
   // See also the comments in the CompareDistances consistency test.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COMPARE_EDGE_DISTANCE_CONSISTENCY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "COMPARE_EDGE_DISTANCE_CONSISTENCY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
     S2Point a0 = ChoosePoint(bitgen);
@@ -1372,8 +1366,7 @@ TEST(CompareEdgeDirections, Consistency) {
   // is consistent with the answer given at the next higher level of
   // precision.  See also the comments in the CompareDistances test.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "COMPARE_EDGE_DIRECTIONS_CONSISTENCY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "COMPARE_EDGE_DIRECTIONS_CONSISTENCY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
     S2Point a0 = ChoosePoint(bitgen);
@@ -1521,8 +1514,7 @@ TEST(EdgeCircumcenterSign, Consistency) {
   // by a method at one level of precision is consistent with the answer given
   // at the next higher level of precision.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "EDGE_CIRCUMCENTER_SIGN_CONSISTENCY",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "EDGE_CIRCUMCENTER_SIGN_CONSISTENCY", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
     S2Point x0 = ChoosePoint(bitgen);
@@ -1768,8 +1760,7 @@ Precision TestVoronoiSiteExclusionConsistency(
 
 TEST(VoronoiSiteExclusion, Consistency) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "VORONOI_SITE_EXCLUSION",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "VORONOI_SITE_EXCLUSION", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // This test chooses random a random edge X, a random point P on that edge,
   // and a random threshold distance "r".  It then choose two sites A and B
   // whose distance to P is almost exactly "r".  This ensures that the

@@ -15,10 +15,13 @@
 
 #include "s2/s2region_sharder.h"
 
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/container/flat_hash_map.h"
 #include "absl/types/span.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_index.h"
@@ -40,6 +43,41 @@ class S2RegionSharderTest : public ::testing::Test {
   }
 };
 
+TEST_F(S2RegionSharderTest, StoreInMap) {
+  vector<S2CellUnion> coverings{
+      S2CellUnion({S2CellId::FromFacePosLevel(0, 0, 10)}),
+      S2CellUnion({
+          S2CellId::FromFacePosLevel(1, 1, 9),
+          S2CellId::FromFacePosLevel(3, 0, 8),
+      }),
+      S2CellUnion({S2CellId::FromFacePosLevel(5, 0, 10)}),
+  };
+
+  const auto Run =  //
+      [](const absl::flat_hash_map<std::string, S2RegionSharder> sharders) {
+        EXPECT_EQ(0, sharders.at("testing").GetMostIntersectingShard(
+                         S2CellUnion({
+                             S2CellId::FromFacePosLevel(0, 0, 11),
+                         }),
+                         42));
+      };
+
+  // Make sure that we can put an S2RegionSharder into a flat_hash_map and that
+  // it still works properly after being moved.
+  {
+    absl::flat_hash_map<std::string, S2RegionSharder> map;
+    map.emplace("testing", S2RegionSharder(coverings));
+    Run(std::move(map));
+  }
+
+  {
+    S2CellIndex index = IndexFromCoverings(coverings);
+    absl::flat_hash_map<std::string, S2RegionSharder> map;
+    map.emplace("testing", S2RegionSharder(&index));
+    Run(std::move(map));
+  }
+}
+
 TEST_F(S2RegionSharderTest, GetMostIntersectingShard) {
   vector<S2CellUnion> coverings{
       S2CellUnion({S2CellId::FromFacePosLevel(0, 0, 10)}),
@@ -50,7 +88,7 @@ TEST_F(S2RegionSharderTest, GetMostIntersectingShard) {
       S2CellUnion({S2CellId::FromFacePosLevel(5, 0, 10)}),
   };
 
-  const auto Run = [](const S2RegionSharder& sharder) {
+  const auto Run = [](const S2RegionSharder sharder) {
     // Overlap with only 1 shard
     EXPECT_EQ(0, sharder.GetMostIntersectingShard(
                      S2CellUnion({
@@ -72,10 +110,18 @@ TEST_F(S2RegionSharderTest, GetMostIntersectingShard) {
                       S2CellUnion({S2CellId::FromFacePosLevel(4, 0, 10)}), 42));
   };
 
-  // Run with an internal and external index.
+  // Run with an internal and external index.  Move the index to get coverage
+  // on the move constructor.
   S2CellIndex index = IndexFromCoverings(coverings);
-  Run(S2RegionSharder(&index));
-  Run(S2RegionSharder(coverings));
+  {
+    S2RegionSharder sharder(&index);
+    Run(std::move(sharder));
+  }
+
+  {
+    S2RegionSharder sharder(coverings);
+    Run(std::move(sharder));
+  }
 }
 
 TEST_F(S2RegionSharderTest, GetIntersectingShards) {

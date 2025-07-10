@@ -31,6 +31,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2coder.h"
@@ -127,8 +128,8 @@ class S2DensityTree {
   // S2DensityTrees can be freely moved and copied.
   S2DensityTree(const S2DensityTree&) = default;
   S2DensityTree& operator=(const S2DensityTree&) = default;
-  S2DensityTree(S2DensityTree&&) = default;
-  S2DensityTree& operator=(S2DensityTree&&) = default;
+  S2DensityTree(S2DensityTree&&) noexcept = default;
+  S2DensityTree& operator=(S2DensityTree&&) noexcept = default;
 
   // Type definition for a function that returns the weight of S2Shapes (see
   // class-level comment for the meaning of weights).  It is an error to return
@@ -272,11 +273,11 @@ class S2DensityTree {
   // weight is scaled by (its parent's weight / the sum of weights of the node
   // and its siblings). This makes the weight of a parent equal to the sum of
   // its children.
-  S2DensityTree Normalize(absl::Nonnull<S2Error*> error) const;
+  S2DensityTree Normalize(S2Error* absl_nonnull error) const;
 
   // Returns an S2CellUnion containing the leaves of this tree.  The cell union
   // is not necessarily normalized.
-  S2CellUnion Leaves(absl::Nonnull<S2Error*> error) const;
+  S2CellUnion Leaves(S2Error* absl_nonnull error) const;
 
   // The decoded weight and offsets of encoded cells.
   class Cell {
@@ -328,7 +329,7 @@ class S2DensityTree {
     // be used if error->ok() == true.  If a given cell_id is not present in the
     // density tree, a Cell object with a weight of zero is returned (this is
     // not an error).
-    const S2DensityTree::Cell* GetCell(const S2CellId cell_id, S2Error* error);
+    const S2DensityTree::Cell* GetCell(S2CellId cell_id, S2Error* error);
 
     // Returns the tree passed during construction.
     const S2DensityTree& tree() const { return *tree_; }

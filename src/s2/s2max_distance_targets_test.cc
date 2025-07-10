@@ -54,8 +54,7 @@ TEST(S2MaxDistance, Constants) {
 
 TEST(CellTarget, GetCapBound) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CELL_TARGET_GET_CAP_BOUND",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CELL_TARGET_GET_CAP_BOUND", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; i++) {
     S2Cell cell = S2Cell{s2random::CellId(bitgen)};
     S2MaxDistanceCellTarget target(cell);
@@ -74,8 +73,7 @@ TEST(CellTarget, GetCapBound) {
 
 TEST(IndexTarget, GetCapBound) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INDEX_TARGET_GET_CAP_BOUND",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INDEX_TARGET_GET_CAP_BOUND", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   auto index = make_unique<MutableS2ShapeIndex>();
 
   S2Polygon polygon(S2Cell{s2random::CellId(bitgen)});

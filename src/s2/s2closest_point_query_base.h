@@ -29,6 +29,7 @@
 #include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"

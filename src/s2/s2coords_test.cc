@@ -91,8 +91,7 @@ TEST(S2, STtoIJHalfway) {
 
 TEST(S2, IJtoSTtoIJRoundtripRandom) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "IJ_TO_ST_TO_IJ_ROUNDTRIP_RANDOM",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "IJ_TO_ST_TO_IJ_ROUNDTRIP_RANDOM", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int n = 0; n < 1000; ++n) {
     const int i = absl::Uniform(bitgen, 0, S2::kLimitIJ);
     const double s_min = S2::IJtoSTMin(i);
@@ -165,8 +164,7 @@ TEST(S2, FaceXYZtoUVW) {
 
 TEST(S2, XYZToFaceSiTi) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "XYZ_TO_FACE_SI_TI",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "XYZ_TO_FACE_SI_TI", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Check the conversion of random cells to center points and back.
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     for (int i = 0; i < 1000; ++i) {
