@@ -18,6 +18,7 @@
 #include "s2/s2region_coverer.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -26,7 +27,6 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
-#include "s2/base/types.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
@@ -487,7 +487,7 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
 
 void S2RegionCoverer::FloodFill(const S2Region& region, S2CellId start,
                                 vector<S2CellId>* output) {
-  absl::flat_hash_set<S2CellId, S2CellIdHash> all;
+  absl::flat_hash_set<S2CellId> all;
   vector<S2CellId> frontier;
   output->clear();
   all.insert(start);

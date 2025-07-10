@@ -33,10 +33,8 @@
 #include "absl/log/absl_check.h"
 #include "absl/meta/type_traits.h"
 #include "absl/numeric/int128.h"
-#include "absl/utility/utility.h"
+#include "absl/strings/string_view.h"
 
-#include "s2/base/casts.h"
-#include "s2/base/types.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/endian/endian.h"
 
@@ -284,7 +282,7 @@ class Encoder {
 class Decoder {
  public:
   // Empty constructor to create uninitialized decoder
-  inline Decoder() { }
+  Decoder() = default;
 
   // NOTE: for efficiency reasons, this is not virtual.  so don't add
   // any members that really need to be destructed, and be careful about
@@ -293,6 +291,7 @@ class Decoder {
   // ~Decoder() = default;
 
   // Initialize decoder to decode from "buf"
+  explicit Decoder(absl::string_view buf) : Decoder(buf.data(), buf.size()) {}
   Decoder(const void* buf, size_t maxn);
   void reset(const void* buf, size_t maxn);
 

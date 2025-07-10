@@ -35,7 +35,6 @@
 #include "absl/strings/string_view.h"
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/types.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"

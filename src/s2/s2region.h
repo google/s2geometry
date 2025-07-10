@@ -133,8 +133,8 @@ class S2Region {
   // Allow derived classes to define copy/move.  They may assume S2Region has
   // no members.  Default the move assign/constructor as well so derived
   // classes can default their constructors/assignment operator.
-  S2Region(const S2Region&) = default;
-  S2Region(S2Region&&) = default;
+  S2Region(const S2Region&) noexcept = default;
+  S2Region(S2Region&&) noexcept = default;
   S2Region& operator=(const S2Region&) = default;
   S2Region& operator=(S2Region&&) = default;
 };

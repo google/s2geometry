@@ -28,7 +28,6 @@
 #include "absl/utility/utility.h"
 
 #include "s2/base/malloc_extension.h"
-#include "s2/base/types.h"
 
 Encoder::Encoder(Encoder&& other)
     : buf_(std::exchange(other.buf_, nullptr)),

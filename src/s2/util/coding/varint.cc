@@ -16,12 +16,14 @@
 
 #include "s2/util/coding/varint.h"
 
+#include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <utility>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
-
 
 char* Varint::Encode32(char* sptr, uint32_t v) {
   return Encode32Inline(sptr, v);
@@ -57,6 +59,15 @@ const char* Varint::Parse32Fallback(const char* ptr, uint32_t* OUTPUT) {
 
 #if defined(__x86_64__)
 
+// Parses a multi-byte 64-bit varint starting at `p`, whose first byte is
+// `res1`.  Returns a pair of the position to continue parsing and the
+// value of the parsed varint (or `(nullptr, 0)` on failure).
+// This function avoids reloading `*p` and uses the x86-64 SHLD instruction,
+// which left-shifts, filling the right bits from another register.
+// Micro-benchmarks show a ~30% improvement vs `Parse64Fallback`.
+// Using this function (without the inline asm) on Arm64 is a ~10% regression,
+// since there's no SHLD equivalent.
+// REQUIRES: `-128 <= res1 < 0` (`p` must be a multi-byte varint.)
 std::pair<const char*, uint64_t> Varint::Parse64FallbackPair(const char* p,
                                                              int64_t res1) {
   // The algorithm relies on sign extension to set all high bits when the varint
@@ -67,6 +78,7 @@ std::pair<const char*, uint64_t> Varint::Parse64FallbackPair(const char* p,
   // bits can accomplish all this in one instruction. It so happens that res1
   // has 57 high bits of ones, which is enough for the largest shift done.
   ABSL_DCHECK_EQ(res1 >> 7, -1);
+  // Note we never use `ptr[0]` since that's just `res1`.
   uint64_t ones = res1;  // save the useful high bit 1's in res1
   uint64_t byte;
   int64_t res2, res3;
@@ -145,7 +157,7 @@ done2:
 #undef DONE
 }
 
-#endif  // defined(__x86_64__)
+#else  // !defined(__x86_64__)
 
 const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
@@ -154,6 +166,8 @@ const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
   //    res1    bits 0..27
   //    res2    bits 28..55
   //    res3    bits 56..63
+  // NOLINTBEGIN(readability/braces) False positive.
+  // clang-format off
   uint32_t byte, res1, res2 = 0, res3 = 0;
   byte = *(ptr++); res1 = byte & 127;
   byte = *(ptr++); res1 |= (byte & 127) <<  7; if (byte < 128) goto done1;
@@ -167,6 +181,8 @@ const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
 
   byte = *(ptr++); res3 = byte & 127;          if (byte < 128) goto done3;
   byte = *(ptr++); res3 |= (byte & 127) <<  7; if (byte < 2) goto done3;
+  // clang-format on
+  // NOLINTEND(readability/braces)
 
   return nullptr;       // Value is too long to be a varint64
 
@@ -178,46 +194,50 @@ const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
 
  done2:
   assert(res3 == 0);
-  *OUTPUT = res1 | (uint64_t(res2) << 28);
+  *OUTPUT = res1 | (uint64_t{res2} << 28);
   return reinterpret_cast<const char*>(ptr);
 
  done3:
-   *OUTPUT = res1 | (uint64_t(res2) << 28) | (uint64_t(res3) << 56);
-   return reinterpret_cast<const char*>(ptr);
- }
+  *OUTPUT = res1 | (uint64_t{res2} << 28) | (uint64_t{res3} << 56);
+  return reinterpret_cast<const char*>(ptr);
+}
 
- const char* Varint::Parse32BackwardSlow(const char* ptr, const char* base,
-                                         uint32_t* OUTPUT) {
-   // Since this method is rarely called, for simplicity, we just skip backward
-   // and then parse forward.
-   const char* prev = Skip32BackwardSlow(ptr, base);
-   if (prev == nullptr) return nullptr;  // no value before 'ptr'
+#endif  // !defined(__x86_64__)
 
-   Parse32(prev, OUTPUT);
-   return prev;
- }
+const char* Varint::Parse32BackwardSlow(const char* ptr, const char* base,
+                                       uint32_t* OUTPUT) {
+  // Since this method is rarely called, for simplicity, we just skip backward
+  // and then parse forward.
+  const char* prev = Skip32BackwardSlow(ptr, base);
+  if (prev == nullptr) return nullptr;  // no value before 'ptr'
 
- const char* Varint::Parse64BackwardSlow(const char* ptr, const char* base,
-                                         uint64_t* OUTPUT) {
-   // Since this method is rarely called, for simplicity, we just skip backward
-   // and then parse forward.
-   const char* prev = Skip64BackwardSlow(ptr, base);
-   if (prev == nullptr) return nullptr;  // no value before 'ptr'
+  Parse32(prev, OUTPUT);
+  return prev;
+}
 
-   Parse64(prev, OUTPUT);
-   return prev;
- }
+const char* Varint::Parse64BackwardSlow(const char* ptr, const char* base,
+                                       uint64_t* OUTPUT) {
+  // Since this method is rarely called, for simplicity, we just skip backward
+  // and then parse forward.
+  const char* prev = Skip64BackwardSlow(ptr, base);
+  if (prev == nullptr) return nullptr;  // no value before 'ptr'
 
- const char* Varint::Parse64WithLimit(const char* p, const char* l,
-                                      uint64_t* OUTPUT) {
-   if (p + kMax64 <= l) {
-     return Parse64(p, OUTPUT);
-   } else {
-     // See detailed comment in Varint::Parse64Fallback about this general
-     // approach.
-     const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
-     const unsigned char* limit = reinterpret_cast<const unsigned char*>(l);
-     uint64_t b, result;
+  Parse64(prev, OUTPUT);
+  return prev;
+}
+
+const char* Varint::Parse64WithLimit(const char* p, const char* l,
+                                    uint64_t* OUTPUT) {
+  if (p + kMax64 <= l) {
+    return Parse64(p, OUTPUT);
+  } else {
+    // See detailed comment in Varint::Parse64Fallback about this general
+    // approach.
+    const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
+    const unsigned char* limit = reinterpret_cast<const unsigned char*>(l);
+    uint64_t b, result;
+    // NOLINTBEGIN(readability/braces) False positive.
+    // clang-format off
 #if defined(__x86_64__)
     if (ptr >= limit) return nullptr;
     b = *(ptr++); result = b;              if (b < 128) goto done;
@@ -239,7 +259,7 @@ const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
     b = *(ptr++); result += (b - 1) << 56; if (b < 128) goto done;
     if (ptr >= limit) return nullptr;
     b = *(ptr++); result += (b - 1) << 63; if (b < 2) goto done;
-    return nullptr;       // Value is too long to be a varint64
+    return nullptr;  // Value is too long to be a varint64
 #else
     if (ptr >= limit) return nullptr;
     b = *(ptr++); result = b & 127;          if (b < 128) goto done;
@@ -261,13 +281,15 @@ const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
     b = *(ptr++); result |= (b & 127) << 56; if (b < 128) goto done;
     if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 63; if (b < 2) goto done;
-    return nullptr;       // Value is too long to be a varint64
+    return nullptr;  // Value is too long to be a varint64
 #endif
-   done:
+    // clang-format on
+    // NOLINTEND(readability/braces)
+  done:
     *OUTPUT = result;
     return reinterpret_cast<const char*>(ptr);
   }
- }
+}
 
 const char* Varint::Skip32BackwardSlow(const char* p, const char* b) {
   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
@@ -285,7 +307,7 @@ const char* Varint::Skip32BackwardSlow(const char* p, const char* b) {
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr + 1);
   }
 
-  return nullptr; // value is too long to be a varint32
+  return nullptr;  // value is too long to be a varint32
 }
 
 const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
@@ -304,7 +326,7 @@ const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr + 1);
   }
 
-  return nullptr; // value is too long to be a varint64
+  return nullptr;  // value is too long to be a varint64
 }
 
 void Varint::Append32Slow(std::string* s, uint32_t value) {

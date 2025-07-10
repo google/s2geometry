@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2error.h"

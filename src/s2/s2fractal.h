@@ -23,6 +23,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/random/bit_gen_ref.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s2loop.h"

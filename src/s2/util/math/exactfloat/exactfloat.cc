@@ -17,13 +17,10 @@
 
 #include "s2/util/math/exactfloat/exactfloat.h"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <string>
 
@@ -34,21 +31,14 @@
 #include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 
 #include "s2/base/port.h"
 
 using std::max;
 using std::min;
 using std::string;
-
-// Define storage for constants.
-const int ExactFloat::kMinExp;
-const int ExactFloat::kMaxExp;
-const int ExactFloat::kMaxPrec;
-const int32_t ExactFloat::kExpNaN;
-const int32_t ExactFloat::kExpInfinity;
-const int32_t ExactFloat::kExpZero;
-const int ExactFloat::kDoubleMantissaBits;
 
 // To simplify the overflow/underflow logic, we limit the exponent and
 // precision range so that (2 * bn_exp_) does not overflow an "int".  We take
@@ -408,15 +398,13 @@ std::string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
       str.push_back('.');
       str.append(digits.begin() + 1, digits.end());
     }
-    char exp_buf[20];
-    sprintf(exp_buf, "e%+02d", exp10 - 1);
-    str += exp_buf;
+    absl::StrAppendFormat(&str, "e%+02d", exp10 - 1);
   } else {
     // Use fixed format.  We split this into two cases depending on whether
     // the integer portion is non-zero or not.
     if (exp10 > 0) {
       if (static_cast<size_t>(exp10) >= digits.size()) {
-        str += digits;
+        absl::StrAppend(&str, digits);
         for (int i = exp10 - digits.size(); i > 0; --i) {
           str.push_back('0');
         }
@@ -426,11 +414,11 @@ std::string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
         str.append(digits.begin() + exp10, digits.end());
       }
     } else {
-      str += "0.";
+      absl::StrAppend(&str, "0.");
       for (int i = exp10; i < 0; ++i) {
         str.push_back('0');
       }
-      str += digits;
+      absl::StrAppend(&str, digits);
     }
   }
   return str;
@@ -500,12 +488,9 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
 
   // Now strip any trailing zeros.
   ABSL_DCHECK_NE((*digits)[0], '0');
-  std::string::iterator pos = digits->end();
-  while (pos[-1] == '0') --pos;
-  if (pos < digits->end()) {
-    bn_exp10 += digits->end() - pos;
-    digits->erase(pos, digits->end());
-  }
+  std::string::size_type pos = digits->find_last_not_of('0') + 1;
+  bn_exp10 += digits->size() - pos;
+  digits->erase(pos);
   ABSL_DCHECK_LE(digits->size(), max_digits);
 
   // Finally, we adjust the base-10 exponent so that the mantissa is a
@@ -514,9 +499,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
 }
 
 std::string ExactFloat::ToUniqueString() const {
-  char prec_buf[20];
-  sprintf(prec_buf, "<%d>", prec());
-  return ToString() + prec_buf;
+  return absl::StrFormat("%s<%d>", ToString(), prec());
 }
 
 ExactFloat& ExactFloat::operator=(const ExactFloat& b) {

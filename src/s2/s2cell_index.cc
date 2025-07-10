@@ -64,8 +64,6 @@ void S2CellIndex::ContentsIterator::StartUnion(const RangeIterator& range) {
   next_node_cutoff_ = contents;
 }
 
-S2CellIndex::S2CellIndex() = default;
-
 void S2CellIndex::Add(const S2CellUnion& cell_ids, Label label) {
   for (S2CellId cell_id : cell_ids) {
     Add(cell_id, label);

@@ -21,6 +21,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
 namespace internal {
 

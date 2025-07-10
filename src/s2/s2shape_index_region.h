@@ -24,6 +24,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/absl_check.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2cap.h"
@@ -382,11 +383,7 @@ bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapeIds(
               clipped.num_edges() > 0 || !clipped.contains_center();
         }
       }
-      // TODO(user,b/210097200): Use structured bindings when we require
-      // C++17 in opensource.
-      for (const auto& p : shape_not_contains) {
-        const int shape_id = p.first;
-        const bool not_contains = p.second;
+      for (const auto [shape_id, not_contains] : shape_not_contains) {
         if (!visitor(shape_id, !not_contains)) return false;
       }
       return true;

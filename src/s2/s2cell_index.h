@@ -27,7 +27,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 
-#include "s2/base/types.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/base/log_severity.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
@@ -116,13 +116,8 @@ class S2CellIndex {
 
   // Convenience class that represents a (cell_id, label) pair.
   struct LabelledCell {
-    S2CellId cell_id;
-    Label label;
-
-    LabelledCell() : cell_id(S2CellId::None()), label(-1) {}
-
-    LabelledCell(S2CellId _cell_id, Label _label)
-        : cell_id(_cell_id), label(_label) {}
+    S2CellId cell_id = S2CellId::None();
+    Label label = -1;
 
     bool operator==(LabelledCell y) const {
       return cell_id == y.cell_id && label == y.label;
@@ -139,12 +134,6 @@ class S2CellIndex {
       return H::combine(std::move(h), x.cell_id, x.label);
     }
   };
-
-  // Default constructor.
-  S2CellIndex();
-
-  // S2CellIndex is move-constructible.
-  S2CellIndex(S2CellIndex&&) = default;
 
   // Returns the number of (cell_id, label) pairs in the index.
   int num_cells() const;
@@ -202,13 +191,9 @@ class S2CellIndex {
   // Represents a node in the (cell_id, label) tree.  Cells are organized in a
   // tree such that the ancestors of a given node contain that node.
   struct CellNode {
-    S2CellId cell_id;
-    Label label;
-    int32_t parent;
-
-    CellNode(S2CellId _cell_id, Label _label, int32_t _parent)
-        : cell_id(_cell_id), label(_label), parent(_parent) {}
-    CellNode() : cell_id(S2CellId::None()), label(kDoneContents), parent(-1) {}
+    S2CellId cell_id = S2CellId::None();
+    Label label = kDoneContents;
+    int32_t parent = -1;
   };
 
  public:
@@ -446,9 +431,6 @@ class S2CellIndex {
   // The last element of range_nodes_ is a sentinel value, which is necessary
   // in order to represent the range covered by the previous element.
   std::vector<RangeNode> range_nodes_;
-
-  S2CellIndex(const S2CellIndex&) = delete;
-  void operator=(const S2CellIndex&) = delete;
 };
 std::ostream& operator<<(std::ostream& os, S2CellIndex::LabelledCell x);
 
@@ -474,7 +456,7 @@ inline S2CellIndex::Label S2CellIndex::CellIterator::label() const {
 inline S2CellIndex::LabelledCell S2CellIndex::CellIterator::labelled_cell()
     const {
   ABSL_DCHECK(!done());
-  return LabelledCell(cell_it_->cell_id, cell_it_->label);
+  return LabelledCell{cell_it_->cell_id, cell_it_->label};
 }
 
 inline bool S2CellIndex::CellIterator::done() const {
@@ -601,7 +583,7 @@ inline S2CellIndex::Label S2CellIndex::ContentsIterator::label() const {
 inline S2CellIndex::LabelledCell S2CellIndex::ContentsIterator::labelled_cell()
     const {
   ABSL_DCHECK(!done());
-  return LabelledCell(node_.cell_id, node_.label);
+  return LabelledCell{node_.cell_id, node_.label};
 }
 
 inline bool S2CellIndex::ContentsIterator::done() const {
@@ -626,7 +608,7 @@ inline int S2CellIndex::num_cells() const {
 inline void S2CellIndex::Add(S2CellId cell_id, Label label) {
   ABSL_DCHECK(cell_id.is_valid());
   ABSL_DCHECK_GE(label, 0);
-  cell_tree_.push_back(CellNode(cell_id, label, -1));
+  cell_tree_.push_back(CellNode{cell_id, label, -1});
 }
 
 inline void S2CellIndex::Clear() {

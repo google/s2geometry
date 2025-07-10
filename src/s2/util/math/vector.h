@@ -31,7 +31,6 @@
 #include <ostream>
 #include <type_traits>
 
-#include "s2/base/types.h"
 #include "absl/base/macros.h"
 #include "absl/log/absl_check.h"
 #include "absl/utility/utility.h"

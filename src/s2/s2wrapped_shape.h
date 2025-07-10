@@ -18,6 +18,7 @@
 #ifndef S2_S2WRAPPED_SHAPE_H_
 #define S2_S2WRAPPED_SHAPE_H_
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2shape.h"
 
 // An S2Shape that simply wraps some other shape.  This is useful for adding an

@@ -23,6 +23,8 @@
 #include <iostream>
 #include <ostream>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
+
 namespace s2shapeutil {
 
 // ShapeEdgeId is a unique identifier for an edge within an S2ShapeIndex,

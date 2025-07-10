@@ -129,7 +129,7 @@ bool BuildChain(
     chain_in->push_back(snap.input.v1);
     chain_out->push_back(g.vertex(ref_v));
     if (snap.v_out >= 0) {
-      // This input edge enters and immediately exits the Voronoi region.
+      // This input edge exits the Voronoi region.
       chain_out->push_back(g.vertex(snap.v_out));
       return true;
     }
@@ -228,7 +228,7 @@ int GetSnappedWindingDelta(
       if (edge.second != ref_v) snap->v_out = edge.second;
     }
   }
-  // Now we regroup the edges according to the reference vertex of the
+  // Now we regroup the edges according to the starting vertex of the
   // corresponding input edge.  This makes it easier to assemble these edges
   // into (portions of) input edge loops.
   InputVertexEdgeMap input_vertex_edge_map;

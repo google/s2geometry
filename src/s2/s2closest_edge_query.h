@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "absl/base/macros.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/functional/function_ref.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
@@ -280,6 +281,12 @@ class S2ClosestEdgeQuery {
   // and can be used to disable reporting of results on the fly.
   void VisitClosestEdges(Target* target, Options options, ResultVisitor visitor,
                          ShapeFilter filter = {});
+
+  // Calls a callback with the closest edge of each shape to the given target
+  // that satisfies the given options.  Shapes are reported in order of
+  // increasing distance.
+  void VisitClosestShapes(Target* target, Options options,
+                          ResultVisitor visitor, ShapeFilter filter = {});
 
   //////////////////////// Convenience Methods ////////////////////////
 

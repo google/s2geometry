@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/functional/function_ref.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell_id.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"

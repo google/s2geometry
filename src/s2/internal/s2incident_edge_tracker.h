@@ -23,6 +23,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2point.h"
 #include "s2/s2shape.h"
 

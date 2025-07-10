@@ -196,8 +196,7 @@ TEST(S2ConvexHullQuery, LoopsAroundNorthPole) {
 
 TEST(S2ConvexHullQuery, PointsInsideHull) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "POINTS_INSIDE_HULL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "POINTS_INSIDE_HULL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Repeatedly build the convex hull of a set of points, then add more points
   // inside that loop and build the convex hull again.  The result should

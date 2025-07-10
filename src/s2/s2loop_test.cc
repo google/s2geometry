@@ -321,8 +321,7 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
   // contain almost no points, and an area near 4*Pi for degenerate loops that
   // contain almost all points.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_AREA_CONSISTENT_WITH_SIGN",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_AREA_CONSISTENT_WITH_SIGN", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   static constexpr int kMaxVertices = 6;
   for (int i = 0; i < 50; ++i) {
@@ -368,8 +367,7 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
   // correct.
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_AREA_AND_CENTROID",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_AREA_AND_CENTROID", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 50; ++i) {
     // Choose a coordinate frame for the spherical cap.
     S2Point x, y, z;
@@ -909,8 +907,7 @@ TEST(S2Loop, LoopRelations2) {
   // at some fixed level.  Comparing two polygons at the same level
   // ensures that there are no T-vertices.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "LOOP_RELATIONS2",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "LOOP_RELATIONS2", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     S2CellId begin = S2CellId(absl::Uniform<uint64_t>(bitgen) | 1);
     if (!begin.is_valid()) continue;
@@ -942,8 +939,7 @@ TEST(S2Loop, BoundsForLoopContainment) {
   // outer loop are expanded slightly.  This test constructs examples where
   // this expansion is necessary and verifies that it is sufficient.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "BOUNDS_FOR_LOOP_CONTAINMENT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "BOUNDS_FOR_LOOP_CONTAINMENT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   for (int iter = 0; iter < 1000; ++iter) {
     // We construct a triangle ABC such that A,B,C are nearly colinear, B is

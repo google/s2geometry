@@ -456,7 +456,7 @@ bool WindingLayer::MatchesDegeneracy(int winding, int winding_minus,
     // Similarly, this heuristic is sufficient to compute unions of points,
     // polylines, and polygons where all boundaries are clockwise (by using
     // WindingRule::NEGATIVE) or where all boundaries are of an unknown but
-    // consistent oreientation (by using WindingRule::NON_ZERO).
+    // consistent orientation (by using WindingRule::NON_ZERO).
     return winding == 0;
   }
 }

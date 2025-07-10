@@ -56,8 +56,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
   const double kDistortionError = 1e-5;
 
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "TEST_FRACTAL",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "TEST_FRACTAL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2Fractal fractal(bitgen);
   fractal.set_min_level(min_level);

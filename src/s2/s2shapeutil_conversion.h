@@ -23,6 +23,7 @@
 #include <memory>
 #include <vector>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"

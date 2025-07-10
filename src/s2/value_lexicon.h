@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/util/gtl/dense_hash_set.h"
 
 // ValueLexicon is a class that maps distinct values to sequentially numbered
@@ -58,8 +59,8 @@ class ValueLexicon {
   // ValueLexicon is movable and copyable.
   ValueLexicon(const ValueLexicon&);
   ValueLexicon& operator=(const ValueLexicon&);
-  ValueLexicon(ValueLexicon&&);
-  ValueLexicon& operator=(ValueLexicon&&);
+  ValueLexicon(ValueLexicon&&) noexcept;
+  ValueLexicon& operator=(ValueLexicon&&) noexcept;
 
   // Clears all data from the lexicon.
   void Clear();
@@ -100,6 +101,9 @@ class ValueLexicon {
     const ValueLexicon* lexicon_;
   };
 
+  // Changing this to `absl::flat_hash_set` causes benchmark regressions,
+  // and will increase the space usage. This requires some investigation.
+  // See b/169825496 (convert dense_hash_set to flat_hash_set).
   using IdSet = gtl::dense_hash_set<uint32_t, IdHasher, IdKeyEqual>;
 
   KeyEqual key_equal_;
@@ -166,14 +170,14 @@ ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(const ValueLexicon& x)
 }
 
 template <class T, class Hasher, class KeyEqual>
-ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(ValueLexicon&& x)
-    : key_equal_(std::move(x.key_equal_)), values_(std::move(x.values_)),
+ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(ValueLexicon&& x) noexcept
+    : key_equal_(std::move(x.key_equal_)),
+      values_(std::move(x.values_)),
       // Unfortunately we can't move "id_set_" because we need to change the
       // "this" pointers associated with hasher() and key_equal().
       id_set_(x.id_set_.begin(), x.id_set_.end(), kEmptyKey, 0,
               IdHasher(x.id_set_.hash_funct().hasher(), this),
-              IdKeyEqual(x.key_equal_, this)) {
-}
+              IdKeyEqual(x.key_equal_, this)) {}
 
 template <class T, class Hasher, class KeyEqual>
 ValueLexicon<T, Hasher, KeyEqual>&
@@ -190,8 +194,8 @@ ValueLexicon<T, Hasher, KeyEqual>::operator=(const ValueLexicon& x) {
 }
 
 template <class T, class Hasher, class KeyEqual>
-ValueLexicon<T, Hasher, KeyEqual>&
-ValueLexicon<T, Hasher, KeyEqual>::operator=(ValueLexicon&& x) {
+ValueLexicon<T, Hasher, KeyEqual>& ValueLexicon<T, Hasher, KeyEqual>::operator=(
+    ValueLexicon&& x) noexcept {
   // Note that move self-assignment has undefined behavior.
   key_equal_ = std::move(x.key_equal_);
   values_ = std::move(x.values_);

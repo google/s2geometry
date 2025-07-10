@@ -35,8 +35,7 @@ namespace {
 
 TEST(GetLengthAndCentroid, GreatCircles) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GREAT_CIRCLES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GREAT_CIRCLES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Construct random great circles and divide them randomly into segments.
   // Then make sure that the length and centroid are correct.  Note that

@@ -25,6 +25,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/varint.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell_id.h"
 
 // ReversibleBytes is a simple wrapper around a string of bytes that we can

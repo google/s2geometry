@@ -18,6 +18,7 @@
 #ifndef S2_S2LATLNG_RECT_BOUNDER_H_
 #define S2_S2LATLNG_RECT_BOUNDER_H_
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"

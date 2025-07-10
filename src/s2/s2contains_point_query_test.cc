@@ -45,6 +45,13 @@ using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 
+TEST(S2ContainsPointQuery, Options) {
+  auto index = MakeIndexOrDie("##");
+  S2ContainsPointQueryOptions options(S2VertexModel::OPEN);
+  auto q = MakeS2ContainsPointQuery(index.get(), options);
+  EXPECT_EQ(q.options().vertex_model(), S2VertexModel::OPEN);
+}
+
 TEST(S2ContainsPointQuery, VertexModelOpen) {
   auto index = MakeIndexOrDie("0:0 # -1:1, 1:1 # 0:5, 0:7, 2:6");
   S2ContainsPointQueryOptions options(S2VertexModel::OPEN);
@@ -137,8 +144,7 @@ TEST(S2ContainsPointQuery, VisitContainingShapesCanStopEarly) {
 TEST(S2ContainsPointQuery, GetContainingShapes) {
   // Also tests ShapeContains().
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "GET_CONTAINING_SHAPES",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "GET_CONTAINING_SHAPES", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   constexpr int kNumVerticesPerLoop = 10;
   const S1Angle kMaxLoopRadius = S2Testing::KmToAngle(10);
   const S2Cap center_cap(s2random::Point(bitgen), kMaxLoopRadius);

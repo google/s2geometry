@@ -34,6 +34,7 @@
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -745,7 +746,7 @@ template <class Distance>
 void S2ClosestCellQueryBase<Distance>::MaybeAddResult(S2CellId cell_id,
                                                       Label label) {
   if (avoid_duplicates_ &&
-      !tested_cells_.insert(LabelledCell(cell_id, label)).second) {
+      !tested_cells_.insert(LabelledCell{cell_id, label}).second) {
     return;
   }
 

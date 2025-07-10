@@ -23,9 +23,11 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/log/absl_check.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -67,7 +69,8 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
   RegularLoopShapeIndexFactory() = default;
   // We present the same interface as the other factories, even though we
   // do not use the BitGenRef here.
-  explicit RegularLoopShapeIndexFactory(absl::BitGenRef unused_bitgen) {}
+  explicit RegularLoopShapeIndexFactory(
+      absl::BitGenRef unused_bitgen ABSL_ATTRIBUTE_LIFETIME_BOUND) {}
 
   void AddEdges(const S2Cap& index_cap, int num_edges,
                 MutableS2ShapeIndex* index) const override {
@@ -79,7 +82,8 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
 // Generates a fractal loop that approximately fills the given S2Cap.
 class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
-  explicit FractalLoopShapeIndexFactory(absl::BitGenRef bitgen)
+  explicit FractalLoopShapeIndexFactory(
+      absl::BitGenRef bitgen ABSL_ATTRIBUTE_LIFETIME_BOUND)
       : bitgen_(bitgen) {}
 
   void AddEdges(const S2Cap& index_cap, int num_edges,
@@ -98,7 +102,8 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
 // Generates a cloud of points that approximately fills the given S2Cap.
 class PointCloudShapeIndexFactory : public ShapeIndexFactory {
  public:
-  explicit PointCloudShapeIndexFactory(absl::BitGenRef bitgen)
+  explicit PointCloudShapeIndexFactory(
+      absl::BitGenRef bitgen ABSL_ATTRIBUTE_LIFETIME_BOUND)
       : bitgen_(bitgen) {}
 
   void AddEdges(const S2Cap& index_cap, int num_edges,

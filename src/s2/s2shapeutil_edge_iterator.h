@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <string>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge_id.h"

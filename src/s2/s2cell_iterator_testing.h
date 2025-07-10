@@ -18,6 +18,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell_iterator.h"
 
 // A mock iterator for testing.  Iterates an absl::btree_map mapping S2CellId to

@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/types/span.h"
 #include "s2/s2lax_polygon_shape.h"
@@ -44,11 +45,8 @@ TEST(S2ShapeConversionUtilTest, PointVectorShapeToPoints) {
   vector<S2Point> points = s2textformat::ParsePointsOrDie("11:11, 10:0, 5:5");
   S2PointVectorShape point_vector(points);
   vector<S2Point> extract = ShapeToS2Points(point_vector);
-  // TODO(user,b/205813109): Use gmock ASSERT_THAT.
-  ASSERT_EQ(extract.size(), 3);
-  for (int i = 0; i < extract.size(); i++) {
-    EXPECT_EQ(extract[i], points[i]);
-  }
+  EXPECT_EQ(extract.size(), 3);
+  EXPECT_THAT(extract, testing::ElementsAreArray(points));
 }
 
 // ShapeToS2Polyline tests

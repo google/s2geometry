@@ -31,8 +31,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 
-#include "s2/_fp_contract_off.h"
-#include "s2/base/types.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2boolean_operation.h"
@@ -322,7 +321,7 @@ class S2Polygon final : public S2Region {
   // if there is a point that is contained by both polygons.
   bool Intersects(const S2Polygon& b) const;
 
-  // Returns true if this polgyon (A) and the given polygon (B) are
+  // Returns true if this polygon (A) and the given polygon (B) are
   // approximately disjoint.  This is true if it is possible to ensure that A
   // and B do not intersect by moving their vertices no further than
   // "tolerance".  This implies that in borderline cases where A and B overlap
@@ -489,40 +488,22 @@ class S2Polygon final : public S2Region {
   // Invert the polygon (replace it by its complement).
   void Invert();
 
-  // Return true if this polygon contains the given polyline.  This method
-  // returns an exact result, according to the following model:
-  //
-  //  - All edges are geodesics (of course).
-  //
-  //  - Vertices are ignored for the purposes of defining containment.
-  //    (This is because polygons often do not contain their vertices, in
-  //    order to that when a set of polygons tiles the sphere then every point
-  //    is contained by exactly one polygon.)
-  //
-  //  - Points that lie exactly on geodesic edges are resolved using symbolic
-  //    perturbations (i.e., they are considered to be infinitesmally offset
-  //    from the edge).
-  //
-  //  - If the polygon and polyline share an edge, it is handled as follows.
-  //    First, the polygon edges are oriented so that the interior is always
-  //    on the left.  Then the shared polyline edge is contained if and only
-  //    if it is in the same direction as the corresponding polygon edge.
-  //    (This model ensures that when a polyline is intersected with a polygon
-  //    and its complement, the edge only appears in one of the two results.)
-  //
-  // TODO(ericv): Update the implementation to correspond to the model above.
+  // Returns true if this polygon contains the given polyline. Uses an
+  // S2BooleanOperation DIFFERENCE operation, using an IdentitySnapFunction with
+  // a minimal snap radius, S2::kIntersectionMergeRadius.
   bool Contains(const S2Polyline& b) const;
 
-  // Returns true if this polgyon approximately contains the given polyline
+  // Returns true if this polygon approximately contains the given polyline.
   // This is true if it is possible to move the polyline vertices no further
   // than "tolerance" such that the polyline is now contained.
   bool ApproxContains(const S2Polyline& b, S1Angle tolerance) const;
 
-  // Return true if this polygon intersects the given polyline.  This method
-  // returns an exact result; see Contains(S2Polyline) for details.
+  // Returns true if this polygon intersects the given polyline. Uses an
+  // S2BooleanOperation INTERSECTION operation, using an IdentitySnapFunction
+  // with a minimal snap radius, S2::kIntersectionMergeRadius.
   bool Intersects(const S2Polyline& b) const;
 
-  // Returns true if this polgyon is approximately disjoint from the given
+  // Returns true if this polygon is approximately disjoint from the given
   // polyline.  This is true if it is possible to avoid intersection by moving
   // their vertices no further than "tolerance".
   //
@@ -549,7 +530,11 @@ class S2Polygon final : public S2Region {
   std::vector<std::unique_ptr<S2Polyline>> ApproxIntersectWithPolyline(
       const S2Polyline& in, S1Angle snap_radius) const;
 
-  // TODO(ericv): Update documentation.
+  // Intersects this polygon with the polyline "in" using the given
+  // SnapFunction, and returns the resulting zero or more polylines.  The
+  // polylines are ordered in the order they would be encountered by traversing
+  // "in" from beginning to end.  Note that the output may include polylines
+  // with only one vertex, but there will not be any zero-vertex polylines.
   std::vector<std::unique_ptr<S2Polyline>> IntersectWithPolyline(
       const S2Polyline& in, const S2Builder::SnapFunction& snap_function) const;
 
@@ -680,7 +665,7 @@ class S2Polygon final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder,
+  void Encode(Encoder* encoder,
               s2coding::CodingHint hint = s2coding::CodingHint::COMPACT) const;
 
   // Encodes the polygon's S2Points directly as three doubles using
@@ -707,10 +692,7 @@ class S2Polygon final : public S2Region {
     friend class S2Polygon;
 
    public:
-    // Define as enum so we don't have to declare storage.
-    // TODO(user, b/210097200): Use static constexpr when C++17 is
-    // allowed in opensource.
-    enum : TypeTag { kTypeTag = 1 };
+    static constexpr TypeTag kTypeTag = 1;
 
     Shape() = default;
     ~Shape() override;
@@ -737,7 +719,7 @@ class S2Polygon final : public S2Region {
     ChainPosition chain_position(int e) const final;
     TypeTag type_tag() const override { return kTypeTag; }
 
-  void Encode(Encoder* encoder, s2coding::CodingHint hint) const override {
+    void Encode(Encoder* encoder, s2coding::CodingHint hint) const override {
       if (hint == s2coding::CodingHint::FAST) {
         polygon_->EncodeUncompressed(encoder);
       } else {
@@ -876,10 +858,6 @@ class S2Polygon final : public S2Region {
   static std::vector<std::unique_ptr<S2Polyline>> SimplifyEdgesInCell(
       const S2Polygon& a, const S2Cell& cell,
       double tolerance_uv, S1Angle snap_radius);
-
-  // Internal implementation of intersect/subtract polyline functions above.
-  std::vector<std::unique_ptr<S2Polyline>> InternalClipPolyline(
-      bool invert, const S2Polyline& a, S1Angle snap_radius) const;
 
   // Defines a total ordering on S2Loops that does not depend on the cyclic
   // order of loop vertices.  This function is used to choose which loop to

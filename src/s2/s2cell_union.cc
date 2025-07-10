@@ -29,7 +29,6 @@
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/types.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"

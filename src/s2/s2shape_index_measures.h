@@ -22,6 +22,7 @@
 #ifndef S2_S2SHAPE_INDEX_MEASURES_H_
 #define S2_S2SHAPE_INDEX_MEASURES_H_
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 #include "s2/s2shape_index.h"

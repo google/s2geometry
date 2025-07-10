@@ -16,11 +16,11 @@
 #ifndef S2_BASE_SPINLOCK_H_
 #define S2_BASE_SPINLOCK_H_
 
-#include <absl/base/thread_annotations.h>
-
 #include <atomic>
 
-class ABSL_LOCKABLE SpinLock {
+#include <absl/base/thread_annotations.h>
+
+class ABSL_LOCKABLE ABSL_ATTRIBUTE_WARN_UNUSED SpinLock {
  public:
   SpinLock() = default;
   ~SpinLock() = default;
@@ -38,13 +38,15 @@ class ABSL_LOCKABLE SpinLock {
     locked_.store(false, std::memory_order_release);
   }
 
-  inline bool IsHeld() const { return locked_.load(std::memory_order_relaxed); }
+  ABSL_MUST_USE_RESULT inline bool IsHeld() const {
+    return locked_.load(std::memory_order_relaxed);
+  }
 
  private:
   std::atomic_bool locked_{false};
 };
 
-class ABSL_SCOPED_LOCKABLE SpinLockHolder {
+class ABSL_MUST_USE_RESULT ABSL_SCOPED_LOCKABLE SpinLockHolder {
  public:
   inline explicit SpinLockHolder(SpinLock* l) ABSL_EXCLUSIVE_LOCK_FUNCTION(l)
       : lock_(l) {

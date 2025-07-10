@@ -18,6 +18,7 @@
 #ifndef S2_S2COORDS_INTERNAL_H_
 #define S2_S2COORDS_INTERNAL_H_
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 namespace S2 {
 namespace internal {
 

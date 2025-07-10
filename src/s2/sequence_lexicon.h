@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/util/gtl/dense_hash_set.h"
 #include "s2/util/hash/mix.h"
 
@@ -67,8 +68,8 @@ class SequenceLexicon {
   // SequenceLexicon is movable and copyable.
   SequenceLexicon(const SequenceLexicon&);
   SequenceLexicon& operator=(const SequenceLexicon&);
-  SequenceLexicon(SequenceLexicon&&);
-  SequenceLexicon& operator=(SequenceLexicon&&);
+  SequenceLexicon(SequenceLexicon&&) noexcept;
+  SequenceLexicon& operator=(SequenceLexicon&&) noexcept;
 
   // Clears all data from the lexicon.
   void Clear();
@@ -137,6 +138,9 @@ class SequenceLexicon {
     const SequenceLexicon* lexicon_;
   };
 
+  // Changing this to `absl::flat_hash_set` causes benchmark regressions,
+  // and will increase the space usage. This requires some investigation.
+  // See b/169825496 (convert dense_hash_set to flat_hash_set).
   using IdSet = gtl::dense_hash_set<uint32_t, IdHasher, IdKeyEqual>;
 
   std::vector<T> values_;
@@ -217,14 +221,15 @@ SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(const SequenceLexicon& x)
 }
 
 template <class T, class Hasher, class KeyEqual>
-SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(SequenceLexicon&& x)
-    : values_(std::move(x.values_)), begins_(std::move(x.begins_)),
+SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(
+    SequenceLexicon&& x) noexcept
+    : values_(std::move(x.values_)),
+      begins_(std::move(x.begins_)),
       // Unfortunately we can't move "id_set_" because we need to change the
       // "this" pointers associated with hasher() and key_equal().
       id_set_(x.id_set_.begin(), x.id_set_.end(), kEmptyKey, 0,
               IdHasher(x.id_set_.hash_funct().hasher(), this),
-              IdKeyEqual(x.id_set_.key_eq().key_equal(), this)) {
-}
+              IdKeyEqual(x.id_set_.key_eq().key_equal(), this)) {}
 
 template <class T, class Hasher, class KeyEqual>
 SequenceLexicon<T, Hasher, KeyEqual>&
@@ -242,7 +247,7 @@ SequenceLexicon<T, Hasher, KeyEqual>::operator=(const SequenceLexicon& x) {
 
 template <class T, class Hasher, class KeyEqual>
 SequenceLexicon<T, Hasher, KeyEqual>&
-SequenceLexicon<T, Hasher, KeyEqual>::operator=(SequenceLexicon&& x) {
+SequenceLexicon<T, Hasher, KeyEqual>::operator=(SequenceLexicon&& x) noexcept {
   // Note that move self-assignment has undefined behavior.
   values_ = std::move(x.values_);
   begins_ = std::move(x.begins_);

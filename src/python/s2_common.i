@@ -119,7 +119,7 @@ public:
 
 %typemap(argout) S2Error * {
   if(!$1->ok())
-    SWIG_exception(SWIG_ValueError, $1->text().c_str());
+    SWIG_exception(SWIG_ValueError, std::string($1->message()).c_str());
 }
 
 // This overload shadows the one the takes vector<uint64_t>&, and it

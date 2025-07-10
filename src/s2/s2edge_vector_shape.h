@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2point.h"
 #include "s2/s2shape.h"
 
@@ -41,9 +42,8 @@ class S2EdgeVectorShape : public S2Shape {
   // Constructs an empty edge vector.
   S2EdgeVectorShape() = default;
 
-  S2EdgeVectorShape(S2EdgeVectorShape&& other) = default;
-
-  S2EdgeVectorShape& operator=(S2EdgeVectorShape&& other) = default;
+  S2EdgeVectorShape(S2EdgeVectorShape&& other) noexcept = default;
+  S2EdgeVectorShape& operator=(S2EdgeVectorShape&& other) noexcept = default;
 
   // Constructs an S2EdgeVectorShape from a vector of edges.
   explicit S2EdgeVectorShape(std::vector<std::pair<S2Point, S2Point>> edges) {

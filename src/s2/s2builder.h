@@ -309,7 +309,7 @@ class S2Builder {
     // AddIntersection() method which allows intersection points to be added
     // selectively.
     //
-    // When this option if true, intersection_tolerance() is automatically set
+    // When this option is true, intersection_tolerance() is automatically set
     // to a minimum of S2::kIntersectionError (see intersection_tolerance()
     // for why this is necessary).  Note that this means that edges can move
     // by up to S2::kIntersectionError even when the specified snap radius is
@@ -363,7 +363,7 @@ class S2Builder {
     //
     // However if the intersection tolerance is set to 1 nanometer then the
     // snap radius for edges is increased to 1.000000001 meters ensuring that
-    // both edges snap to a common vertex even in this worst case.  (Tthis
+    // both edges snap to a common vertex even in this worst case.  (This
     // technique does not work if the vertex snap radius is increased as well;
     // it requires edges and vertices to be handled differently.)
     //
@@ -566,11 +566,14 @@ class S2Builder {
 
   // Adds the edges in the given loop to the current layer.  Note that a loop
   // consisting of one vertex adds a single degenerate edge.
+  void AddLoop(S2PointLoopSpan loop);
+
+  // Adds the edges in the given loop to the current layer. Loops with a single
+  // vertex are ignored.
   //
   // If the sign() of an S2Loop is negative (i.e. the loop represents a hole
   // within a polygon), the edge directions are automatically reversed to
   // ensure that the polygon interior is always to the left of every edge.
-  void AddLoop(S2PointLoopSpan loop);
   void AddLoop(const S2Loop& loop);
 
   // Adds the loops in the given polygon to the current layer.  Loops

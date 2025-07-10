@@ -19,6 +19,7 @@
 #include <memory>
 
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2cell_range_iterator.h"
@@ -33,6 +34,21 @@ using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Ne;
 using ::testing::Not;
+using ::testing::NotNull;
+
+TEST(S2IndexCellData, Accessors) {
+  // Provide some test coverage for accessors so they are not detected as
+  // dead code.
+  unique_ptr<MutableS2ShapeIndex> index =
+      s2textformat::MakeIndexOrDie("0:0 ##");
+
+  MutableS2ShapeIndex::Iterator iter(index.get(), S2ShapeIndex::BEGIN);
+
+  S2IndexCellData data;
+  data.LoadCell(index.get(), iter.id(), &iter.cell());
+  EXPECT_THAT(data.index(), NotNull());
+  EXPECT_THAT(data.num_clipped(), Eq(1));
+}
 
 TEST(S2IndexCellData, DimensionFilteringWorks) {
   unique_ptr<MutableS2ShapeIndex> index = s2textformat::MakeIndexOrDie(

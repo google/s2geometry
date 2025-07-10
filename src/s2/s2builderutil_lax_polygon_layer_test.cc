@@ -33,7 +33,6 @@
 #include "absl/strings/string_view.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"

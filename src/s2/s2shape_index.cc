@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <limits>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
@@ -200,8 +201,15 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       int num_edges = ((header >> 2) & 15) + 2;
       clipped->Init(0 /*shape_id*/, num_edges);
       clipped->set_contains_center((header & 2) != 0);
-      for (int i = 0, edge_id = header >> 6; i < num_edges; ++i) {
-        clipped->set_edge(i, edge_id + i);
+      // Edge ids are int32, but we use int64 to guard against overflow.
+      const int64_t edge_id = header >> 6;
+      if (ABSL_PREDICT_FALSE(edge_id + num_edges >
+                             std::numeric_limits<int32_t>::max())) {
+        return false;
+      }
+      for (int i = 0; i < num_edges; ++i) {
+        // Range check for `edge_id + i` is performed above.
+        clipped->set_edge(i, static_cast<int>(edge_id + i));
       }
       return true;
     }
@@ -209,7 +217,11 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       // The cell contains a single edge.
       clipped->Init(0 /*shape_id*/, 1 /*num_edges*/);
       clipped->set_contains_center((header & 4) != 0);
-      clipped->set_edge(0, header >> 3);
+      const int64_t edge_id = header >> 3;
+      if (ABSL_PREDICT_FALSE(edge_id > std::numeric_limits<int32_t>::max())) {
+        return false;
+      }
+      clipped->set_edge(0, edge_id);
       return true;
     }
     // The cell contains some other combination of edges.
@@ -227,7 +239,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     num_clipped = header >> 3;
     if (!decoder->get_varint32(&header)) return false;
   }
-  int64_t shape_id = 0;
+  int64_t shape_id = 0;  // Shape id is 32-bit, but we guard against overflow.
   S2ClippedShape* clipped = add_shapes(num_clipped);
   for (int j = 0; j < num_clipped; ++j, ++clipped, ++shape_id) {
     // Ensure we don't overflow a 32 bit shape id.
@@ -244,8 +256,13 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       int num_edges = (shape_id_count & 15) + 1;
       clipped->Init(shape_id, num_edges);
       clipped->set_contains_center((header & 2) != 0);
-      for (int i = 0, edge_id = header >> 2; i < num_edges; ++i) {
-        clipped->set_edge(i, edge_id + i);
+      const int64_t edge_id = header >> 2;
+      if (ABSL_PREDICT_FALSE(edge_id + num_edges >
+                             std::numeric_limits<int32_t>::max())) {
+        return false;
+      }
+      for (int i = 0; i < num_edges; ++i) {
+        clipped->set_edge(i, static_cast<int>(edge_id + i));
       }
     } else if ((header & 7) == 7) {
       // The clipped shape has no edges.
@@ -315,13 +332,17 @@ inline bool S2ShapeIndexCell::DecodeEdges(int num_edges,
                                           S2ClippedShape* clipped,
                                           Decoder* decoder) {
   // This function inverts the encodings documented above.
-  int32_t edge_id = 0;
+  int64_t edge_id = 0;  // Edge id is 32-bit, but we guard against overflow.
   for (int i = 0; i < num_edges; ) {
     uint32_t delta = 0;
     if (!decoder->get_varint32(&delta)) return false;
     if (i + 1 == num_edges) {
       // The last edge is encoded without an edge count.
-      clipped->set_edge(i++, edge_id + delta);
+      edge_id += delta;
+      if (ABSL_PREDICT_FALSE(edge_id > std::numeric_limits<int32_t>::max())) {
+        return false;
+      }
+      clipped->set_edge(i++, edge_id);
     } else {
       // Otherwise decode the count and edge delta.
       uint32_t count = (delta & 7) + 1;
@@ -332,11 +353,16 @@ inline bool S2ShapeIndexCell::DecodeEdges(int num_edges,
       }
 
       // Guard against overflowing edge memory for bad inputs.
-      if (static_cast<int32_t>(i + count) > num_edges) {
+      if (ABSL_PREDICT_FALSE(i + count > static_cast<uint32_t>(num_edges))) {
         return false;
       }
 
       edge_id += delta;
+      // Guard against overflowing edge memory for bad inputs.
+      if (ABSL_PREDICT_FALSE(edge_id + count >
+                             std::numeric_limits<int32_t>::max())) {
+        return false;
+      }
       for (; count > 0; --count, ++i, ++edge_id) {
         clipped->set_edge(i, edge_id);
       }

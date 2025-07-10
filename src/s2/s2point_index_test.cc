@@ -125,8 +125,7 @@ TEST_F(S2PointIndexTest, DuplicatePoints) {
 
 TEST_F(S2PointIndexTest, RandomPoints) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_POINTS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_POINTS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
     Add(s2random::Point(bitgen), absl::Uniform(bitgen, 0, 100));
   }

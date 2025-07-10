@@ -36,7 +36,6 @@
 #include "absl/utility/utility.h"
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/types.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2builder.h"

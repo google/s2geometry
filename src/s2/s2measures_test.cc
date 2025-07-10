@@ -81,8 +81,7 @@ TEST(S2, AreaMethods) {
 
   // TODO(user,b/338315414): Split up this test case.
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "AREA_METHODS",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "AREA_METHODS", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   double max_girard = 0;
   for (int i = 0; i < 10000; ++i) {

@@ -29,6 +29,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
 #include "s2/base/port.h"
 
@@ -137,13 +138,9 @@ class S2Error {
   //                   absl::StrFormat("Loop %d: %s", j, error.message()));
   S2Error(Code code, absl::string_view message) : code_(code), text_(message) {}
 
-  ABSL_MUST_USE_RESULT bool ok() const { return code_ == OK; }
+  [[nodiscard]] bool ok() const { return code_ == OK; }
   Code code() const { return code_; }
   absl::string_view message() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return text_;
-  }
-  [[deprecated("Use message() instead.")]]
-  std::string text() const {
     return text_;
   }
 
@@ -199,7 +196,7 @@ class S2Error {
 //
 // absl::Status codes with no exact equivalent in S2Error::Code are converted to
 // S2Error::UNKNOWN.
-ABSL_MUST_USE_RESULT S2Error ToS2Error(const absl::Status& status);
+[[nodiscard]] S2Error ToS2Error(const absl::Status& status);
 
 // Converts an S2Error into an absl::Status.
 //

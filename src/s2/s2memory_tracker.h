@@ -27,6 +27,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2error.h"
 #include "s2/util/gtl/compact_array.h"
 
@@ -296,7 +297,9 @@ class S2MemoryTracker {
     }
 
     // Like AddSpace() except that if more memory is needed the vector is
-    // sized to hold exactly "n" additional elements.  Returns false if the
+    // sized to request exactly "n" additional elements of capacity.  Because
+    // vector reserve is not guaranteed to reserve exactly "n" additional
+    // elements the capacity may be greater than "n". Returns false if the
     // current operation should be cancelled.
     template <class T>
     inline bool AddSpaceExact(T* v, int64_t n) {
@@ -385,8 +388,9 @@ inline bool S2MemoryTracker::Client::AddSpaceInternal(T* v, int64_t n) {
   // Note that reserve() allocates new storage before freeing the old storage.
   if (!Tally(new_capacity * sizeof((*v)[0]))) return false;
   v->reserve(new_capacity);
-  ABSL_DCHECK_EQ(v->capacity(), new_capacity);
-  return Tally(-old_capacity * sizeof((*v)[0]));
+  // Capacity may be greater than requested due to `size_returning_new`.
+  ABSL_DCHECK_GE(v->capacity(), new_capacity);
+  return Tally((v->capacity() - new_capacity - old_capacity) * sizeof((*v)[0]));
 }
 
 // Returns the number of bytes used by compact_array<T>.

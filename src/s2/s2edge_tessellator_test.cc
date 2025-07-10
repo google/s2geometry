@@ -446,8 +446,7 @@ static constexpr double kBestFraction = 0.31215691082248312;
 
 TEST(S2EdgeTessellator, MaxEdgeErrorPlateCarree) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MAX_EDGE_ERROR_PLATE_CARREE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MAX_EDGE_ERROR_PLATE_CARREE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2::PlateCarreeProjection proj(180);
   // Uncomment to test some nearby parameter values.
   // TestEdgeError(bitgen, proj, 0.311);
@@ -457,8 +456,7 @@ TEST(S2EdgeTessellator, MaxEdgeErrorPlateCarree) {
 
 TEST(S2EdgeTessellator, MaxEdgeErrorMercator) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "MAX_EDGE_ERROR_MERCATOR",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "MAX_EDGE_ERROR_MERCATOR", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2::MercatorProjection proj(180);
   // Uncomment to test some nearby parameter values.
   // TestEdgeError(bitgen, proj, 0.311);
@@ -487,8 +485,7 @@ void TestRandomEdges(absl::BitGenRef bitgen, const S2::Projection& proj,
 
 TEST(S2EdgeTessellator, RandomEdgesPlateCarree) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_EDGES_PLATE_CARREE",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_EDGES_PLATE_CARREE", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2::PlateCarreeProjection proj(180);
   S1Angle tolerance = S2Testing::MetersToAngle(100);
   TestRandomEdges(bitgen, proj, tolerance);
@@ -497,8 +494,7 @@ TEST(S2EdgeTessellator, RandomEdgesPlateCarree) {
 TEST(S2EdgeTessellator, RandomEdgesMercator) {
   // About 50% flaky.  b/210809122
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "RANDOM_EDGES_MERCATOR",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "RANDOM_EDGES_MERCATOR", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2::MercatorProjection proj(180);
   S1Angle tolerance = S2Testing::MetersToAngle(100);
   TestRandomEdges(bitgen, proj, tolerance);
@@ -507,8 +503,7 @@ TEST(S2EdgeTessellator, RandomEdgesMercator) {
 // TODO(ericv): Superseded by random edge tests above, remove?
 TEST(S2EdgeTessellator, UnprojectedAccuracyRandomCheck) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "UNPROJECTED_ACCURACY_RANDOM_CHECK",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "UNPROJECTED_ACCURACY_RANDOM_CHECK", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2::PlateCarreeProjection proj(180);
   S1Angle tolerance(S1Angle::Degrees(1e-3));
   constexpr int kIters = S2_DEBUG_MODE ? 250 : 5000;
@@ -526,8 +521,7 @@ TEST(S2EdgeTessellator, UnprojectedAccuracyRandomCheck) {
 // XXX(ericv): Superseded by random edge tests above, remove?
 TEST(S2EdgeTessellator, ProjectedAccuracyRandomCheck) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "PROJECTED_ACCURACY_RANDOM_CHECK",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "PROJECTED_ACCURACY_RANDOM_CHECK", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2::PlateCarreeProjection proj(180);
   S1Angle tolerance(S1Angle::Degrees(1e-3));
   constexpr int kIters = S2_DEBUG_MODE ? 250 : 5000;

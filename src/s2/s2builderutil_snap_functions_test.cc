@@ -44,7 +44,6 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/types.h"
 #include "s2/base/log_severity.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
@@ -91,8 +90,7 @@ TEST(S2CellIdSnapFunction, LevelToFromSnapRadius) {
 
 TEST(S2CellIdSnapFunction, SnapPoint) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "CELL_ID_SNAP_POINT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "CELL_ID_SNAP_POINT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
       // This checks that points are snapped to the correct level, since
@@ -123,8 +121,7 @@ TEST(IntLatLngSnapFunction, ExponentToFromSnapRadius) {
 
 TEST(IntLatLngSnapFunction, SnapPoint) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
-      "INT_LAT_LNG_SNAP_POINT",
-      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+      "INT_LAT_LNG_SNAP_POINT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     // Test that IntLatLngSnapFunction does not modify points that were
     // generated using the S2LatLng::From{E5,E6,E7} methods.  This ensures

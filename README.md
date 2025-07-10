@@ -18,8 +18,9 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 
 Note that all [releases](https://github.com/google/s2geometry/releases) are
 version 0.x, so there are
-[no API or ABI stability guarantees](https://semver.org/#spec-item-4).
-Starting with 1.0 we will adhere to [SemVer](https://semver.org/).
+[no API or ABI stability guarantees](https://semver.org/#spec-item-4). Starting
+with 1.0 we will adhere to [SemVer](https://semver.org/) and follow the
+[Google OSS breaking change policy](https://opensource.google/documentation/policies/library-breaking-change)
 
 The Python API is particularly unstable, and it is planned that the SWIGged
 API will be replaced by a pybind11 version with more Pythonic names and more
@@ -49,8 +50,12 @@ This issue may require revision of boringssl or exactfloat.
 
 ## Requirements for End Users using CMake
 
+*   We aim to support all platforms supported by the
+    [Google foundational C++ support policy](https://opensource.google/documentation/policies/cplusplus-support)
 *   [CMake](http://www.cmake.org/) >= 3.5
-*   A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
+*   A C++ compiler with C++17 support, such as
+    [g++ >= 7.5](https://gcc.gnu.org/) or
+    [clang >= 7.0.0](https://clang.llvm.org/)
 *   [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
     [`20240722`](https://github.com/abseil/abseil-cpp/releases/tag/20240722.0)
     (standard library extensions)
@@ -82,8 +87,6 @@ cmake -DGOOGLETEST_ROOT=/opt/local/src -DCMAKE_PREFIX_PATH=/opt/local ..
 ```
 
 in the build instructions below.
-
-Thorough testing has only been done on Ubuntu 14.04.3 and macOS 10.13.
 
 ## Build and Install
 

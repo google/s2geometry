@@ -19,6 +19,7 @@
 #define S2_THREAD_TESTING_H_
 
 #include "absl/synchronization/mutex.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
 namespace s2testing {
 
