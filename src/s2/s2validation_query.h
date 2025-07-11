@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+// Author: smcallis@google.com (Sean McAllister)
 
 #ifndef S2_S2VALIDATION_QUERY_H_
 #define S2_S2VALIDATION_QUERY_H_

@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+// Author: smcallis@google.com (Sean McAllister)
 #ifndef S2_S2CELL_ITERATOR_JOIN_H_
 #define S2_S2CELL_ITERATOR_JOIN_H_
 
