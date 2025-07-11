@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+// Author: smcallis@google.com (Sean McAllister)
 
 #include "s2/internal/s2index_cell_data.h"
 
