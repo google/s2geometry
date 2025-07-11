@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+// Author: smcallis@google.com (Sean McAllister)
 
 #ifndef S2_INTERNAL_S2DISJOINT_SET_H_
 #define S2_INTERNAL_S2DISJOINT_SET_H_
