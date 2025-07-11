@@ -57,7 +57,7 @@ This issue may require revision of boringssl or exactfloat.
     [g++ >= 7.5](https://gcc.gnu.org/) or
     [clang >= 7.0.0](https://clang.llvm.org/)
 *   [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
-    [`20240722`](https://github.com/abseil/abseil-cpp/releases/tag/20240722.0)
+    [`20250512`](https://github.com/abseil/abseil-cpp/releases/tag/20250512.1)
     (standard library extensions)
 *   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 *   [googletest testing framework >= 1.10](https://github.com/google/googletest)
@@ -117,8 +117,8 @@ First, [install Abseil](https://github.com/abseil/abseil-cpp/blob/master/CMake/R
 It must be configured with `-DCMAKE_POSITION_INDEPENDENT_CODE=ON`.
 s2geometry must be configured to use the same C++ version that
 abseil uses.  The easiest way to achieve this is to pass
-`-DCMAKE_CXX_STANDARD=14` (or `-DCMAKE_CXX_STANDARD=17`) to `cmake`
-when compiling both abseil and s2geometry.
+`-DCMAKE_CXX_STANDARD=17` to `cmake` when compiling both abseil and
+s2geometry.
 
 From the appropriate directory depending on how you got the source:
 
@@ -127,7 +127,7 @@ mkdir build
 cd build
 # You can omit -DGOOGLETEST_ROOT to skip tests; see above for macOS.
 # Use the same CMAKE_CXX_STANDARD value that was used with absl.
-cmake -DGOOGLETEST_ROOT=/usr/src/googletest -DCMAKE_PREFIX_PATH=/path/to/absl/install -DCMAKE_CXX_STANDARD=14 ..
+cmake -DGOOGLETEST_ROOT=/usr/src/googletest -DCMAKE_PREFIX_PATH=/path/to/absl/install -DCMAKE_CXX_STANDARD=17 ..
 make -j $(nproc)
 make test ARGS="-j$(nproc)"  # If GOOGLETEST_ROOT specified above.
 sudo make install
