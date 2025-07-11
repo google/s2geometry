@@ -31,10 +31,9 @@
 #include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/numeric/bits.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-
-#include "s2/base/port.h"
 
 using std::max;
 using std::min;
@@ -129,15 +128,16 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
 // Requires that BIGNUM fits into 64 bits.
 inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
   uint64_t r;
-#ifdef IS_LITTLE_ENDIAN
-  ABSL_CHECK_EQ(BN_bn2lebinpad(bn, reinterpret_cast<unsigned char*>(&r),
-                sizeof(r)), sizeof(r));
-#elif defined(IS_BIG_ENDIAN)
-  ABSL_CHECK_EQ(BN_bn2binpad(bn, reinterpret_cast<unsigned char*>(&r),
-                sizeof(r)), sizeof(r));
-#else
-#error one of IS_LITTLE_ENDIAN or IS_BIG_ENDIAN should be defined!
-#endif
+  static_assert(absl::endian::native == absl::endian::little ||
+                absl::endian::native == absl::endian::big,
+                "Unsupported endianness.");
+  if constexpr (absl::endian::native == absl::endian::little) {
+    ABSL_CHECK_EQ(BN_bn2lebinpad(bn, reinterpret_cast<unsigned char*>(&r),
+                  sizeof(r)), sizeof(r));
+  } else {
+    ABSL_CHECK_EQ(BN_bn2binpad(bn, reinterpret_cast<unsigned char*>(&r),
+                  sizeof(r)), sizeof(r));
+  }
   return r;
 }
 
