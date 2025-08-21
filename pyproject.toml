@@ -56,3 +56,5 @@ namespaces = false
 [tool.setuptools.package-dir]
 "" = "src"
 
+[tool.setuptools_scm]
+tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
