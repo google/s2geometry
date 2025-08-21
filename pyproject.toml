@@ -57,4 +57,6 @@ namespaces = false
 "" = "src"
 
 [tool.setuptools_scm]
+# The same as the default.  See #450.
+# https://setuptools-scm.readthedocs.io/en/latest/config/#setuptools_scm._config.DEFAULT_TAG_REGEX
 tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
