@@ -36,7 +36,7 @@ jobs:
       - uses: zacharyburnett/setup-abseil-cpp@713a4383f10b05948a6d9d4906056063c8da1168 # Not a release, but has #423 fix.
         with:
           cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
-          abseil-version: "20250512.1"
+          abseil-version: "20250814.1"
       - name: retrieve googletest v${{ env.GOOGLETEST_VERSION }}
         run: |
           wget https://github.com/google/googletest/releases/download/v${{ env.GOOGLETEST_VERSION }}/googletest-${{ env.GOOGLETEST_VERSION }}.tar.gz
