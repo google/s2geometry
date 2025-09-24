@@ -100,7 +100,7 @@
 #include <ostream>
 #include <string>
 
-#include "s2/util/math/exactfloat/bignum.h"
+#include "s2/util/math/exactfloat/exactfloat_internal.h"
 
 namespace exactfloat {
 
@@ -498,6 +498,8 @@ class ExactFloat {
   //  - sign_ is either +1 or -1
   //  - bn_ is a Bignum with a positive value
   //  - bn_exp_ is the base-2 exponent applied to bn_.
+  //
+  // Bignum supports negative values so that subtraction can be supported.
   int32_t sign_ = 1;
   int32_t bn_exp_ = kExpZero;
   Bignum bn_;

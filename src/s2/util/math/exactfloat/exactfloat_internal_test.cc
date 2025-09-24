@@ -13,22 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "s2/util/math/exactfloat/bignum.h"
+#include "s2/util/math/exactfloat/exactfloat_internal.h"
 
 #include <memory>
 #include <random>
 #include <string>
 #include <vector>
 
-#if 0
 #include "absl/base/no_destructor.h"
 #include "absl/strings/string_view.h"
 #include "benchmark/benchmark.h"
+#include "gtest/gtest.h"
 #include "openssl/bn.h"
 #include "openssl/crypto.h"
-#endif
-
-#include "gtest/gtest.h"
 
 const uint64_t u8max = std::numeric_limits<uint8_t>::max();
 const uint64_t u16max = std::numeric_limits<uint16_t>::max();
@@ -111,18 +108,16 @@ TEST(BignumTest, SignInWrongPlaceCausesFailure) {
   EXPECT_EQ(Bn("+314-"), std::nullopt);
 }
 
-TEST(BignumTest, ZeroAlwaysCompatible) {
+TEST(BignumTest, ZeroAlwaysFitsIn) {
   const Bignum zero(0);
-  EXPECT_TRUE(zero.Compatible<int8_t>());
-  EXPECT_TRUE(zero.Compatible<uint8_t>());
-  EXPECT_TRUE(zero.Compatible<int16_t>());
-  EXPECT_TRUE(zero.Compatible<uint16_t>());
-  EXPECT_TRUE(zero.Compatible<int32_t>());
-  EXPECT_TRUE(zero.Compatible<uint32_t>());
-  EXPECT_TRUE(zero.Compatible<int64_t>());
-  EXPECT_TRUE(zero.Compatible<uint64_t>());
-  EXPECT_TRUE(zero.Compatible<absl::int128>());
-  EXPECT_TRUE(zero.Compatible<absl::uint128>());
+  EXPECT_TRUE(zero.FitsIn<int8_t>());
+  EXPECT_TRUE(zero.FitsIn<uint8_t>());
+  EXPECT_TRUE(zero.FitsIn<int16_t>());
+  EXPECT_TRUE(zero.FitsIn<uint16_t>());
+  EXPECT_TRUE(zero.FitsIn<int32_t>());
+  EXPECT_TRUE(zero.FitsIn<uint32_t>());
+  EXPECT_TRUE(zero.FitsIn<int64_t>());
+  EXPECT_TRUE(zero.FitsIn<uint64_t>());
 }
 
 TEST(BignumTest, ZeroAlwaysCastsToZero) {
@@ -137,175 +132,141 @@ TEST(BignumTest, ZeroAlwaysCastsToZero) {
   EXPECT_EQ(zero.Cast<uint64_t>(), 0);
 }
 
-TEST(BignumTest, NegativeOnlyCompatibleSigned) {
+TEST(BignumTest, NegativeOnlyFitsInSigned) {
   const Bignum small_neg(-1);
-  EXPECT_FALSE(small_neg.Compatible<uint8_t>());
-  EXPECT_FALSE(small_neg.Compatible<uint16_t>());
-  EXPECT_FALSE(small_neg.Compatible<uint32_t>());
-  EXPECT_FALSE(small_neg.Compatible<uint64_t>());
-  EXPECT_FALSE(small_neg.Compatible<absl::uint128>());
+  EXPECT_FALSE(small_neg.FitsIn<uint8_t>());
+  EXPECT_FALSE(small_neg.FitsIn<uint16_t>());
+  EXPECT_FALSE(small_neg.FitsIn<uint32_t>());
+  EXPECT_FALSE(small_neg.FitsIn<uint64_t>());
 
-  EXPECT_TRUE(small_neg.Compatible<int8_t>());
-  EXPECT_TRUE(small_neg.Compatible<int16_t>());
-  EXPECT_TRUE(small_neg.Compatible<int32_t>());
-  EXPECT_TRUE(small_neg.Compatible<int64_t>());
-  EXPECT_TRUE(small_neg.Compatible<absl::int128>());
+  EXPECT_TRUE(small_neg.FitsIn<int8_t>());
+  EXPECT_TRUE(small_neg.FitsIn<int16_t>());
+  EXPECT_TRUE(small_neg.FitsIn<int32_t>());
+  EXPECT_TRUE(small_neg.FitsIn<int64_t>());
 }
 
-TEST(BignumTest, CompatibleUnsignedBoundsChecks) {
+TEST(BignumTest, FitsInUnsignedBoundsChecks) {
   const Bignum bn_u8max(u8max);
   const Bignum bn_u8over(u8max + 1);
-  EXPECT_TRUE(bn_u8max.Compatible<uint8_t>());
-  EXPECT_TRUE(bn_u8max.Compatible<uint16_t>());
-  EXPECT_TRUE(bn_u8max.Compatible<uint32_t>());
-  EXPECT_FALSE(bn_u8over.Compatible<uint8_t>());
-  EXPECT_TRUE(bn_u8over.Compatible<uint16_t>());
-  EXPECT_TRUE(bn_u8over.Compatible<uint32_t>());
+  EXPECT_TRUE(bn_u8max.FitsIn<uint8_t>());
+  EXPECT_TRUE(bn_u8max.FitsIn<uint16_t>());
+  EXPECT_TRUE(bn_u8max.FitsIn<uint32_t>());
+  EXPECT_FALSE(bn_u8over.FitsIn<uint8_t>());
+  EXPECT_TRUE(bn_u8over.FitsIn<uint16_t>());
+  EXPECT_TRUE(bn_u8over.FitsIn<uint32_t>());
 
   const Bignum bn_u16max(u16max);
   const Bignum bn_u16over(u16max + 1);
-  EXPECT_FALSE(bn_u16max.Compatible<uint8_t>());
-  EXPECT_TRUE(bn_u16max.Compatible<uint16_t>());
-  EXPECT_TRUE(bn_u16max.Compatible<uint32_t>());
-  EXPECT_FALSE(bn_u16over.Compatible<uint8_t>());
-  EXPECT_FALSE(bn_u16over.Compatible<uint16_t>());
-  EXPECT_TRUE(bn_u16over.Compatible<uint32_t>());
+  EXPECT_FALSE(bn_u16max.FitsIn<uint8_t>());
+  EXPECT_TRUE(bn_u16max.FitsIn<uint16_t>());
+  EXPECT_TRUE(bn_u16max.FitsIn<uint32_t>());
+  EXPECT_FALSE(bn_u16over.FitsIn<uint8_t>());
+  EXPECT_FALSE(bn_u16over.FitsIn<uint16_t>());
+  EXPECT_TRUE(bn_u16over.FitsIn<uint32_t>());
 
   const Bignum bn_u32max(u32max);
   const Bignum bn_u32over(u32max + 1);
-  EXPECT_FALSE(bn_u32max.Compatible<uint8_t>());
-  EXPECT_FALSE(bn_u32max.Compatible<uint16_t>());
-  EXPECT_TRUE(bn_u32max.Compatible<uint32_t>());
-  EXPECT_FALSE(bn_u32over.Compatible<uint8_t>());
-  EXPECT_FALSE(bn_u32over.Compatible<uint16_t>());
-  EXPECT_FALSE(bn_u32over.Compatible<uint32_t>());
+  EXPECT_FALSE(bn_u32max.FitsIn<uint8_t>());
+  EXPECT_FALSE(bn_u32max.FitsIn<uint16_t>());
+  EXPECT_TRUE(bn_u32max.FitsIn<uint32_t>());
+  EXPECT_FALSE(bn_u32over.FitsIn<uint8_t>());
+  EXPECT_FALSE(bn_u32over.FitsIn<uint16_t>());
+  EXPECT_FALSE(bn_u32over.FitsIn<uint32_t>());
 
   const Bignum bn_u64max(u64max);
-  EXPECT_TRUE(bn_u64max.Compatible<uint64_t>());
+  EXPECT_TRUE(bn_u64max.FitsIn<uint64_t>());
 
   // 2^64, need to use string constructor.
   Bignum bn0 = *Bn("18446744073709551616");
-  EXPECT_FALSE(bn0.Compatible<uint64_t>());
-  EXPECT_TRUE(bn0.Compatible<absl::uint128>());
-
-  // (2^128 - 1) fits in absl::uint128.
-  Bignum bn1 = *Bn("340282366920938463463374607431768211455");
-  EXPECT_TRUE(bn1.Compatible<absl::uint128>());
-
-  // 2^128 does not fit in absl::uint128.
-  Bignum bn2 = *Bn("340282366920938463463374607431768211456");
-  EXPECT_FALSE(bn2.Compatible<absl::uint128>());
+  EXPECT_FALSE(bn0.FitsIn<uint64_t>());
 }
 
-TEST(BignumTest, CompatibleSignedBoundsChecks) {
+TEST(BignumTest, FitsInSignedBoundsChecks) {
   const Bignum bn_i8max(i8max);
   const Bignum bn_i8over(i8max + 1);
-  EXPECT_TRUE(bn_i8max.Compatible<int8_t>());
-  EXPECT_TRUE(bn_i8max.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i8max.Compatible<int32_t>());
-  EXPECT_FALSE(bn_i8over.Compatible<int8_t>());
-  EXPECT_TRUE(bn_i8over.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i8over.Compatible<int32_t>());
+  EXPECT_TRUE(bn_i8max.FitsIn<int8_t>());
+  EXPECT_TRUE(bn_i8max.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i8max.FitsIn<int32_t>());
+  EXPECT_FALSE(bn_i8over.FitsIn<int8_t>());
+  EXPECT_TRUE(bn_i8over.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i8over.FitsIn<int32_t>());
 
   const Bignum bn_i16max(i16max);
   const Bignum bn_i16over(i16max + 1);
-  EXPECT_FALSE(bn_i16max.Compatible<int8_t>());
-  EXPECT_TRUE(bn_i16max.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i16max.Compatible<int32_t>());
-  EXPECT_FALSE(bn_i16over.Compatible<int8_t>());
-  EXPECT_FALSE(bn_i16over.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i16over.Compatible<int32_t>());
+  EXPECT_FALSE(bn_i16max.FitsIn<int8_t>());
+  EXPECT_TRUE(bn_i16max.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i16max.FitsIn<int32_t>());
+  EXPECT_FALSE(bn_i16over.FitsIn<int8_t>());
+  EXPECT_FALSE(bn_i16over.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i16over.FitsIn<int32_t>());
 
   const Bignum bn_i32max(i32max);
   const Bignum bn_i32over(i32max + 1);
-  EXPECT_FALSE(bn_i32max.Compatible<int8_t>());
-  EXPECT_FALSE(bn_i32max.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i32max.Compatible<int32_t>());
-  EXPECT_FALSE(bn_i32over.Compatible<int8_t>());
-  EXPECT_FALSE(bn_i32over.Compatible<int16_t>());
-  EXPECT_FALSE(bn_i32over.Compatible<int32_t>());
+  EXPECT_FALSE(bn_i32max.FitsIn<int8_t>());
+  EXPECT_FALSE(bn_i32max.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i32max.FitsIn<int32_t>());
+  EXPECT_FALSE(bn_i32over.FitsIn<int8_t>());
+  EXPECT_FALSE(bn_i32over.FitsIn<int16_t>());
+  EXPECT_FALSE(bn_i32over.FitsIn<int32_t>());
 
   Bignum bn_i64max(i64max);
-  EXPECT_TRUE(bn_i64max.Compatible<int64_t>());
+  EXPECT_TRUE(bn_i64max.FitsIn<int64_t>());
 
   // 2^63, need to use string constructor.
   Bignum bn0 = *Bn("9223372036854775808");
-  EXPECT_FALSE(bn0.Compatible<int64_t>());
+  EXPECT_FALSE(bn0.FitsIn<int64_t>());
 
   const Bignum bn_i8min(i8min);
   const Bignum bn_i8under(i8min - 1);
-  EXPECT_TRUE(bn_i8min.Compatible<int8_t>());
-  EXPECT_TRUE(bn_i8min.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i8min.Compatible<int32_t>());
-  EXPECT_FALSE(bn_i8under.Compatible<int8_t>());
-  EXPECT_TRUE(bn_i8under.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i8under.Compatible<int32_t>());
+  EXPECT_TRUE(bn_i8min.FitsIn<int8_t>());
+  EXPECT_TRUE(bn_i8min.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i8min.FitsIn<int32_t>());
+  EXPECT_FALSE(bn_i8under.FitsIn<int8_t>());
+  EXPECT_TRUE(bn_i8under.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i8under.FitsIn<int32_t>());
 
   const Bignum bn_i16min(i16min);
   const Bignum bn_i16under(i16min - 1);
-  EXPECT_FALSE(bn_i16min.Compatible<int8_t>());
-  EXPECT_TRUE(bn_i16min.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i16min.Compatible<int32_t>());
-  EXPECT_FALSE(bn_i16under.Compatible<int8_t>());
-  EXPECT_FALSE(bn_i16under.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i16under.Compatible<int32_t>());
+  EXPECT_FALSE(bn_i16min.FitsIn<int8_t>());
+  EXPECT_TRUE(bn_i16min.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i16min.FitsIn<int32_t>());
+  EXPECT_FALSE(bn_i16under.FitsIn<int8_t>());
+  EXPECT_FALSE(bn_i16under.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i16under.FitsIn<int32_t>());
 
   const Bignum bn_i32min(i32min);
   const Bignum bn_i32under(i32min - 1);
-  EXPECT_FALSE(bn_i32min.Compatible<int8_t>());
-  EXPECT_FALSE(bn_i32min.Compatible<int16_t>());
-  EXPECT_TRUE(bn_i32min.Compatible<int32_t>());
-  EXPECT_FALSE(bn_i32under.Compatible<int8_t>());
-  EXPECT_FALSE(bn_i32under.Compatible<int16_t>());
-  EXPECT_FALSE(bn_i32under.Compatible<int32_t>());
+  EXPECT_FALSE(bn_i32min.FitsIn<int8_t>());
+  EXPECT_FALSE(bn_i32min.FitsIn<int16_t>());
+  EXPECT_TRUE(bn_i32min.FitsIn<int32_t>());
+  EXPECT_FALSE(bn_i32under.FitsIn<int8_t>());
+  EXPECT_FALSE(bn_i32under.FitsIn<int16_t>());
+  EXPECT_FALSE(bn_i32under.FitsIn<int32_t>());
 
   Bignum bn_i64min(i64min);
-  EXPECT_TRUE(bn_i64min.Compatible<int64_t>());
-
-  // -(2^63) - 1 doesn't fit in int64_t.
-  Bignum b0 = *Bn("-9223372036854775809");
-  EXPECT_FALSE(b0.Compatible<int64_t>());
-
-  // Exact min and max of signed 128.
-  Bignum bn_s128min = *Bn("-170141183460469231731687303715884105728");
-  Bignum bn_s128max = *Bn("170141183460469231731687303715884105727");
-  EXPECT_TRUE(bn_s128min.Compatible<absl::int128>());
-  EXPECT_TRUE(bn_s128max.Compatible<absl::int128>());
-
-  // +2^127 does not fit in signed 128, but does in unsigned 128.
-  Bignum bn1 = *Bn("170141183460469231731687303715884105728");
-  EXPECT_FALSE(bn1.Compatible<absl::int128>());
-  EXPECT_TRUE(bn1.Compatible<absl::uint128>());
-
-  // Below min: -(2^127) - 1 should not fit.
-  Bignum bn2 = *Bn("-170141183460469231731687303715884105729");
-  EXPECT_FALSE(bn2.Compatible<absl::int128>());
+  EXPECT_TRUE(bn_i64min.FitsIn<int64_t>());
 }
 
-TEST(BignumTest, CompatibleBasicSanityChecks) {
+TEST(BignumTest, FitsInBasicSanityChecks) {
   Bignum pos42(42);
-  EXPECT_TRUE(pos42.Compatible<int8_t>());
-  EXPECT_TRUE(pos42.Compatible<uint8_t>());
-  EXPECT_TRUE(pos42.Compatible<int16_t>());
-  EXPECT_TRUE(pos42.Compatible<uint16_t>());
-  EXPECT_TRUE(pos42.Compatible<int32_t>());
-  EXPECT_TRUE(pos42.Compatible<uint32_t>());
-  EXPECT_TRUE(pos42.Compatible<int64_t>());
-  EXPECT_TRUE(pos42.Compatible<uint64_t>());
-  EXPECT_TRUE(pos42.Compatible<absl::int128>());
-  EXPECT_TRUE(pos42.Compatible<absl::uint128>());
+  EXPECT_TRUE(pos42.FitsIn<int8_t>());
+  EXPECT_TRUE(pos42.FitsIn<uint8_t>());
+  EXPECT_TRUE(pos42.FitsIn<int16_t>());
+  EXPECT_TRUE(pos42.FitsIn<uint16_t>());
+  EXPECT_TRUE(pos42.FitsIn<int32_t>());
+  EXPECT_TRUE(pos42.FitsIn<uint32_t>());
+  EXPECT_TRUE(pos42.FitsIn<int64_t>());
+  EXPECT_TRUE(pos42.FitsIn<uint64_t>());
 
   Bignum neg42(-42);
-  EXPECT_TRUE(neg42.Compatible<int8_t>());
-  EXPECT_FALSE(neg42.Compatible<uint8_t>());
-  EXPECT_TRUE(neg42.Compatible<int16_t>());
-  EXPECT_FALSE(neg42.Compatible<uint16_t>());
-  EXPECT_TRUE(neg42.Compatible<int32_t>());
-  EXPECT_FALSE(neg42.Compatible<uint32_t>());
-  EXPECT_TRUE(neg42.Compatible<int64_t>());
-  EXPECT_FALSE(neg42.Compatible<uint64_t>());
-  EXPECT_TRUE(neg42.Compatible<absl::int128>());
-  EXPECT_FALSE(neg42.Compatible<absl::uint128>());
+  EXPECT_TRUE(neg42.FitsIn<int8_t>());
+  EXPECT_FALSE(neg42.FitsIn<uint8_t>());
+  EXPECT_TRUE(neg42.FitsIn<int16_t>());
+  EXPECT_FALSE(neg42.FitsIn<uint16_t>());
+  EXPECT_TRUE(neg42.FitsIn<int32_t>());
+  EXPECT_FALSE(neg42.FitsIn<uint32_t>());
+  EXPECT_TRUE(neg42.FitsIn<int64_t>());
+  EXPECT_FALSE(neg42.FitsIn<uint64_t>());
 }
 
 TEST(BignumTest, UnsignedCasting) {
@@ -371,42 +332,6 @@ TEST(BignumTest, CastingLargeResidues) {
   Bignum bn1 = *Bn("-1208925819614629174706177");
   EXPECT_EQ(bn1.Cast<uint64_t>(), std::numeric_limits<uint64_t>::max());
   EXPECT_EQ(bn1.Cast<int64_t>(), -1);
-}
-
-TEST(BignumTest, AbslUint128Casting) {
-  Bignum neg1(-1);
-  EXPECT_EQ(neg1.Cast<absl::uint128>(), ~absl::uint128(0));
-
-  // 2^128 -> low 128 bits == 0
-  Bignum bn1 = *Bn("340282366920938463463374607431768211456");
-  EXPECT_EQ(bn1.Cast<absl::uint128>(), absl::uint128(0));
-
-  // 2^200 + 5 -> low 128 bits == 5
-  Bignum bn2 =
-      *Bn("1606938044258990275541962092341162602522202993782792835301381");
-  EXPECT_EQ(bn2.Cast<absl::uint128>(), absl::uint128(5));
-}
-
-TEST(BignumTest, AbslInt128Casting) {
-  const absl::int128 two127 = absl::int128(1) << 127;
-
-  // +2^127 -> wraps to -2^127
-  Bignum bn0 = *Bn("170141183460469231731687303715884105728");
-  EXPECT_EQ(bn0.Cast<absl::int128>(), 0 - two127);
-
-  // -(2^127) - 1 -> wraps to +2^127 - 1
-  Bignum bn1 = *Bn("-170141183460469231731687303715884105729");
-  EXPECT_EQ(bn1.Cast<absl::int128>(), two127 - 1);
-
-  // 2^200 + 5 -> low 128 bits == 5
-  Bignum bn2 =
-      *Bn("1606938044258990275541962092341162602522202993782792835301381");
-  EXPECT_EQ(bn2.Cast<absl::int128>(), absl::int128(5));
-
-  // -(2^200 + 5) -> low 128 bits == -5
-  Bignum bn3 =
-      *Bn("-1606938044258990275541962092341162602522202993782792835301381");
-  EXPECT_EQ(bn3.Cast<absl::int128>(), absl::int128(-5));
 }
 
 TEST(BignumTest, UnaryOperators) {
@@ -610,24 +535,24 @@ TEST(BignumTest, Multiplication) {
 }
 
 TEST(BignumTest, CountrZero) {
-  EXPECT_EQ(Bignum(0).CountrZero(), 0);
-  EXPECT_EQ(Bignum(1).CountrZero(), 0);
-  EXPECT_EQ(Bignum(7).CountrZero(), 0);
-  EXPECT_EQ(Bignum(-7).CountrZero(), 0);
+  EXPECT_EQ(countr_zero(Bignum(0)), 0);
+  EXPECT_EQ(countr_zero(Bignum(1)), 0);
+  EXPECT_EQ(countr_zero(Bignum(7)), 0);
+  EXPECT_EQ(countr_zero(Bignum(-7)), 0);
 
-  EXPECT_EQ(Bignum(2).CountrZero(), 1);
-  EXPECT_EQ(Bignum(8).CountrZero(), 3);
-  EXPECT_EQ(Bignum(10).CountrZero(), 1);  // 0b1010
-  EXPECT_EQ(Bignum(12).CountrZero(), 2);  // 0b1100
+  EXPECT_EQ(countr_zero(Bignum(2)), 1);
+  EXPECT_EQ(countr_zero(Bignum(8)), 3);
+  EXPECT_EQ(countr_zero(Bignum(10)), 1);  // 0b1010
+  EXPECT_EQ(countr_zero(Bignum(12)), 2);  // 0b1100
 
   auto two_pow_64 = Bignum(1) << 64;
-  EXPECT_EQ(two_pow_64.CountrZero(), 64);
+  EXPECT_EQ(countr_zero(two_pow_64), 64);
 
   auto large_shifted = Bignum(6) << 100;  // 0b110 << 100
-  EXPECT_EQ(large_shifted.CountrZero(), 101);
+  EXPECT_EQ(countr_zero(large_shifted), 101);
 
   auto neg_large_shifted = Bignum(-5) << 200;
-  EXPECT_EQ(neg_large_shifted.CountrZero(), 200);
+  EXPECT_EQ(countr_zero(neg_large_shifted), 200);
 }
 
 TEST(BignumTest, Bit) {
@@ -691,7 +616,7 @@ TEST(BignumTest, Pow) {
 TEST(BignumTest, SetZero) {
   Bignum a(123);
   a.SetZero();
-  EXPECT_TRUE(a.zero());
+  EXPECT_TRUE(a.is_zero());
 
   Bignum b(-456);
   b.SetZero();
@@ -718,7 +643,7 @@ TEST(BignumTest, SetSign) {
   EXPECT_EQ(a, Bignum(99));
 
   a.SetSign(0);
-  EXPECT_TRUE(a.zero());
+  EXPECT_TRUE(a.is_zero());
 }
 
 TEST(BignumTest, Comparisons) {
@@ -772,9 +697,6 @@ TEST(BignumTest, Comparisons) {
   EXPECT_LE(Bignum(0), Bignum(0));
   EXPECT_GE(Bignum(0), Bignum(0));
 }
-
-// TODO: Enable once benchmark is integrated.
-#if 0
 
 // RAII wrapper for OpenSSL BIGNUM
 class OpenSSLBignum {
@@ -849,7 +771,7 @@ static std::vector<std::string> GenerateRandomNumbers(int bits) {
 }
 
 // Basic correctness test to ensure OpenSSL integration is working
-TEST(BignumTestBenchmarkTest, OpenSSLIntegration) {
+TEST(BignumTest, OpenSSLIntegration) {
   OpenSSLBignum a(123);
   OpenSSLBignum b(456);
   OpenSSLBignum result;
@@ -861,7 +783,7 @@ TEST(BignumTestBenchmarkTest, OpenSSLIntegration) {
   OPENSSL_free(str);
 }
 
-TEST(BignumTestBenchmarkTest, ResultsMatch) {
+TEST(BignumTest, ResultsMatch) {
   // Test that and OpenSSL produce the same results
   const Bignum w_a(12345);
   const Bignum w_b(67890);
@@ -908,6 +830,38 @@ const std::vector<std::string>& MegaNumbers() {
       GenerateRandomNumbers(18000));
   return *numbers;
 }
+
+TEST(BignumTest, MultiplyCorrectVsOpenSSL) {
+  // Test that multiplication produces correct results by comparing to OpenSSL.
+  BN_CTX* ctx = BN_CTX_new();
+  for (const auto& numbers : {SmallNumbers(), MediumNumbers(), LargeNumbers(),
+                              HugeNumbers(), MediumNumbers()}) {
+    for (const auto& number : numbers) {
+      // Test same number multiplication (most likely to trigger edge cases)
+      const Bignum bn_a = *Bignum::FromString(number);
+      const Bignum bn_result = bn_a * bn_a;
+
+      const OpenSSLBignum ssl_a(number);
+      OpenSSLBignum ssl_result;
+      BN_mul(ssl_result.get(), ssl_a.get(), ssl_a.get(), ctx);
+
+      // Compare string representations
+      char* ssl_str = BN_bn2dec(ssl_result.get());
+      std::string bn_str = absl::StrFormat("%v", bn_result);
+
+      EXPECT_EQ(bn_str, std::string(ssl_str))
+          << "Mismatch for multiplication"
+          << "\nBignum result: " << bn_str.substr(0, 100) << "..."
+          << "\nOpenSSL result: " << std::string(ssl_str).substr(0, 100)
+          << "...";
+      OPENSSL_free(ssl_str);
+    }
+  }
+  BN_CTX_free(ctx);
+}
+
+// TODO: Enable once benchmark is integrated.
+#if 0
 
 template <typename BinaryOp>
 void BignumBinaryOpBenchmark(benchmark::State& state,

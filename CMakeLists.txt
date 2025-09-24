@@ -211,6 +211,7 @@ add_library(s2
             src/s2/util/coding/coder.cc
             src/s2/util/coding/varint.cc
             src/s2/util/math/exactfloat/exactfloat.cc
+            src/s2/util/math/exactfloat/exactfloat_internal.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
 
@@ -222,6 +223,7 @@ if (GOOGLETEST_ROOT)
               src/s2/s2testing.cc
               src/s2/thread_testing.cc)
 endif()
+
 
 target_link_libraries(
     s2
@@ -434,6 +436,8 @@ if(S2_ENABLE_INSTALL)
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/testing")
   install(FILES src/s2/util/bitmap/bitmap.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bitmap")
+  install(FILES src/s2/util/bits/bits.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bits")
   install(FILES src/s2/util/coding/coder.h
                 src/s2/util/coding/varint.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/coding")
@@ -454,6 +458,7 @@ if(S2_ENABLE_INSTALL)
                 src/s2/util/math/vector.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math")
   install(FILES src/s2/util/math/exactfloat/exactfloat.h
+                src/s2/util/math/exactfloat/exactfloat_internal.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math/exactfloat")
   install(FILES src/s2/util/units/length-units.h
                 src/s2/util/units/physical-units.h
@@ -483,6 +488,8 @@ if(S2_ENABLE_INSTALL)
 endif() # S2_ENABLE_INSTALL
 
 if (BUILD_TESTS)
+  add_library(test_main "src/s2/test_main.cc")
+
   if (NOT GOOGLETEST_ROOT)
     message(FATAL_ERROR "BUILD_TESTS requires GOOGLETEST_ROOT")
   endif()
@@ -608,7 +615,7 @@ if (BUILD_TESTS)
       src/s2/s2shapeutil_shape_edge_id_test.cc
       src/s2/s2shapeutil_visit_crossing_edge_pairs_test.cc
       src/s2/s2text_format_test.cc
-      src/s2/util/math/exactfloat/bignum_test.cc
+      src/s2/util/math/exactfloat/exactfloat_internal_test.cc
       src/s2/s2validation_query_test.cc
       src/s2/s2wedge_relations_test.cc
       src/s2/s2winding_operation_test.cc
@@ -626,6 +633,9 @@ if (BUILD_TESTS)
     target_link_libraries(
         ${test}
         s2testing s2
+        test_main
+        benchmark
+        profiler
         absl::base
         absl::btree
         absl::check
