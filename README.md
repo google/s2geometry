@@ -59,7 +59,6 @@ This issue may require revision of boringssl or exactfloat.
 *   [Abseil](https://github.com/abseil/abseil-cpp) LTS
     [`20250814`](https://github.com/abseil/abseil-cpp/releases/tag/20250814.1)
     (standard library extensions). This exact version must be used.
-*   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 *   [googletest testing framework >= 1.10](https://github.com/google/googletest)
     (to build tests and example programs, optional)
 
@@ -139,11 +138,6 @@ Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
 Enable the python interface with `-DWITH_PYTHON=ON`.
 
-If OpenSSL is installed in a non-standard location set `OPENSSL_ROOT_DIR`
-before running configure, for example on macOS:
-```
-OPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@3/3.1.0 cmake -DCMAKE_PREFIX_PATH=/opt/homebrew -DCMAKE_CXX_STANDARD=17
-```
 
 ## Installing
 
@@ -218,8 +212,6 @@ python -m build
 
 The resulting wheel will be in the `dist` directory.
 
-> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR`; 
-> see above for more information.
 
 ## Other S2 implementations
 

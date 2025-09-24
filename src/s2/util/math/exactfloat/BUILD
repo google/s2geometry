@@ -5,11 +5,19 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "exactfloat",
     srcs = ["exactfloat.cc"],
-    hdrs = ["exactfloat.h"],
+    hdrs = [
+        "bignum.h",
+        "exactfloat.h",
+    ],
     deps = [
         "//s2/base:logging",
+        "@abseil-cpp//absl/container:inlined_vector",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/log:log",
+        "@abseil-cpp//absl/numeric:bits",
+        "@abseil-cpp//absl/numeric:int128",
+        "@abseil-cpp//absl/strings:ascii",
+        "@abseil-cpp//absl/strings:str_format",
     ] + select({
         "//:use_openssl_setting": ["@openssl//:crypto"],
         "//conditions:default": ["@boringssl//:crypto"],

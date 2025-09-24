@@ -60,7 +60,6 @@ add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 if (NOT TARGET absl::base)
     find_package(absl REQUIRED)
 endif()
-find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 
@@ -99,10 +98,6 @@ else()
     add_compile_options(-fsized-deallocation)
 endif()
 
-# If OpenSSL is installed in a non-standard location, configure with
-# something like:
-# OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
-include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
     include_directories(${Python3_INCLUDE_DIRS})
@@ -230,7 +225,6 @@ endif()
 
 target_link_libraries(
     s2
-    ${OPENSSL_LIBRARIES}
     absl::absl_vlog_is_on
     absl::base
     absl::btree
@@ -614,6 +608,7 @@ if (BUILD_TESTS)
       src/s2/s2shapeutil_shape_edge_id_test.cc
       src/s2/s2shapeutil_visit_crossing_edge_pairs_test.cc
       src/s2/s2text_format_test.cc
+      src/s2/util/math/exactfloat/bignum_test.cc
       src/s2/s2validation_query_test.cc
       src/s2/s2wedge_relations_test.cc
       src/s2/s2winding_operation_test.cc
@@ -644,7 +639,8 @@ if (BUILD_TESTS)
         absl::status
         absl::strings
         absl::synchronization
-        gmock_main)
+        gmock_main
+        crypto)
     add_test(${test} ${test})
   endforeach()
 endif()
