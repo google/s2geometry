@@ -265,7 +265,7 @@ TEST(S2, MaxDistance) {
 }
 
 // Chooses a random S2Point that is often near the intersection of one of the
-// coordinates planes or coordinate axes with the unit sphere.  (It is possible
+// coordinate planes or coordinate axes with the unit sphere.  (It is possible
 // to represent very small perturbations near such points.)
 S2Point ChoosePoint(absl::BitGenRef bitgen) {
   S2Point x = s2random::Point(bitgen);

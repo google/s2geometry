@@ -123,8 +123,7 @@ S2Polygon::S2Polygon(unique_ptr<S2Loop> loop, S2Debug override)
   Init(std::move(loop));
 }
 
-S2Polygon::S2Polygon(const S2Cell& cell)
-    : s2debug_override_(S2Debug::ALLOW) {
+S2Polygon::S2Polygon(const S2Cell& cell) : s2debug_override_(S2Debug::ALLOW) {
   Init(make_unique<S2Loop>(cell));
 }
 
@@ -172,13 +171,17 @@ S2Polygon& S2Polygon::operator=(S2Polygon&& b) noexcept {
   return *this;
 }
 
+S2Polygon S2Polygon::MakeFull() {
+  S2Polygon polygon;
+  polygon.Init(make_unique<S2Loop>(S2Loop::kFull()));
+  return polygon;
+}
+
 void S2Polygon::set_s2debug_override(S2Debug override) {
   s2debug_override_ = override;
 }
 
-S2Debug S2Polygon::s2debug_override() const {
-  return s2debug_override_;
-}
+S2Debug S2Polygon::s2debug_override() const { return s2debug_override_; }
 
 void S2Polygon::Copy(const S2Polygon& src) {
   ClearLoops();
@@ -218,9 +221,7 @@ void S2Polygon::ClearLoops() {
   error_inconsistent_loop_orientations_ = false;
 }
 
-S2Polygon::~S2Polygon() {
-  ClearLoops();
-}
+S2Polygon::~S2Polygon() { ClearLoops(); }
 
 bool S2Polygon::IsValid() const {
   S2Error error;
@@ -283,7 +284,7 @@ void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
   // Find most nested containing loop.  `children` is where we need to
   // add `new_loop`.
   vector<S2Loop*>* children;
-  for (bool done = false; !done; ) {
+  for (bool done = false; !done;) {
     children = &(*loop_map)[parent];
     done = true;
     for (S2Loop* child : *children) {
@@ -642,11 +643,9 @@ bool S2Polygon::Intersects(const S2Polygon& b) const {
   return S2BooleanOperation::Intersects(index_, b.index_);
 }
 
-S2Cap S2Polygon::GetCapBound() const {
-  return bound_.GetCapBound();
-}
+S2Cap S2Polygon::GetCapBound() const { return bound_.GetCapBound(); }
 
-void S2Polygon::GetCellUnionBound(vector<S2CellId> *cell_ids) const {
+void S2Polygon::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
   return MakeS2ShapeIndexRegion(&index_).GetCellUnionBound(cell_ids);
 }
 
@@ -920,8 +919,7 @@ bool S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
                                 S2Error* error) {
   S2BooleanOperation::Options options;
   options.set_snap_function(snap_function);
-  S2BooleanOperation op(op_type, make_unique<S2PolygonLayer>(this),
-                         options);
+  S2BooleanOperation op(op_type, make_unique<S2PolygonLayer>(this), options);
   return op.Build(a.index_, b.index_, error);
 }
 
@@ -946,14 +944,14 @@ void S2Polygon::InitToIntersection(
     InitNested({});
     return;
   }
-  InitToOperation(S2BooleanOperation::OpType::INTERSECTION,
-                  snap_function, a, b);
+  InitToOperation(S2BooleanOperation::OpType::INTERSECTION, snap_function, a,
+                  b);
 }
 
-bool S2Polygon::InitToIntersection(
-    const S2Polygon& a, const S2Polygon& b,
-    const S2Builder::SnapFunction& snap_function, S2Error* error) {
-  if (!a.bound_.Intersects(b.bound_))  {
+bool S2Polygon::InitToIntersection(const S2Polygon& a, const S2Polygon& b,
+                                   const S2Builder::SnapFunction& snap_function,
+                                   S2Error* error) {
+  if (!a.bound_.Intersects(b.bound_)) {
     InitNested({});
     return true;  // Success.
   }
@@ -965,34 +963,32 @@ void S2Polygon::InitToUnion(const S2Polygon& a, const S2Polygon& b) {
   InitToUnion(a, b, IdentitySnapFunction(S2::kIntersectionMergeRadius));
 }
 
-void S2Polygon::InitToUnion(
-    const S2Polygon& a, const S2Polygon& b,
-    const S2Builder::SnapFunction& snap_function) {
+void S2Polygon::InitToUnion(const S2Polygon& a, const S2Polygon& b,
+                            const S2Builder::SnapFunction& snap_function) {
   InitToOperation(S2BooleanOperation::OpType::UNION, snap_function, a, b);
 }
 
-bool S2Polygon::InitToUnion(
-    const S2Polygon& a, const S2Polygon& b,
-    const S2Builder::SnapFunction& snap_function, S2Error* error) {
-  return InitToOperation(S2BooleanOperation::OpType::UNION,
-                         snap_function, a, b, error);
+bool S2Polygon::InitToUnion(const S2Polygon& a, const S2Polygon& b,
+                            const S2Builder::SnapFunction& snap_function,
+                            S2Error* error) {
+  return InitToOperation(S2BooleanOperation::OpType::UNION, snap_function, a, b,
+                         error);
 }
 
 void S2Polygon::InitToDifference(const S2Polygon& a, const S2Polygon& b) {
   InitToDifference(a, b, IdentitySnapFunction(S2::kIntersectionMergeRadius));
 }
 
-void S2Polygon::InitToDifference(
-    const S2Polygon& a, const S2Polygon& b,
-    const S2Builder::SnapFunction& snap_function) {
+void S2Polygon::InitToDifference(const S2Polygon& a, const S2Polygon& b,
+                                 const S2Builder::SnapFunction& snap_function) {
   InitToOperation(S2BooleanOperation::OpType::DIFFERENCE, snap_function, a, b);
 }
 
-bool S2Polygon::InitToDifference(
-    const S2Polygon& a, const S2Polygon& b,
-    const S2Builder::SnapFunction& snap_function, S2Error* error) {
-  return InitToOperation(S2BooleanOperation::OpType::DIFFERENCE,
-                         snap_function, a, b, error);
+bool S2Polygon::InitToDifference(const S2Polygon& a, const S2Polygon& b,
+                                 const S2Builder::SnapFunction& snap_function,
+                                 S2Error* error) {
+  return InitToOperation(S2BooleanOperation::OpType::DIFFERENCE, snap_function,
+                         a, b, error);
 }
 
 void S2Polygon::InitToSymmetricDifference(const S2Polygon& a,
@@ -1125,8 +1121,7 @@ void S2Polygon::InitToSimplifiedInCell(const S2Polygon& a, const S2Cell& cell,
 
   // The second pass eliminates any intersections between interior edges and
   // boundary edges, and then assembles the edges into a polygon.
-  S2Builder::Options options(
-      (IdentitySnapFunction(S2::kIntersectionError)));
+  S2Builder::Options options((IdentitySnapFunction(S2::kIntersectionError)));
   options.set_idempotent(false);  // Force snapping up to the given radius
   S2Builder builder(options);
   builder.StartLayer(make_unique<S2PolygonLayer>(this));
@@ -1147,8 +1142,8 @@ void S2Polygon::InitToSimplifiedInCell(const S2Polygon& a, const S2Cell& cell,
 
 // See comments in InitToSimplifiedInCell.
 vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
-    const S2Polygon& a, const S2Cell& cell,
-    double tolerance_uv, S1Angle snap_radius) {
+    const S2Polygon& a, const S2Cell& cell, double tolerance_uv,
+    S1Angle snap_radius) {
   S2Builder::Options options((IdentitySnapFunction(snap_radius)));
   options.set_simplify_edge_chains(true);
   S2Builder builder(options);
@@ -1203,8 +1198,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
 
 vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
     S2BooleanOperation::OpType op_type,
-    const S2Builder::SnapFunction& snap_function,
-    const S2Polyline& a) const {
+    const S2Builder::SnapFunction& snap_function, const S2Polyline& a) const {
   S2BooleanOperation::Options options;
   options.set_snap_function(snap_function);
   vector<unique_ptr<S2Polyline>> result;
@@ -1266,11 +1260,9 @@ bool S2Polygon::ApproxContains(const S2Polyline& b, S1Angle tolerance) const {
   return difference.empty();
 }
 
-bool S2Polygon::Intersects(const S2Polyline& b) const {
-  return !ApproxDisjoint(b, S2::kIntersectionMergeRadius);
-}
+bool S2Polygon::Intersects(const S2Polyline& b) const { return !Disjoint(b); }
 
-bool S2Polygon::ApproxDisjoint(const S2Polyline& b, S1Angle tolerance) const {
+bool S2Polygon::Disjoint(const S2Polyline& b) const {
   MutableS2ShapeIndex polyline_index;
   polyline_index.Add(make_unique<S2Polyline::Shape>(&b));
 
@@ -1293,8 +1285,7 @@ unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
 unique_ptr<S2Polygon> S2Polygon::DestructiveUnion(
     vector<unique_ptr<S2Polygon>> polygons,
     const S2Builder::SnapFunction& snap_function) {
-  if (polygons.empty())
-    return make_unique<S2Polygon>();
+  if (polygons.empty()) return make_unique<S2Polygon>();
 
   // Create a priority queue of polygons in order of number of vertices.
   // Repeatedly union the two smallest polygons and add the result to the
@@ -1347,8 +1338,8 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   // that distance, then we should always merge shared edges without merging
   // different edges.
   double snap_radius = 0.5 * S2::kMinWidth.GetValue(S2CellId::kMaxLevel);
-  S2Builder builder{S2Builder::Options(
-      IdentitySnapFunction(S1Angle::Radians(snap_radius)))};
+  S2Builder builder{
+      S2Builder::Options(IdentitySnapFunction(S1Angle::Radians(snap_radius)))};
   builder.StartLayer(make_unique<S2PolygonLayer>(this));
   for (S2CellId id : cells) {
     builder.AddLoop(S2Loop{S2Cell{id}});
@@ -1558,9 +1549,7 @@ S2Shape::ReferencePoint S2Polygon::Shape::GetReferencePoint() const {
   return ReferencePoint(S2::Origin(), contains_origin);
 }
 
-int S2Polygon::Shape::num_chains() const {
-  return polygon_->num_loops();
-}
+int S2Polygon::Shape::num_chains() const { return polygon_->num_loops(); }
 
 S2Shape::Chain S2Polygon::Shape::chain(int i) const {
   ABSL_DCHECK_LT(i, Shape::num_chains());

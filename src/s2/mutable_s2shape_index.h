@@ -18,7 +18,6 @@
 #ifndef S2_MUTABLE_S2SHAPE_INDEX_H_
 #define S2_MUTABLE_S2SHAPE_INDEX_H_
 
-#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -26,7 +25,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/base/macros.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
@@ -40,9 +38,9 @@
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2cell_iterator.h"
 #include "s2/s2memory_tracker.h"
 #include "s2/s2point.h"
-#include "s2/s2pointutil.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
@@ -374,8 +372,18 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   // continue to be added even once the specified limit has been reached.
   int Add(std::unique_ptr<S2Shape> shape);
 
+  // Removes the given shape from the index.  Invalidates all iterators and
+  // their associated data. To retain ownership of the shape, use Release()
+  // instead.
+  //
+  // Note that SpaceUsed() does not consider the size of removed shapes, causing
+  // it to undercount the memory used by removed shapes. This memory is released
+  // when the index is next built.
+  void Remove(int shape_id);
+
   // Removes the given shape from the index and return ownership to the caller.
-  // Invalidates all iterators and their associated data.
+  // Invalidates all iterators and their associated data. To simply remove the
+  // shape and destroy it, use Remove() instead.
   std::unique_ptr<S2Shape> Release(int shape_id);
 
   // Resets the index to its original state and returns ownership of all
@@ -404,7 +412,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   // method is "const" since it does not modify the visible index contents.
   //
   // ForceBuild() should not normally be called since it prevents lazy index
-  // construction (which is usually benficial).  Some reasons to use it
+  // construction (which is usually beneficial).  Some reasons to use it
   // include:
   //
   //  - To exclude the cost of building the index from benchmark results.
@@ -441,7 +449,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   struct BatchDescriptor;
   struct ClippedEdge;
   struct FaceEdge;
-  struct RemovedShape;
+  struct PendingRemoval;
 
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
   using ShapeIdSet = std::vector<int>;
@@ -452,6 +460,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 
   // Internal methods are documented with their definitions.
   bool is_shape_being_removed(int shape_id) const;
+  bool MaybeCreatePendingRemovals();
   void MarkIndexStale();
   void MaybeApplyUpdates() const;
   void ApplyUpdatesThreadSafe();
@@ -462,7 +471,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   void AddShape(const S2Shape* shape, int shape_id, int edges_begin,
                 int edges_end, std::vector<FaceEdge> all_edges[6],
                 InteriorTracker* tracker) const;
-  void RemoveShape(const RemovedShape& removed,
+  void RemoveShape(const S2Shape* shape, int shape_id,
                    std::vector<FaceEdge> all_edges[6],
                    InteriorTracker* tracker) const;
   void FinishPartialShape(int shape_id);
@@ -521,19 +530,11 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   // processed yet.
   int pending_additions_begin_ = 0;
 
-  // The representation of an edge that has been queued for removal.
-  struct RemovedShape {
-    int32_t shape_id;
-    bool has_interior;  // Belongs to a shape of dimension 2.
-    bool contains_tracker_origin;
-    std::vector<S2Shape::Edge> edges;
-  };
-
   // The set of shapes that have been queued for removal but not processed
-  // yet.  Note that we need to copy the edge data since the caller is free to
-  // destroy the shape once Release() has been called.  This field is present
+  // yet.  Shapes are moved here from the main shapes_ vector when Release()
+  // is called (Remove just moves the original shape). This field is present
   // only when there are removed shapes to process (to save memory).
-  std::unique_ptr<std::vector<RemovedShape>> pending_removals_;
+  std::unique_ptr<std::vector<PendingRemoval>> pending_removals_;
 
   // Additions and removals are queued and processed on the first subsequent
   // query.  There are several reasons to do this:
@@ -619,6 +620,12 @@ struct MutableS2ShapeIndex::BatchDescriptor {
   int num_edges;
 };
 
+// A shape that has been queued for removal.
+struct MutableS2ShapeIndex::PendingRemoval {
+  int shape_id;
+  std::unique_ptr<S2Shape> shape;
+};
+
 // The purpose of BatchGenerator is to divide large updates into batches such
 // that all batches use approximately the same amount of high-water memory.
 // This class is defined here so that it can be tested independently.
@@ -627,7 +634,7 @@ class MutableS2ShapeIndex::BatchGenerator {
   // Given the total number of edges that will be removed and added, prepares
   // to divide the edges into batches.  "shape_id_begin" identifies the first
   // shape whose edges will be added.
-  BatchGenerator(int num_edges_removed, int num_edges_added,
+  BatchGenerator(int64_t num_edges_removed, int64_t num_edges_added,
                  int shape_id_begin);
 
   // Indicates that the given shape will be added to the index.  Shapes with
@@ -643,8 +650,8 @@ class MutableS2ShapeIndex::BatchGenerator {
   // Returns a vector indicating the maximum number of edges in each batch.
   // (The actual batch sizes are adjusted later in order to avoid splitting
   // shapes between batches unnecessarily.)
-  static std::vector<int> GetMaxBatchSizes(int num_edges_removed,
-                                           int num_edges_added);
+  static std::vector<int> GetMaxBatchSizes(int64_t num_edges_removed,
+                                           int64_t num_edges_added);
 
   // Returns the maximum number of edges in the current batch.
   int max_batch_size() const { return max_batch_sizes_[batch_index_]; }

@@ -116,7 +116,6 @@
 #include "s2/s2shapeutil_shape_edge.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2text_format.h"
-#include "s2/util/bits/bits.h"
 #include "s2/util/gtl/compact_array.h"
 
 using absl::flat_hash_set;

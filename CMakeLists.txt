@@ -443,8 +443,6 @@ if(S2_ENABLE_INSTALL)
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/testing")
   install(FILES src/s2/util/bitmap/bitmap.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bitmap")
-  install(FILES src/s2/util/bits/bits.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bits")
   install(FILES src/s2/util/coding/coder.h
                 src/s2/util/coding/varint.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/coding")
@@ -455,6 +453,7 @@ if(S2_ENABLE_INSTALL)
                 src/s2/util/gtl/dense_hash_set.h
                 src/s2/util/gtl/densehashtable.h
                 src/s2/util/gtl/hashtable_common.h
+                src/s2/util/gtl/requires.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/gtl")
   install(FILES src/s2/util/hash/mix.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/hash")
@@ -622,7 +621,8 @@ if (BUILD_TESTS)
       src/s2/s2winding_operation_test.cc
       src/s2/s2wrapped_shape_test.cc
       src/s2/sequence_lexicon_test.cc
-      src/s2/value_lexicon_test.cc)
+      src/s2/value_lexicon_test.cc
+      src/s2/util/math/exactfloat/exactfloat_test.cc)
 
   enable_testing()
 

@@ -192,7 +192,7 @@ class dense_hash_set {
   key_equal key_eq() const { return rep.key_eq(); }
 
   // Constructors
-  dense_hash_set() {}
+  dense_hash_set() = default;
 
   explicit dense_hash_set(size_type expected_max_items_in_table,
                           const hasher& hf = hasher(),

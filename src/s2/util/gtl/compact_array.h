@@ -55,9 +55,9 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/meta/type_traits.h"
+#include "absl/numeric/bits.h"
 
 #include "s2/base/malloc_extension.h"
-#include "s2/util/bits/bits.h"
 #include "s2/util/gtl/container_logging.h"
 
 namespace gtl {
@@ -376,7 +376,7 @@ class compact_array_base {
   void set_capacity(size_type n) {
     ABSL_DCHECK_LE(size(), n);
     is_exponent_ = (n >= kExponentStart);
-    capacity_ = is_exponent_ ? Bits::Log2Ceiling(n) : n;
+    capacity_ = is_exponent_ ? absl::bit_width(n - 1) : n;
     // A tiny optimization here would be to set capacity_ to kInlined if
     // it's currently less. We don't bother, because doing so would require
     // changing the existing comments and unittests that say that, for small n,

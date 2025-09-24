@@ -159,6 +159,10 @@ class S2Polygon final : public S2Region {
   S2Polygon(S2Polygon&&) noexcept;
   S2Polygon& operator=(S2Polygon&&) noexcept;
 
+  // Returns a polygon that covers the entire sphere. Note this does allocate
+  // memory for the polygon.
+  static S2Polygon MakeFull();
+
   // Create a polygon from a set of hierarchically nested loops.  The polygon
   // interior consists of the points contained by an odd number of loops.
   // (Recall that a loop contains the set of points on its left-hand side.)
@@ -380,28 +384,28 @@ class S2Polygon final : public S2Region {
                           const S2Builder::SnapFunction& snap_function);
   bool InitToIntersection(const S2Polygon& a, const S2Polygon& b,
                           const S2Builder::SnapFunction& snap_function,
-                          S2Error *error);
+                          S2Error* error);
 
   void InitToUnion(const S2Polygon& a, const S2Polygon& b);
   void InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function);
   bool InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function,
-                   S2Error *error);
+                   S2Error* error);
 
   void InitToDifference(const S2Polygon& a, const S2Polygon& b);
   void InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function);
   bool InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function,
-                        S2Error *error);
+                        S2Error* error);
 
   void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b);
   void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function);
   bool InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function,
-                                 S2Error *error);
+                                 S2Error* error);
 
   // Snaps the vertices of the given polygon using the given SnapFunction
   // (e.g., s2builderutil::IntLatLngSnapFunction(6) snaps to E6 coordinates).
@@ -498,43 +502,37 @@ class S2Polygon final : public S2Region {
   // than "tolerance" such that the polyline is now contained.
   bool ApproxContains(const S2Polyline& b, S1Angle tolerance) const;
 
-  // Returns true if this polygon intersects the given polyline. Uses an
-  // S2BooleanOperation INTERSECTION operation, using an IdentitySnapFunction
-  // with a minimal snap radius, S2::kIntersectionMergeRadius.
+  // Returns true if this polygon intersects the given polyline, i.e. they have
+  // at least one point in common.
   bool Intersects(const S2Polyline& b) const;
 
-  // Returns true if this polygon is approximately disjoint from the given
-  // polyline.  This is true if it is possible to avoid intersection by moving
-  // their vertices no further than "tolerance".
-  //
-  // This implies that in borderline cases where there is a small overlap,
-  // this method returns true (i.e., they are approximately disjoint).
-  bool ApproxDisjoint(const S2Polyline& b, S1Angle tolerance) const;
+  // Returns true if this polygon and the given polyline are disjoint, i.e. have
+  // no points in common.
+  bool Disjoint(const S2Polyline& b) const;
 
-  // Intersect this polygon with the polyline "in" and return the resulting
-  // zero or more polylines.  The polylines are returned in the order they
-  // would be encountered by traversing "in" from beginning to end.
-  // Note that the output may include polylines with only one vertex,
-  // but there will not be any zero-vertex polylines.
+  // Intersects this polygon with the polyline "in" and assembles the resulting
+  // edges into zero or more polylines.  The polylines are returned in the order
+  // they would be encountered by traversing "in" from beginning to end.
+  // Note that degenerate polylines are discarded, so it is possible to have an
+  // S2Polyline and S2Polygon where polygon.Intersects(polyline) is true, but
+  // the result of IntersectWithPolyline is empty.
   //
   // This is equivalent to calling ApproxIntersectWithPolyline() with the
   // "snap_radius" set to S2::kIntersectionMergeRadius.
   std::vector<std::unique_ptr<S2Polyline>> IntersectWithPolyline(
       const S2Polyline& in) const;
 
-  // Similar to IntersectWithPolyline(), except that vertices will be
-  // dropped as necessary to ensure that all adjacent vertices in the
-  // sequence obtained by concatenating the output polylines will be
-  // farther than "snap_radius" apart.  Note that this can change
-  // the number of output polylines and/or yield single-vertex polylines.
+  // Equivalent to IntersectWithPolyline(in, IdentitySnapFunction(snap_radius)).
   std::vector<std::unique_ptr<S2Polyline>> ApproxIntersectWithPolyline(
       const S2Polyline& in, S1Angle snap_radius) const;
 
-  // Intersects this polygon with the polyline "in" using the given
-  // SnapFunction, and returns the resulting zero or more polylines.  The
-  // polylines are ordered in the order they would be encountered by traversing
-  // "in" from beginning to end.  Note that the output may include polylines
-  // with only one vertex, but there will not be any zero-vertex polylines.
+  // Intersects this polygon with the polyline "in", snaps the resulting edges
+  // with the given SnapFunction, and assembles the resulting edges into zero
+  // or more polylines.  The polylines are ordered in the order they would be
+  // encountered by traversing "in" from beginning to end.  Note that
+  // degenerate polylines are discarded, so it is possible to have an S2Polyline
+  // and S2Polygon where polygon.Intersects(polyline) is true, but the result
+  // of IntersectWithPolyline is empty.
   std::vector<std::unique_ptr<S2Polyline>> IntersectWithPolyline(
       const S2Polyline& in, const S2Builder::SnapFunction& snap_function) const;
 
@@ -555,8 +553,7 @@ class S2Polygon final : public S2Region {
   static std::unique_ptr<S2Polygon> DestructiveUnion(
       std::vector<std::unique_ptr<S2Polygon>> polygons);
   static std::unique_ptr<S2Polygon> DestructiveApproxUnion(
-      std::vector<std::unique_ptr<S2Polygon>> polygons,
-      S1Angle snap_radius);
+      std::vector<std::unique_ptr<S2Polygon>> polygons, S1Angle snap_radius);
   static std::unique_ptr<S2Polygon> DestructiveUnion(
       std::vector<std::unique_ptr<S2Polygon>> polygons,
       const S2Builder::SnapFunction& snap_function);
@@ -641,7 +638,7 @@ class S2Polygon final : public S2Region {
   S2Polygon* Clone() const override;
   S2Cap GetCapBound() const override;  // Cap surrounding rect bound.
   S2LatLngRect GetRectBound() const override { return bound_; }
-  void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
 
   bool Contains(const S2Cell& cell) const override;
   bool MayIntersect(const S2Cell& cell) const override;
@@ -708,7 +705,8 @@ class S2Polygon final : public S2Region {
     // S2Shape interface:
     int num_edges() const final {
       return (polygon_->num_vertices() != 1) ? polygon_->num_vertices()
-                                             : polygon_->is_full() ? 0 : 1;
+             : polygon_->is_full()           ? 0
+                                             : 1;
     }
     Edge edge(int e) const final;
     int dimension() const final { return 2; }
@@ -836,8 +834,7 @@ class S2Polygon final : public S2Region {
 
   std::vector<std::unique_ptr<S2Polyline>> OperationWithPolyline(
       S2BooleanOperation::OpType op_type,
-      const S2Builder::SnapFunction& snap_function,
-      const S2Polyline& a) const;
+      const S2Builder::SnapFunction& snap_function, const S2Polyline& a) const;
 
   // Decode a polygon encoded with EncodeUncompressed().  Used by the Decode
   // method above.
@@ -856,8 +853,8 @@ class S2Polygon final : public S2Region {
   bool DecodeCompressed(Decoder* decoder);
 
   static std::vector<std::unique_ptr<S2Polyline>> SimplifyEdgesInCell(
-      const S2Polygon& a, const S2Cell& cell,
-      double tolerance_uv, S1Angle snap_radius);
+      const S2Polygon& a, const S2Cell& cell, double tolerance_uv,
+      S1Angle snap_radius);
 
   // Defines a total ordering on S2Loops that does not depend on the cyclic
   // order of loop vertices.  This function is used to choose which loop to
@@ -905,9 +902,7 @@ class S2Polygon final : public S2Region {
   void operator=(const S2Polygon&) = delete;
 };
 
-
 //////////////////   Implementation details follow   ////////////////////
-
 
 ABSL_ATTRIBUTE_ALWAYS_INLINE
 inline S2Shape::Edge S2Polygon::Shape::chain_edge(int i, int j) const {
@@ -940,8 +935,8 @@ inline S2Shape::ChainPosition S2Polygon::Shape::chain_position(int e) const {
         ++i;
       } else {
         // "upper_bound" finds the loop just beyond the one we want.
-        i = std::upper_bound(&start[1], &start[polygon_->num_loops()], e)
-            - &start[1];
+        i = std::upper_bound(&start[1], &start[polygon_->num_loops()], e) -
+            &start[1];
       }
       prev_loop_.store(i, std::memory_order_relaxed);
     }

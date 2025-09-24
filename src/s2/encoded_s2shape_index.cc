@@ -81,7 +81,7 @@ const S2ShapeIndexCell* EncodedS2ShapeIndex::GetCell(int i) const {
   }
   // Recheck cell_decoded(i) once we hold the lock in case another thread
   // has decoded this cell in the meantime.
-  SpinLockHolder l(&cells_lock_);
+  SpinLockHolder l(cells_lock_);
   if (cell_decoded(i)) return cells_[i];
 
   // Update the cell, setting cells_[i] before cell_decoded(i).
