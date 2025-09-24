@@ -203,9 +203,9 @@ void EncodedS2PointVector::Encode(Encoder* encoder) const {
 
 // Encodes a vector of points, optimizing for (encoding and decoding) speed.
 void EncodeS2PointVectorFast(Span<const S2Point> points, Encoder* encoder) {
-#ifndef IS_LITTLE_ENDIAN
-  ABSL_LOG(FATAL) << "Not implemented on big-endian architectures";
-#endif
+  if constexpr (absl::endian::native != absl::endian::little) {
+    ABSL_LOG(FATAL) << "Not implemented on big-endian architectures";
+  }
 
   // This function always uses the UNCOMPRESSED encoding.  The header consists
   // of a varint64 in the following format:
@@ -222,19 +222,24 @@ void EncodeS2PointVectorFast(Span<const S2Point> points, Encoder* encoder) {
 }
 
 bool EncodedS2PointVector::InitUncompressedFormat(Decoder* decoder) {
-#if !defined(IS_LITTLE_ENDIAN) || defined(__arm__)
-  // TODO(b/231674214): Make this work on platforms that don't support
-  // unaligned 64-bit little-endian reads, e.g. by falling back to
-  //
-  //   bit_cast<double>(little_endian::Load64()).
-  //
-  // Maybe the compiler is smart enough that we can do this all the time,
-  // but more likely we will need two cases using the #ifdef above.
-  // (Note that even ARMv7 does not support unaligned 64-bit loads.)
-  ABSL_LOG(ERROR)
-      << "Needs architecture with 64-bit little-endian unaligned loads";
-  return false;
+#ifdef __arm__
+  constexpr bool kIsArm32 = true;
+#else
+  constexpr bool kIsArm32 = false;
 #endif
+  if constexpr (absl::endian::native != absl::endian::little || kIsArm32) {
+    // TODO(b/231674214): Make this work on platforms that don't support
+    // unaligned 64-bit little-endian reads, e.g. by falling back to
+    //
+    //   bit_cast<double>(LittleEndian::Load64()).
+    //
+    // Maybe the compiler is smart enough that we can do this all the time,
+    // but more likely we will need two cases using the #ifdef above.
+    // (Note that even ARMv7 does not support unaligned 64-bit loads.)
+    ABSL_LOG(ERROR)
+        << "Needs architecture with 64-bit little-endian unaligned loads";
+    return false;
+  }
 
   uint64_t size;
   if (!decoder->get_varint64(&size)) return false;

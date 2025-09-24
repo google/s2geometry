@@ -44,7 +44,6 @@
 #include "s2/s2error.h"
 #include "s2/s2point.h"
 #include "s2/s2region.h"
-#include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 
 class S2LatLng;

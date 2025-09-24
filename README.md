@@ -52,12 +52,12 @@ This issue may require revision of boringssl or exactfloat.
 
 *   We aim to support all platforms supported by the
     [Google foundational C++ support policy](https://opensource.google/documentation/policies/cplusplus-support)
-*   [CMake](http://www.cmake.org/) >= 3.5
+*   [CMake](http://www.cmake.org/) >= 3.22
 *   A C++ compiler with C++17 support, such as
     [g++ >= 7.5](https://gcc.gnu.org/) or
-    [clang >= 7.0.0](https://clang.llvm.org/)
+    [clang >= 14.0.0](https://clang.llvm.org/)
 *   [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
-    [`20250512`](https://github.com/abseil/abseil-cpp/releases/tag/20250512.1)
+    [`20250814`](https://github.com/abseil/abseil-cpp/releases/tag/20250814.1)
     (standard library extensions)
 *   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 *   [googletest testing framework >= 1.10](https://github.com/google/googletest)

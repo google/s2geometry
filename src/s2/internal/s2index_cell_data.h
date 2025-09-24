@@ -142,7 +142,7 @@ class S2IndexCellData {
   // Returns an S2Cell instance for the current cell.
   const S2Cell& cell() const {
     if (!s2cell_set_.load(std::memory_order_acquire)) {
-      absl::MutexLock lock(&lock_);
+      absl::MutexLock lock(lock_);
       if (!s2cell_set_.load(std::memory_order_relaxed)) {
         s2cell_ = S2Cell(cell_id_);
         s2cell_set_.store(true, std::memory_order_release);
@@ -156,7 +156,7 @@ class S2IndexCellData {
   // Returns the center point of the current cell.
   const S2Point& center() const {
     if (!center_set_.load(std::memory_order_acquire)) {
-      absl::MutexLock lock(&lock_);
+      absl::MutexLock lock(lock_);
       if (!center_set_.load(std::memory_order_relaxed)) {
         cell_center_ = cell_id_.ToPoint();
         center_set_.store(true, std::memory_order_release);

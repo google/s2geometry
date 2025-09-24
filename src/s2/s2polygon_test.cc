@@ -2282,6 +2282,15 @@ TEST(S2PolygonTest, Project) {
   projected = polygon->Project(point);
   EXPECT_TRUE(
       S2::ApproxEquals(s2textformat::MakePointOrDie("0:-2"), projected));
+
+  // Project() for polygons with no edges (full or empty) are expected to return
+  // the given point.
+  S2Polygon no_edges_polygon(make_unique<S2Loop>(S2Loop::kEmpty()));
+  EXPECT_TRUE(no_edges_polygon.is_empty());
+  EXPECT_TRUE(no_edges_polygon.Project(point) == point);
+  no_edges_polygon.Init(make_unique<S2Loop>(S2Loop::kFull()));
+  EXPECT_TRUE(no_edges_polygon.is_full());
+  EXPECT_TRUE(no_edges_polygon.Project(point) == point);
 }
 
 // Helper function for testing the distance methods.  "boundary_x" is the

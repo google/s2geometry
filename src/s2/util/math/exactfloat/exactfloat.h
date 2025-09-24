@@ -158,7 +158,7 @@ class ExactFloat {
   // The default constructor initializes the value to zero.  (The initial
   // value must be zero rather than NaN for compatibility with the built-in
   // float types.)
-  inline ExactFloat();
+  inline ExactFloat() = default;
 
   // Construct an ExactFloat from a "double".  The constructor is implicit so
   // that this class can be used as a replacement for "float" or "double" in
@@ -504,8 +504,8 @@ class ExactFloat {
   // allocated BIGNUMS.  We use BN_init when possible, but BN_new otherwise.
   // If the performance penalty is too high, an object pool can be added
   // in the future.
-#if defined(OPENSSL_IS_BORINGSSL) || OPENSSL_VERSION_NUMBER < 0x10100000L
-  // BoringSSL and OpenSSL < 1.1 support stack allocated BIGNUMs and BN_init.
+#if defined(OPENSSL_IS_BORINGSSL)
+  // BoringSSL supports stack allocated BIGNUMs and BN_init.
   class BigNum {
    public:
     BigNum() { BN_init(&bn_); }
@@ -546,8 +546,9 @@ class ExactFloat {
   //  - sign_ is either +1 or -1
   //  - bn_ is a BIGNUM with a positive value
   //  - bn_exp_ is the base-2 exponent applied to bn_.
-  int32_t sign_;
-  int32_t bn_exp_;
+  // Default value is zero.
+  int32_t sign_ = 1;
+  int32_t bn_exp_ = kExpZero;
   BigNum bn_;
 
   // A standard IEEE "double" has a 53-bit mantissa consisting of a 52-bit
@@ -608,8 +609,6 @@ class ExactFloat {
 
 /////////////////////////////////////////////////////////////////////////
 // Implementation details follow:
-
-inline ExactFloat::ExactFloat() : sign_(1), bn_exp_(kExpZero) {}
 
 inline bool ExactFloat::is_zero() const { return bn_exp_ == kExpZero; }
 inline bool ExactFloat::is_inf() const { return bn_exp_ == kExpInfinity; }

@@ -210,7 +210,7 @@ struct dense_hashtable_iterator {
       : ht(h), pos(it), end(it_end) {
     if (advance) advance_past_empty_and_deleted();
   }
-  dense_hashtable_iterator() {}
+  dense_hashtable_iterator() = default;
   // The default destructor is fine; we don't define one
   // The default operator= is fine; we don't define one
 

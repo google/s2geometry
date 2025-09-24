@@ -41,7 +41,6 @@
 
 #include "absl/base/macros.h"
 #include "absl/numeric/bits.h"
-#include "s2/util/bits/bits.h"
 
 // Just a namespace, not a real class
 class Varint {
@@ -392,6 +391,17 @@ int Varint::LengthImpl(T v) {
                     std::numeric_limits<T>::digits == 64,
                 "Unexpected length. This implementation works up to 448 bits, "
                 "but performance has not been tested other than 32 and 64.");
+// X86 CPUs lacking the lzcnt instruction are faster with the bit_width-based
+// implementation.  Both absl::bit_width and absl::count_lzero will use lzcnt
+// when available, and bsr otherwise.  For K8 (no lzcnt), bit_width produces
+// better code; for Haswell and AArch64, countl_zero does.  MSVC and clang do
+// not define __LZCNT__, the nearest option that they interpret as lzcnt
+// availability is __AVX2__.
+#if (defined(__x86__) || defined(__x86_64__) || defined(_M_IX86) || \
+     defined(_M_X64)) &&                                            \
+    !(defined(__LZCNT__) || defined(__AVX2__))
+  return (absl::bit_width(v | T{1}) * 9 + 64) / 64;
+#else
   // This computes value == 0 ? 1 : floor(log2(v)) / 7 + 1
   // Rather than using division by 7 to accomplish this, we use multiplication
   // by 9/64. This has a number of important properties:
@@ -418,41 +428,13 @@ int Varint::LengthImpl(T v) {
   //  (352 - (clz + (clz << 3))) >> 6
   // on x86:
   //  (352 - lea(clz, clz, 8)) >> 6
-  uint32_t clz = absl::countl_zero(v);
-  return static_cast<int>(
-      ((std::numeric_limits<T>::digits * 9 + 64) - (clz * 9)) >> 6);
-}
-
-// X86 CPUs lacking the lzcnt instruction are faster with the bsr-based
-// implementation. MSVC does not define __LZCNT__, the nearest option that
-// it interprets as lzcnt availability is __AVX2__.
-#if (defined(__x86__) || defined(__x86_64__) || defined(_M_IX86) || \
-     defined(_M_X64)) &&                                            \
-    !(defined(__LZCNT__) || defined(__AVX2__))
-#define UTIL_CODING_VARINT_H_PREFER_BSR 1
-#else
-#define UTIL_CODING_VARINT_H_PREFER_BSR 0
-#endif
-inline int Varint::Length32(uint32_t v) {
-#if UTIL_CODING_VARINT_H_PREFER_BSR
-  // Use bsr instruction
-  uint32_t log2value = static_cast<uint32_t>(Bits::Log2FloorNonZero(v | 0x1));
-  return static_cast<int>((log2value * 9 + (64 + 9)) / 64);
-#else
-  return LengthImpl(v);
+  const int clz = absl::countl_zero(v);
+  return ((std::numeric_limits<T>::digits * 9 + 64) - (clz * 9)) >> 6;
 #endif
 }
 
-inline int Varint::Length64(uint64_t v) {
-#if UTIL_CODING_VARINT_H_PREFER_BSR
-  // Use bsr instruction
-  uint32_t log2value = static_cast<uint32_t>(Bits::Log2FloorNonZero64(v | 0x1));
-  return static_cast<int>((log2value * 9 + (64 + 9)) / 64);
-#else
-  return LengthImpl(v);
-#endif
-}
-#undef UTIL_CODING_VARINT_H_PREFER_BSR
+inline int Varint::Length32(uint32_t v) { return LengthImpl(v); }
+inline int Varint::Length64(uint64_t v) { return LengthImpl(v); }
 
 inline void Varint::Append32(std::string* s, uint32_t value) {
   // Inline the fast-path for single-character output, but fall back to the .cc

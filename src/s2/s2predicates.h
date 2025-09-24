@@ -134,7 +134,7 @@ int CompareDistance(const S2Point& x, const S2Point& y, S1ChordAngle r);
 int CompareEdgeDistance(const S2Point& x, const S2Point& a0, const S2Point& a1,
                         S1ChordAngle r);
 
-// Returns -1, 0, or +1 according to whether the distance from edge A edge B
+// Returns -1, 0, or +1 according to whether the distance from edge A to edge B
 // is less than, equal to, or greater than "r" respectively.  Distances are
 // measured with respect the positions of all points as though they were
 // projected to lie exactly on the surface of the unit sphere.
