@@ -4,10 +4,13 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "exactfloat",
-    srcs = ["exactfloat.cc"],
+    srcs = [
+        "exactfloat.cc",
+        "exactfloat_internal.cc",
+    ],
     hdrs = [
-        "bignum.h",
         "exactfloat.h",
+        "exactfloat_internal.h",
     ],
     deps = [
         "//s2/base:logging",

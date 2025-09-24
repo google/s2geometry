@@ -96,11 +96,11 @@ ExactFloat ExactFloat::NaN() {
   return r;
 }
 
-int ExactFloat::prec() const { return bn_.BitWidth(); }
+int ExactFloat::prec() const { return bit_width(bn_); }
 
 int ExactFloat::exp() const {
   ABSL_DCHECK(is_normal());
-  return bn_exp_ + bn_.BitWidth();
+  return bn_exp_ + bit_width(bn_);
 }
 
 void ExactFloat::set_zero(int sign) {
@@ -146,7 +146,7 @@ ExactFloat::operator double() const {
 }
 
 double ExactFloat::ToDoubleHelper() const {
-  ABSL_DCHECK_LE(bn_.BitWidth(), kDoubleMantissaBits);
+  ABSL_DCHECK_LE(bit_width(bn_), kDoubleMantissaBits);
   if (!is_normal()) {
     if (is_zero()) return copysign(0, sign_);
     if (isinf(*this)) {
@@ -154,7 +154,7 @@ double ExactFloat::ToDoubleHelper() const {
     }
     return std::copysign(std::numeric_limits<double>::quiet_NaN(), sign_);
   }
-  auto opt_mantissa = bn_.Convert<uint64_t>();
+  auto opt_mantissa = bn_.ConvertTo<uint64_t>();
   ABSL_DCHECK(opt_mantissa.has_value());
   uint64_t d_mantissa = opt_mantissa.value();
   // We rely on ldexp() to handle overflow and underflow.  (It will return a
@@ -210,7 +210,7 @@ ExactFloat ExactFloat::RoundToPowerOf2(int bit_exp, RoundingMode mode) const {
     if (bn_.Bit(shift - 1)) increment = true;
   } else if (mode == kRoundAwayFromZero) {
     // Increment unless all discarded bits are zero.
-    if (bn_.CountrZero() < shift) increment = true;
+    if (countr_zero(bn_) < shift) increment = true;
   } else {
     ABSL_DCHECK_EQ(mode, kRoundTiesToEven);
     // Let "w/xyz" denote a mantissa where "w" is the lowest kept bit and
@@ -220,7 +220,7 @@ ExactFloat ExactFloat::RoundToPowerOf2(int bit_exp, RoundingMode mode) const {
     //    1/10*       ->    Increment (fraction = 1/2, kept part odd)
     //    ./1.*1.*    ->    Increment (fraction > 1/2)
     if (bn_.Bit(shift - 1) &&
-        ((bn_.Bit(shift) || bn_.CountrZero() < shift - 1))) {
+        ((bn_.Bit(shift) || countr_zero(bn_) < shift - 1))) {
       increment = true;
     }
   }
@@ -452,7 +452,7 @@ ExactFloat ExactFloat::SignedSum(int a_sign, const ExactFloat* a, int b_sign,
       r.bn_ = b->bn_ - a_bn;
       r.sign_ = b_sign;
     }
-    if (r.bn_.zero()) {
+    if (r.bn_.is_zero()) {
       r.sign_ = +1;
     }
   }
@@ -466,14 +466,14 @@ void ExactFloat::Canonicalize() {
   // Underflow/overflow occurs if exp() is not in [kMinExp, kMaxExp].
   // We also convert a zero mantissa to signed zero.
   int my_exp = exp();
-  if (my_exp < kMinExp || bn_.zero()) {
+  if (my_exp < kMinExp || bn_.is_zero()) {
     set_zero(sign_);
   } else if (my_exp > kMaxExp) {
     set_inf(sign_);
-  } else if (bn_.even()) {
+  } else if (bn_.is_even()) {
     // Remove any low-order zero bits from the mantissa.
-    ABSL_DCHECK(!bn_.zero());
-    int shift = bn_.CountrZero();
+    ABSL_DCHECK(!bn_.is_zero());
+    int shift = countr_zero(bn_);
     if (shift > 0) {
       bn_ >>= shift;
       bn_exp_ += shift;
@@ -626,7 +626,7 @@ T ExactFloat::ToInteger(RoundingMode mode) const {
   if (!isinf(r)) {
     // If the unsigned value has more than 63 bits it is always clamped.
     if (r.exp() < 64) {
-      auto opt_value = r.bn_.Convert<uint64_t>();
+      auto opt_value = r.bn_.ConvertTo<uint64_t>();
       ABSL_DCHECK(opt_value.has_value());
       int64_t value = static_cast<int64_t>(opt_value.value()) << r.bn_exp_;
       if (r.sign_ < 0) value = -value;

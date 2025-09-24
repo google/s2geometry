@@ -138,6 +138,19 @@ Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
 Enable the python interface with `-DWITH_PYTHON=ON`.
 
+# For Testing
+
+If BUILD_TESTS is 'on' (the default), and benchmarks are enabled, then OpenSSL
+must be available to build some tests:
+
+*   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
+
+
+If OpenSSL is installed in a non-standard location set `OPENSSL_ROOT_DIR`
+before running configure, for example on macOS:
+```
+OPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@3/3.1.0 cmake -DCMAKE_PREFIX_PATH=/opt/homebrew -DCMAKE_CXX_STANDARD=17
+```
 
 ## Installing
 
