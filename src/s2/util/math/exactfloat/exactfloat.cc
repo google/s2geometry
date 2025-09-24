@@ -28,6 +28,8 @@
 #include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+// Used by !defined(OPENSSL_IS_BORINGSSL).
+#include "absl/numeric/bits.h"  // IWYU pragma: keep
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include <openssl/bn.h>
@@ -99,28 +101,6 @@ inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
 #endif
 }
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-
-// Count the number of low-order zero bits in the given BIGNUM (ignoring its
-// sign).  Returns 0 if the argument is zero.
-static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
-  int count = 0;
-  for (int i = 0; i < bn->top; ++i) {
-    BN_ULONG w = bn->d[i];
-    if (w == 0) {
-      count += 8 * sizeof(BN_ULONG);
-    } else {
-      for (; (w & 1) == 0; w >>= 1) {
-        ++count;
-      }
-      break;
-    }
-  }
-  return count;
-}
-
-#else  // OPENSSL_VERSION_NUMBER >= 0x10100000L
-
 static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   // In OpenSSL >= 1.1, BIGNUM is an opaque type, so d and top
   // cannot be accessed.  The bytes must be copied out at a ~25%
@@ -134,16 +114,12 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
     if (c == 0) {
       count += 8;
     } else {
-      for (; (c & 1) == 0; c >>= 1) {
-        ++count;
-      }
+      count += absl::countr_zero(c);
       break;
     }
   }
   return count;
 }
-
-#endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
 
 #endif  // !defined(OPENSSL_IS_BORINGSSL)
 

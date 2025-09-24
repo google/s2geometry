@@ -26,7 +26,6 @@
 #include <utility>
 
 #include "absl/log/absl_check.h"
-#include "absl/utility/utility.h"
 #include "s2/base/malloc_extension.h"
 
 Encoder::Encoder(Encoder&& other)

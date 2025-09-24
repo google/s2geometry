@@ -48,7 +48,7 @@ class ReaderThreadPool {
 };
 
 void ReaderWriterTest::ReaderLoop() {
-  lock_.Lock();
+  lock_.lock();
   for (int last_write = 0; ; last_write = num_writes_) {
     while (num_writes_ == last_write) {
       write_ready_.Wait(&lock_);
@@ -56,20 +56,20 @@ void ReaderWriterTest::ReaderLoop() {
     if (num_writes_ < 0) break;
 
     // Release the lock first so that all reader threads can run in parallel.
-    lock_.Unlock();
+    lock_.unlock();
     ReadOp();
-    lock_.Lock();
+    lock_.lock();
     if (--num_readers_left_ == 0) {
       all_readers_done_.Signal();
     }
   }
-  lock_.Unlock();
+  lock_.unlock();
 }
 
 void ReaderWriterTest::Run(int num_readers, int iters) {
   ReaderThreadPool pool(std::bind(&ReaderWriterTest::ReaderLoop, this),
                         num_readers);
-  lock_.Lock();
+  lock_.lock();
   for (int iter = 0; iter < iters; ++iter) {
     // Loop invariant: lock_ is held and num_readers_left_ == 0.
     ABSL_DCHECK_EQ(0, num_readers_left_);
@@ -86,7 +86,7 @@ void ReaderWriterTest::Run(int num_readers, int iters) {
   // Signal the readers to exit.
   num_writes_ = -1;
   write_ready_.SignalAll();
-  lock_.Unlock();
+  lock_.unlock();
   // ReaderThreadPool destructor waits for all threads to complete.
 }
 

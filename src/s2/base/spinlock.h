@@ -28,18 +28,18 @@ class ABSL_LOCKABLE ABSL_ATTRIBUTE_WARN_UNUSED SpinLock {
   SpinLock(SpinLock const&) = delete;
   SpinLock& operator=(SpinLock const&) = delete;
 
-  inline void Lock() ABSL_EXCLUSIVE_LOCK_FUNCTION() {
+  inline void lock() ABSL_EXCLUSIVE_LOCK_FUNCTION() {
     while (locked_.exchange(true, std::memory_order_acquire)) {
       // Spin.
       continue;
     }
   }
 
-  inline void Unlock() ABSL_UNLOCK_FUNCTION() {
+  inline void unlock() ABSL_UNLOCK_FUNCTION() {
     locked_.store(false, std::memory_order_release);
   }
 
-  ABSL_MUST_USE_RESULT inline bool IsHeld() const {
+  [[nodiscard]] inline bool IsHeld() const {
     return locked_.load(std::memory_order_relaxed);
   }
 
@@ -47,19 +47,19 @@ class ABSL_LOCKABLE ABSL_ATTRIBUTE_WARN_UNUSED SpinLock {
   std::atomic_bool locked_{false};
 };
 
-class ABSL_MUST_USE_RESULT ABSL_SCOPED_LOCKABLE SpinLockHolder {
+class [[nodiscard]] ABSL_SCOPED_LOCKABLE SpinLockHolder {
  public:
-  inline explicit SpinLockHolder(SpinLock* l) ABSL_EXCLUSIVE_LOCK_FUNCTION(l)
+  inline explicit SpinLockHolder(SpinLock& l) ABSL_EXCLUSIVE_LOCK_FUNCTION(l)
       : lock_(l) {
-    l->Lock();
+    l.lock();
   }
-  inline ~SpinLockHolder() ABSL_UNLOCK_FUNCTION() { lock_->Unlock(); }
+  inline ~SpinLockHolder() ABSL_UNLOCK_FUNCTION() { lock_.unlock(); }
 
   SpinLockHolder(const SpinLockHolder&) = delete;
   SpinLockHolder& operator=(const SpinLockHolder&) = delete;
 
  private:
-  SpinLock* lock_;
+  SpinLock& lock_;
 };
 
 #endif  // S2_BASE_SPINLOCK_H_

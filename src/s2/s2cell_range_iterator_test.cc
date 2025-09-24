@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+// Author: smcallis@google.com (Sean McAllister)
 #include "s2/s2cell_range_iterator.h"
 
 #include <memory>

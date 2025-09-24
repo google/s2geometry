@@ -45,6 +45,9 @@
 #include <string>
 #include <type_traits>
 
+#include "absl/strings/str_cat.h"
+#include "s2/util/gtl/requires.h"
+
 namespace gtl {
 
 // Several policy classes below determine how LogRangeToStream will
@@ -76,7 +79,13 @@ namespace internal {
 struct LogBase {
   template <typename ElementT>
   void Log(std::ostream &out, const ElementT &element) const {  // NOLINT
-    out << element;
+    // Fallback to `AbslStringify` if the type does not have `operator<<`.
+    if constexpr (Requires<std::ostream, ElementT>(
+                      [](auto &&x, auto &&y) -> decltype(x << y) {})) {
+      out << element;
+    } else {
+      out << absl::StrCat(element);
+    }
   }
   void LogEllipsis(std::ostream &out) const {  // NOLINT
     out << "...";

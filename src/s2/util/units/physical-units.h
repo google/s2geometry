@@ -84,7 +84,6 @@
 #ifndef S2_UTIL_UNITS_PHYSICAL_UNITS_H_
 #define S2_UTIL_UNITS_PHYSICAL_UNITS_H_
 
-#include <cmath>
 #include <cstdint>
 #include <iosfwd>
 #include <iostream>
@@ -92,8 +91,6 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
-
-#include "absl/base/macros.h"
 
 namespace util {
 

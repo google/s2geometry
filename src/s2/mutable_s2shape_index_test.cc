@@ -786,6 +786,26 @@ TEST_F(MutableS2ShapeIndexTest, LongIndexEntriesBound) {
   EXPECT_EQ(sum, 366);
 }
 
+TEST_F(MutableS2ShapeIndexTest, AddRemoveShapeContainingOrigin) {
+  // Add a shape that contains InteriorTracker::Origin().
+  S2Point origin = S2::FaceUVtoXYZ(0, -1, -1).Normalize();
+  index_.Add(make_unique<S2Loop::OwningShape>(
+      S2Loop::MakeRegularLoop(origin, S1Angle::Degrees(1), 10)));
+
+  // Force an index update.
+  index_.ForceBuild();
+
+  // Remove the shape.
+  index_.Remove(0);
+
+  // Force another index update.
+  index_.ForceBuild();
+
+  // The iterator should be empty.
+  MutableS2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
+  EXPECT_TRUE(it.done());
+}
+
 TEST_F(MutableS2ShapeIndexTest, DecoderCatchesInvalidIndex) {
   // An S2Shape index with one face cell but no actual shapes encoded.
   const std::string encoded{"E\000P\340\010\020\000"};
