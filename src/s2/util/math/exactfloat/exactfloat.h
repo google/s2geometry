@@ -100,7 +100,7 @@
 #include <ostream>
 #include <string>
 
-#include "s2/util/math/exactfloat/exactfloat_internal.h"
+#include "s2/util/math/exactfloat/bignum.h"
 
 namespace exactfloat {
 
@@ -166,13 +166,6 @@ class ExactFloat {
   // the value is exactly representable as a floating-point number (so for
   // example, "0.125" is allowed but "0.1" is not).
   explicit ExactFloat(const char* s) { Unimplemented(); }
-
-  // Copy constructor.
-  ExactFloat(const ExactFloat& b);
-
-  // The destructor is not virtual for efficiency reasons.  Therefore no
-  // subclass should declare additional fields that require destruction.
-  inline ~ExactFloat() = default;
 
   /////////////////////////////////////////////////////////////////////
   // Constants
@@ -486,6 +479,8 @@ class ExactFloat {
   friend ExactFloat logb(const ExactFloat& a);
 
  protected:
+  using Bignum = exactfloat_internal::Bignum;
+
   // Non-normal numbers are represented using special exponent values and a
   // mantissa of zero.  Do not change these values; methods such as
   // is_normal() make assumptions about their ordering.  Non-normal numbers

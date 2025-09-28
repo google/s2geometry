@@ -28,14 +28,16 @@
 #include "absl/strings/ascii.h"
 #include "absl/strings/str_format.h"
 
+namespace exactfloat_internal {
+
 // A class to support arithmetic on large, arbitrary precision integers.
 //
 // Large integers are represented as an array of uint64_t values.
 class Bignum {
  public:
-  // Wrap uint64_t in a struct so we can avoid default initialization.
+  // Wrap uint64_t in a struct so we can make value-initialization a noop.
   //
-  // Avoiding default initialization overhead saves us 50% on some benchmarks.
+  // Avoiding value-initialization overhead saves us 50% on some benchmarks.
   struct Bigit {
     static constexpr int kBits = std::numeric_limits<uint64_t>::digits;
 
@@ -133,7 +135,7 @@ class Bignum {
   // General accessors.
   //--------------------------------------
 
-  // Returns the number of bits required to represent the bignum.
+  // Returns the number of bits required for the magnitude of the value.
   friend int bit_width(const Bignum& a);
 
   // Returns the number of consecutive 0 bits in the value, starting from the
@@ -290,7 +292,7 @@ class Bignum {
     return bigits_.empty() || bigits_.back() != 0;
   }
 
-  // Returns true if the bignum is the given power of two.
+  // Returns true if the bignum magnitude is the given power of two.
   bool IsPow2(int pow2) const {
     const int bigits = pow2 / Bigit::kBits;
     if (bigits_.size() != bigits + 1) {
@@ -311,6 +313,9 @@ class Bignum {
   }
 
   // Compares magnitude with another bignum, returning -1, 0, or +1.
+  //
+  // Magnitudes are compared lexicographically from the most significant bigit
+  // (bigits_.back()) to the least significant (bigits_[0]).
   int CmpAbs(const Bignum& b) const;
 
   BigitVector bigits_;
@@ -372,7 +377,7 @@ void AbslStringify(Sink& sink, const Bignum& b) {
   copy.sign_ = 1;
 
   // Repeatedly divide and modulo by 10^19 to get decimal chunks.
-  static constexpr uint64_t kBase = 10000000000000000000ull;
+  static constexpr uint64_t kBase = 10'000'000'000'000'000'000u;
   Bignum::BigitVector chunks;
 
   while (!copy.is_zero()) {
@@ -487,3 +492,5 @@ inline int Bignum::CmpAbs(const Bignum& b) const {
 
   return 0;
 }
+
+}  // namespace exactfloat_internal

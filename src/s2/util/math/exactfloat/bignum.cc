@@ -1,4 +1,6 @@
-#include "s2/util/math/exactfloat/exactfloat_internal.h"
+#include "s2/util/math/exactfloat/bignum.h"
+
+namespace exactfloat_internal {
 
 // Threshold for fallback to simple multiplication, determined empirically.
 static constexpr int kKaratsubaThreshold = 64;
@@ -482,7 +484,7 @@ static Bigit MulAddIp(  //
 static void MulQuadratic(   //
     absl::Span<Bigit> out,  //
     absl::Span<const Bigit> a, absl::Span<const Bigit> b) {
-  ABSL_DCHECK_EQ(out.size(), a.size() + b.size());
+  ABSL_DCHECK_GE(out.size(), a.size() + b.size());
 
   // Make sure A is the longer of the two arguments.
   if (a.size() < b.size()) {
@@ -551,7 +553,7 @@ class Arena {
 static void KaratsubaMulRec(  //
     absl::Span<Bigit> dst,    //
     absl::Span<const Bigit> a, absl::Span<const Bigit> b, Arena& arena) {
-  ABSL_DCHECK_EQ(dst.size(), a.size() + b.size());
+  ABSL_DCHECK_GE(dst.size(), a.size() + b.size());
   if (a.empty() || b.empty()) {
     return;
   }
@@ -751,3 +753,5 @@ Bignum& Bignum::operator*=(const Bignum& b) {
   NormalizeSign(new_sign);
   return *this;
 }
+
+}  // namespace exactfloat_internal
