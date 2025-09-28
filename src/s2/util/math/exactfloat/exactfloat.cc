@@ -69,14 +69,12 @@ ExactFloat::ExactFloat(double v) {
 
 ExactFloat::ExactFloat(int v) {
   sign_ = (v >= 0) ? 1 : -1;
-  // Note that this works even for INT_MIN.
+
+  // Note that this works even for INT_MIN, as |INT_MIN| < |INT_MAX|.
   bn_ = Bignum(abs(v));
   bn_exp_ = 0;
   Canonicalize();
 }
-
-ExactFloat::ExactFloat(const ExactFloat& b)
-    : sign_(b.sign_), bn_exp_(b.bn_exp_), bn_(b.bn_) {}
 
 ExactFloat ExactFloat::SignedZero(int sign) {
   ExactFloat r;
@@ -156,10 +154,10 @@ double ExactFloat::ToDoubleHelper() const {
   }
   auto opt_mantissa = bn_.ConvertTo<uint64_t>();
   ABSL_DCHECK(opt_mantissa.has_value());
-  uint64_t d_mantissa = opt_mantissa.value();
+
   // We rely on ldexp() to handle overflow and underflow.  (It will return a
   // signed zero or infinity if the result is too small or too large.)
-  return sign_ * ldexp(static_cast<double>(d_mantissa), bn_exp_);
+  return sign_ * ldexp(static_cast<double>(*opt_mantissa), bn_exp_);
 }
 
 ExactFloat ExactFloat::RoundToMaxPrec(int max_prec, RoundingMode mode) const {

@@ -13,19 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "s2/util/math/exactfloat/exactfloat_internal.h"
+#include "s2/util/math/exactfloat/bignum.h"
 
 #include <memory>
-#include <random>
 #include <string>
 #include <vector>
 
-#include "absl/base/no_destructor.h"
-#include "absl/strings/string_view.h"
+// TODO: remove once benchmarks are available
+#if 0
 #include "benchmark/benchmark.h"
+#endif
+
+#include "absl/base/no_destructor.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "gtest/gtest.h"
 #include "openssl/bn.h"
 #include "openssl/crypto.h"
+
+namespace exactfloat_internal {
+
+using ::testing::TestWithParam;
 
 const uint64_t u8max = std::numeric_limits<uint8_t>::max();
 const uint64_t u16max = std::numeric_limits<uint16_t>::max();
@@ -747,8 +756,8 @@ const int kRandomBignumCount = 128;
 
 static std::vector<std::string> GenerateRandomNumbers(int bits) {
   std::vector<std::string> numbers;
-  std::mt19937_64 rng(42);  // Fixed seed for reproducibility
 
+  absl::BitGen bitgen;
   for (int i = 0; i < kRandomBignumCount; ++i) {
     std::string num;
 
@@ -756,12 +765,9 @@ static std::vector<std::string> GenerateRandomNumbers(int bits) {
     int decimal_digits = (bits * 3) / 10;  // log10(2^bits) ≈ bits * 0.301
 
     // First digit can't be zero
-    std::uniform_int_distribution<int> first_digit(1, 9);
-    num += std::to_string(first_digit(rng));
-
-    std::uniform_int_distribution<int> digit(0, 9);
+    absl::StrAppend(&num, absl::StrFormat("%d", absl::Uniform(bitgen, 1, 9)));
     for (int j = 1; j < decimal_digits; ++j) {
-      num += std::to_string(digit(rng));
+      num += std::to_string(absl::Uniform(bitgen, 0, 9));
     }
 
     numbers.push_back(num);
@@ -831,34 +837,95 @@ const std::vector<std::string>& MegaNumbers() {
   return *numbers;
 }
 
-TEST(BignumTest, MultiplyCorrectVsOpenSSL) {
+class VsOpenSSLTest : public TestWithParam<std::vector<std::string>> {};
+
+TEST_P(VsOpenSSLTest, MultiplyCorrect) {
   // Test that multiplication produces correct results by comparing to OpenSSL.
   BN_CTX* ctx = BN_CTX_new();
-  for (const auto& numbers : {SmallNumbers(), MediumNumbers(), LargeNumbers(),
-                              HugeNumbers(), MediumNumbers()}) {
-    for (const auto& number : numbers) {
-      // Test same number multiplication (most likely to trigger edge cases)
-      const Bignum bn_a = *Bignum::FromString(number);
-      const Bignum bn_result = bn_a * bn_a;
+  for (const auto& number : GetParam()) {
+    // Test same number multiplication (most likely to trigger edge cases)
+    const Bignum bn_a = *Bignum::FromString(number);
+    const Bignum bn_result = bn_a * bn_a;
 
-      const OpenSSLBignum ssl_a(number);
-      OpenSSLBignum ssl_result;
-      BN_mul(ssl_result.get(), ssl_a.get(), ssl_a.get(), ctx);
+    const OpenSSLBignum ssl_a(number);
+    OpenSSLBignum ssl_result;
+    BN_mul(ssl_result.get(), ssl_a.get(), ssl_a.get(), ctx);
 
-      // Compare string representations
-      char* ssl_str = BN_bn2dec(ssl_result.get());
-      std::string bn_str = absl::StrFormat("%v", bn_result);
+    // Compare string representations
+    char* ssl_str = BN_bn2dec(ssl_result.get());
+    std::string bn_str = absl::StrFormat("%v", bn_result);
 
-      EXPECT_EQ(bn_str, std::string(ssl_str))
-          << "Mismatch for multiplication"
-          << "\nBignum result: " << bn_str.substr(0, 100) << "..."
-          << "\nOpenSSL result: " << std::string(ssl_str).substr(0, 100)
-          << "...";
-      OPENSSL_free(ssl_str);
-    }
+    EXPECT_EQ(bn_str, std::string(ssl_str))
+        << "Mismatch for multiplication"
+        << "\nBignum result: " << bn_str.substr(0, 100) << "..."
+        << "\nOpenSSL result: " << std::string(ssl_str).substr(0, 100) << "...";
+    OPENSSL_free(ssl_str);
   }
   BN_CTX_free(ctx);
 }
+
+TEST_P(VsOpenSSLTest, AdditionCorrect) {
+  // Test that addition produces correct results by comparing to OpenSSL.
+  const std::vector<std::string> numbers = GetParam();
+  for (int i = 0; i < numbers.size(); ++i) {
+    const auto& num_a = numbers[i];
+    const auto& num_b = numbers[(i + 1) % numbers.size()];
+
+    const Bignum bn_a = *Bignum::FromString(num_a);
+    const Bignum bn_b = *Bignum::FromString(num_b);
+
+    const Bignum bn_result = bn_a + bn_b;
+
+    const OpenSSLBignum ssl_a(num_a);
+    const OpenSSLBignum ssl_b(num_b);
+    OpenSSLBignum ssl_result;
+    BN_add(ssl_result.get(), ssl_a.get(), ssl_b.get());
+
+    // Compare string representations
+    char* ssl_str = BN_bn2dec(ssl_result.get());
+    std::string bn_str = absl::StrFormat("%v", bn_result);
+
+    EXPECT_EQ(bn_str, std::string(ssl_str))
+        << "Mismatch for addition"
+        << "\nBignum result: " << bn_str.substr(0, 100) << "..."
+        << "\nOpenSSL result: " << std::string(ssl_str).substr(0, 100) << "...";
+    OPENSSL_free(ssl_str);
+  }
+}
+
+TEST_P(VsOpenSSLTest, SubtractionCorrect) {
+  // Test that subtraction produces correct results by comparing to OpenSSL.
+  const std::vector<std::string> numbers = GetParam();
+  for (int i = 0; i < numbers.size(); ++i) {
+    const auto& num_a = numbers[i];
+    const auto& num_b = numbers[(i + 1) % numbers.size()];
+
+    const Bignum bn_a = *Bignum::FromString(num_a);
+    const Bignum bn_b = *Bignum::FromString(num_b);
+
+    const Bignum bn_result = bn_a - bn_b;
+
+    const OpenSSLBignum ssl_a(num_a);
+    const OpenSSLBignum ssl_b(num_b);
+    OpenSSLBignum ssl_result;
+    BN_sub(ssl_result.get(), ssl_a.get(), ssl_b.get());
+
+    // Compare string representations
+    char* ssl_str = BN_bn2dec(ssl_result.get());
+    std::string bn_str = absl::StrFormat("%v", bn_result);
+
+    EXPECT_EQ(bn_str, std::string(ssl_str))
+        << "Mismatch for addition"
+        << "\nBignum result: " << bn_str.substr(0, 100) << "..."
+        << "\nOpenSSL result: " << std::string(ssl_str).substr(0, 100) << "...";
+    OPENSSL_free(ssl_str);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(VsOpenSSL, VsOpenSSLTest,
+                         ::testing::Values(SmallNumbers(), MediumNumbers(),
+                                           LargeNumbers(), HugeNumbers(),
+                                           MediumNumbers()));
 
 // TODO: Enable once benchmark is integrated.
 #if 0
@@ -1089,3 +1156,5 @@ void BM_OpenSSL_PowMedium(benchmark::State& state) {
 }
 BENCHMARK(BM_OpenSSL_PowMedium);
 #endif
+
+}  // namespace exactfloat_internal
