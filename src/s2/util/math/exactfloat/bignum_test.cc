@@ -867,7 +867,7 @@ TEST_P(VsOpenSSLTest, MultiplyCorrect) {
 TEST_P(VsOpenSSLTest, AdditionCorrect) {
   // Test that addition produces correct results by comparing to OpenSSL.
   const std::vector<std::string> numbers = GetParam();
-  for (int i = 0; i < numbers.size(); ++i) {
+  for (size_t i = 0; i < numbers.size(); ++i) {
     const auto& num_a = numbers[i];
     const auto& num_b = numbers[(i + 1) % numbers.size()];
 
@@ -896,7 +896,7 @@ TEST_P(VsOpenSSLTest, AdditionCorrect) {
 TEST_P(VsOpenSSLTest, SubtractionCorrect) {
   // Test that subtraction produces correct results by comparing to OpenSSL.
   const std::vector<std::string> numbers = GetParam();
-  for (int i = 0; i < numbers.size(); ++i) {
+  for (size_t i = 0; i < numbers.size(); ++i) {
     const auto& num_a = numbers[i];
     const auto& num_b = numbers[(i + 1) % numbers.size()];
 

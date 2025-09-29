@@ -140,11 +140,10 @@ Enable the python interface with `-DWITH_PYTHON=ON`.
 
 # For Testing
 
-If BUILD_TESTS is 'on' (the default), and benchmarks are enabled, then OpenSSL
-must be available to build some tests:
+If BUILD_TESTS is 'on' (the default), then OpenSSL must be available to build
+some tests:
 
 *   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
-
 
 If OpenSSL is installed in a non-standard location set `OPENSSL_ROOT_DIR`
 before running configure, for example on macOS:
