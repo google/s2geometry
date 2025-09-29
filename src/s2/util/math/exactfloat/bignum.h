@@ -30,51 +30,22 @@
 
 namespace exactfloat_internal {
 
+using Bigit = uint64_t;
+
+// Compares magnitude magnitude of two bigit vectors, returning -1, 0, or +1.
+//
+// Magnitudes are compared lexicographically from the most significant bigit
+// to the least significant.
+int CmpAbs(absl::Span<const Bigit> a, absl::Span<const Bigit> b);
+
 // A class to support arithmetic on large, arbitrary precision integers.
 //
 // Large integers are represented as an array of uint64_t values.
 class Bignum {
  public:
-  // Wrap uint64_t in a struct so we can make value-initialization a noop.
-  //
-  // Avoiding value-initialization overhead saves us 50% on some benchmarks.
-  struct Bigit {
-    static constexpr int kBits = std::numeric_limits<uint64_t>::digits;
-
-    Bigit() {}
-    constexpr Bigit(uint64_t value) : value_(value) {}
-    explicit Bigit(absl::uint128 value) : value_(absl::Uint128Low64(value)) {}
-
-    constexpr operator uint64_t() const { return value_; }
-    constexpr Bigit& operator=(uint64_t value) {
-      value_ = value;
-      return *this;
-    }
-
-    ABSL_ATTRIBUTE_ALWAYS_INLINE constexpr Bigit& operator--(int) {
-      value_--;
-      return *this;
-    }
-
-    ABSL_ATTRIBUTE_ALWAYS_INLINE constexpr friend Bigit operator*(  //
-        int a, Bigit b) {
-      return a * b.value_;
-    }
-
-    ABSL_ATTRIBUTE_ALWAYS_INLINE friend absl::uint128 operator*(  //
-        absl::uint128 a, Bigit b) {
-      return a * b.value_;
-    }
-
-    ABSL_ATTRIBUTE_ALWAYS_INLINE friend absl::uint128 operator+(  //
-        absl::uint128 a, Bigit b) {
-      return a + b.value_;
-    }
-
-    uint64_t value_;
-  };
-
   using BigitVector = absl::InlinedVector<Bigit, 2>;
+
+  static constexpr int kBigitBits = std::numeric_limits<Bigit>::digits;
 
   Bignum() = default;
 
@@ -294,29 +265,28 @@ class Bignum {
 
   // Returns true if the bignum magnitude is the given power of two.
   bool IsPow2(int pow2) const {
-    const int bigits = pow2 / Bigit::kBits;
+    const size_t bigits = pow2 / kBigitBits;
     if (bigits_.size() != bigits + 1) {
       return false;
     }
 
     // Verify lower words are zero.
-    for (int i = 0; i < bigits; ++i) {
+    for (size_t i = 0; i < bigits; ++i) {
       if (bigits_[i] != 0) {
         return false;
       }
     }
 
     // Check final word is power of two.
-    pow2 -= bigits * Bigit::kBits;
-    ABSL_DCHECK_LT(pow2, Bigit::kBits);
+    pow2 -= bigits * kBigitBits;
+    ABSL_DCHECK_LT(pow2, kBigitBits);
     return bigits_.back() == (Bigit(1) << pow2);
   }
 
   // Compares magnitude with another bignum, returning -1, 0, or +1.
-  //
-  // Magnitudes are compared lexicographically from the most significant bigit
-  // (bigits_.back()) to the least significant (bigits_[0]).
-  int CmpAbs(const Bignum& b) const;
+  int CmpAbs(const Bignum& b) const {
+    return ::exactfloat_internal::CmpAbs(bigits_, b.bigits_);
+  }
 
   BigitVector bigits_;
   int sign_ = 0;
@@ -349,12 +319,12 @@ Bignum::Bignum(T value) {
   }
 
   // Pack the magnitude into bigits.
-  if constexpr (std::numeric_limits<UT>::digits <= Bigit::kBits) {
+  if constexpr (std::numeric_limits<UT>::digits <= kBigitBits) {
     bigits_.push_back(static_cast<Bigit>(mag));
   } else {
     while (mag) {
       bigits_.push_back(static_cast<Bigit>(mag));
-      mag >>= Bigit::kBits;
+      mag >>= kBigitBits;
     }
   }
 }
@@ -384,13 +354,13 @@ void AbslStringify(Sink& sink, const Bignum& b) {
     absl::uint128 rem = 0;
     for (int i = static_cast<int>(copy.bigits_.size()) - 1; i >= 0; --i) {
       absl::uint128 acc = (rem << 64) + copy.bigits_[i];
-      Bignum::Bigit quot = static_cast<Bignum::Bigit>(acc / kBase);
+      Bigit quot = static_cast<Bigit>(acc / kBase);
       rem = acc - absl::uint128(quot) * kBase;
       copy.bigits_[i] = quot;
     }
 
     copy.Normalize();
-    chunks.push_back(static_cast<Bignum::Bigit>(rem));
+    chunks.push_back(static_cast<Bigit>(rem));
   }
   ABSL_DCHECK(!chunks.empty());
 
@@ -413,7 +383,7 @@ inline bool Bignum::FitsIn() const {
 
   // Maximum number of bits that could fit in the output type.
   constexpr int kTBitWidth = std::numeric_limits<UT>::digits;
-  constexpr int kMaxBigits = (kTBitWidth + (Bigit::kBits - 1)) / Bigit::kBits;
+  constexpr int kMaxBigits = (kTBitWidth + (kBigitBits - 1)) / kBigitBits;
 
   // Fast reject if the bignum couldn't conceivably fit.
   if (bigits_.size() > kMaxBigits) {
@@ -458,14 +428,14 @@ T Bignum::Cast() const {
   // Grab the bottom bits into an unsigned value.
   UT residue = 0;
   for (size_t i = 0; i < bigits_.size(); ++i) {
-    const int shift = i * Bigit::kBits;
+    const int shift = i * kBigitBits;
     if (shift >= kTBitWidth) {
       break;
     }
 
     const int room = kTBitWidth - shift;
     UT chunk = static_cast<UT>(bigits_[i]);
-    if (room < Bigit::kBits && room < std::numeric_limits<UT>::digits) {
+    if (room < kBigitBits && room < std::numeric_limits<UT>::digits) {
       chunk &= (UT(1) << room) - UT(1);
     }
     residue |= (chunk << shift);
@@ -477,20 +447,6 @@ T Bignum::Cast() const {
   }
 
   return static_cast<T>(residue);
-}
-
-inline int Bignum::CmpAbs(const Bignum& b) const {
-  if (size() != b.size()) {
-    return size() < b.size() ? -1 : +1;
-  }
-
-  for (int i = size() - 1; i >= 0; --i) {
-    if (bigits_[i] != b.bigits_[i]) {
-      return bigits_[i] < b.bigits_[i] ? -1 : +1;
-    }
-  }
-
-  return 0;
 }
 
 }  // namespace exactfloat_internal

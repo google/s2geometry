@@ -6,6 +6,7 @@ cc_library(
     name = "bignum",
     srcs = ["bignum.cc"],
     hdrs = ["bignum.h"],
+    visibility = "//visibility:private",
 )
 
 cc_library(
