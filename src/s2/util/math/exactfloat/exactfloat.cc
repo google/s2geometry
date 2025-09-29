@@ -383,15 +383,6 @@ std::string ExactFloat::ToUniqueString() const {
   return absl::StrFormat("%s<%d>", ToString(), prec());
 }
 
-ExactFloat& ExactFloat::operator=(const ExactFloat& b) {
-  if (this != &b) {
-    sign_ = b.sign_;
-    bn_exp_ = b.bn_exp_;
-    bn_ = b.bn_;
-  }
-  return *this;
-}
-
 ExactFloat ExactFloat::operator-() const { return CopyWithSign(-sign_); }
 
 ExactFloat operator+(const ExactFloat& a, const ExactFloat& b) {
