@@ -535,7 +535,10 @@ static void MulQuadratic(   //
 template <typename T>
 static std::pair<absl::Span<T>, absl::Span<T>> Split(  //
     absl::Span<T> span, int a, int b) {
-  return {span.subspan(0, a), span.subspan(a, b)};
+  if (a < span.size()) {
+    return {span.subspan(0, a), span.subspan(a, b)};
+  }
+  return {span.subspan(0, a), {}};
 };
 
 // A simple bump allocator to avoid allocating memory during recursion.
@@ -550,6 +553,8 @@ class Arena {
     used_ += n;
     return absl::Span<Bigit>(data_.data() + start, n);
   }
+
+  size_t Used() const { return used_; }
 
   void Release(ssize_t n) {
     ABSL_DCHECK_LE(n, used_);
@@ -566,18 +571,21 @@ static void KaratsubaMulRec(  //
     absl::Span<const Bigit> a, absl::Span<const Bigit> b, Arena& arena) {
   ABSL_DCHECK_GE(dst.size(), a.size() + b.size());
   if (a.empty() || b.empty()) {
+    absl::c_fill(dst, 0);
     return;
   }
 
-  // Karatsuba lets us represent two numbers of 2M bigits each, A and B, as:
+  int arena_start = arena.Used();
+
+  // Karatsuba lets us represent two numbers of M bigits each, A and B, as:
   //
-  //   A = a1*10^M + a0
-  //   B = b1*10^M + b0
+  //   A = a1*10^(M/2) + a0
+  //   B = b1*10^(M/2) + b0
   //
   // Which we can multiply out:
-  //   AB = (a1*10^M + a0)*(b1*10^M + b0);
-  //      = a1*b1*10^(2M) + (a1*b0 + a0*b1)*10^M + a0*b0
-  //      = z2 * 10^2M    + z1*10^M              + z0
+  //   AB = (a1*10^(M/2) + a0)*(b1*10^(M/2) + b0);
+  //      = a1*b1*10^M + (a1*b0 + a0*b1)*10^(M/2) + a0*b0
+  //      = z2 * 10^M  + z1*10^(M/2)            + z0
   //
   // Where:
   //   z0 = a0*b0
@@ -594,33 +602,42 @@ static void KaratsubaMulRec(  //
   // with those individual multiplies able to be recursively divided.
 
   // Fall back to long multiplication when we're small enough.
-  if (dst.size() < kKaratsubaThreshold) {
+  if (dst.size() <= kKaratsubaThreshold) {
     MulQuadratic(dst, a, b);
     return;
   }
 
-  const int half = (std::min(a.size(), b.size()) + 1) / 2;
+  const int half = (std::max(a.size(), b.size()) + 1) / 2;
 
   // Split the inputs into contiguous subspans.
   auto [a0, a1] = Split(a, half, half);
   auto [b0, b1] = Split(b, half, half);
 
+  // We can skip adding the z2 term if a1 or b1 is zero.
+  const bool z2_zero = (a1.empty() || b1.empty());
+
   // Make space to hold results in the output and multiply sub-terms.
   //   z0 = a0 * b0
   //   z2 = a1 * b1
-  auto [z0, z2] = Split(dst, 2 * half, 2 * half);
-
+  auto [z0, z2] = Split(dst, a0.size() + b0.size(), a1.size() + b1.size());
   KaratsubaMulRec(z0, a0, b0, arena);
   KaratsubaMulRec(z2, a1, b1, arena);
 
-  // Compute (a0 + a1) and (b0 + b1) using space from the arena.
+  // Compute (a0 + a1) and (b0 + b1)
   //
-  // The sums may or may not carry. We pop the extra bigit off if they
-  // don't.
-  auto sa = arena.Alloc(half + 1);
-  auto sb = arena.Alloc(half + 1);
-  sa = sa.first(AddInto(sa, a0, a1));
-  sb = sb.first(AddInto(sb, b0, b1));
+  // If the upper terms are zero we can just re-use the terms we have, otherwise
+  // we compute the sum and pop off the MSB bigit if no carry occurred.
+  absl::Span<const Bigit> sa = a0;
+  absl::Span<const Bigit> sb = b0;
+  if (!a1.empty()) {
+    absl::Span<Bigit> tmp = arena.Alloc(half + 1);
+    sa = tmp.first(AddInto(tmp, a0, a1));
+  }
+
+  if (!b1.empty()) {
+    absl::Span<Bigit> tmp = arena.Alloc(half + 1);
+    sb = tmp.first(AddInto(tmp, b0, b1));
+  }
 
   // Compute z1 = sa*sb - z0 - z2 = (a0 + a1)*(b0 + b1) - z0 - z2
   auto z1 = arena.Alloc(sa.size() + sb.size());
@@ -630,13 +647,26 @@ static void KaratsubaMulRec(  //
 
   // NOTE: (a0 + a1) * (b0 + b1) >= a0*b0 + a1*b1 so this never underflows.
   SubGeInPlace(z1, z0);
-  SubGeInPlace(z1, z2);
+  if (!z2_zero) {
+    SubGeInPlace(z1, z2);
+  }
+
+  // Z1 may overflow because of a carry in (a0 + b0) or (a1 + b1) but
+  // subtracting z0 and z2 will always bring it back in range, trim any leading
+  // zeros to shorten the value if needed.
+  int i = 0;
+  for (i = z1.size() - 1; i > 0; --i) {
+    if (z1[i]) {
+      break;
+    }
+  }
+  z1 = z1.first(i + 1);
 
   // We need to add z1*10^half which we can do by adding it offset.
   AddInPlace(dst.subspan(half), z1);
 
   // Release temporary memory we used.
-  arena.Release(z1.size() + sb.size() + sa.size());
+  arena.Release(arena.Used() - arena_start);
 }
 
 Bignum::BigitVector Bignum::KaratsubaMul(  //
@@ -646,7 +676,7 @@ Bignum::BigitVector Bignum::KaratsubaMul(  //
   }
 
   // Each step of Karatsuba splits at:
-  //   N = std::ceil(std::min(a.size(), b.size())/2)
+  //   N = (std::max(a.size() + b.size() + 1) / 2
   //
   // We have to hold a total of 4*(N + 1) bigits as temporaries at each step.
   //

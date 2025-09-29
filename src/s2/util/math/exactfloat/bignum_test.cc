@@ -839,7 +839,7 @@ const std::vector<std::string>& MegaNumbers() {
 
 class VsOpenSSLTest : public TestWithParam<std::vector<std::string>> {};
 
-TEST_P(VsOpenSSLTest, MultiplyCorrect) {
+TEST_P(VsOpenSSLTest, SquaringCorrect) {
   // Test that multiplication produces correct results by comparing to OpenSSL.
   BN_CTX* ctx = BN_CTX_new();
   for (const auto& number : GetParam()) {
@@ -850,6 +850,31 @@ TEST_P(VsOpenSSLTest, MultiplyCorrect) {
     const OpenSSLBignum ssl_a(number);
     OpenSSLBignum ssl_result;
     BN_mul(ssl_result.get(), ssl_a.get(), ssl_a.get(), ctx);
+
+    // Compare string representations
+    char* ssl_str = BN_bn2dec(ssl_result.get());
+    std::string bn_str = absl::StrFormat("%v", bn_result);
+
+    EXPECT_EQ(bn_str, std::string(ssl_str))
+        << "Mismatch for multiplication"
+        << "\nBignum result: " << bn_str.substr(0, 100) << "..."
+        << "\nOpenSSL result: " << std::string(ssl_str).substr(0, 100) << "...";
+    OPENSSL_free(ssl_str);
+  }
+  BN_CTX_free(ctx);
+}
+
+TEST_P(VsOpenSSLTest, MultiplyCorrect) {
+  // Multiply by a small constant to test widely different operand sizes.
+  BN_CTX* ctx = BN_CTX_new();
+  for (const auto& number : GetParam()) {
+    // Test same number multiplication (most likely to trigger edge cases)
+    const Bignum bn_a = *Bignum::FromString(number);
+    const Bignum bn_result = Bignum(2) * bn_a;
+
+    const OpenSSLBignum ssl_a(number);
+    OpenSSLBignum ssl_result;
+    BN_mul(ssl_result.get(), OpenSSLBignum("2").get(), ssl_a.get(), ctx);
 
     // Compare string representations
     char* ssl_str = BN_bn2dec(ssl_result.get());
