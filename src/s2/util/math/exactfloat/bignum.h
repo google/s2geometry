@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef S2_UTIL_MATH_EXACTFLOAT_BIGNUM_H_
+#define S2_UTIL_MATH_EXACTFLOAT_BIGNUM_H_
+
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -450,3 +453,5 @@ T Bignum::Cast() const {
 }
 
 }  // namespace exactfloat_internal
+
+#endif  // S2_UTIL_MATH_EXACTFLOAT_BIGNUM_H_

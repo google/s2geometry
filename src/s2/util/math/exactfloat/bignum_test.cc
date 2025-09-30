@@ -16,6 +16,7 @@
 #include "s2/util/math/exactfloat/bignum.h"
 
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,7 @@
 #endif
 
 #include "absl/base/no_destructor.h"
+#include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -36,20 +38,20 @@ namespace exactfloat_internal {
 
 using ::testing::TestWithParam;
 
-const uint64_t u8max = std::numeric_limits<uint8_t>::max();
-const uint64_t u16max = std::numeric_limits<uint16_t>::max();
-const uint64_t u32max = std::numeric_limits<uint32_t>::max();
-const uint64_t u64max = std::numeric_limits<uint64_t>::max();
+constexpr uint64_t kU8max = std::numeric_limits<uint8_t>::max();
+constexpr uint64_t kU16max = std::numeric_limits<uint16_t>::max();
+constexpr uint64_t kU32max = std::numeric_limits<uint32_t>::max();
+constexpr uint64_t kU64max = std::numeric_limits<uint64_t>::max();
 
-const int64_t i8max = std::numeric_limits<int8_t>::max();
-const int64_t i16max = std::numeric_limits<int16_t>::max();
-const int64_t i32max = std::numeric_limits<int32_t>::max();
-const int64_t i64max = std::numeric_limits<int64_t>::max();
+constexpr int64_t kI8max = std::numeric_limits<int8_t>::max();
+constexpr int64_t kI16max = std::numeric_limits<int16_t>::max();
+constexpr int64_t kI32max = std::numeric_limits<int32_t>::max();
+constexpr int64_t kI64max = std::numeric_limits<int64_t>::max();
 
-const int64_t i8min = std::numeric_limits<int8_t>::min();
-const int64_t i16min = std::numeric_limits<int16_t>::min();
-const int64_t i32min = std::numeric_limits<int32_t>::min();
-const int64_t i64min = std::numeric_limits<int64_t>::min();
+constexpr int64_t kI8min = std::numeric_limits<int8_t>::min();
+constexpr int64_t kI16min = std::numeric_limits<int16_t>::min();
+constexpr int64_t kI32min = std::numeric_limits<int32_t>::min();
+constexpr int64_t kI64min = std::numeric_limits<int64_t>::min();
 
 // To reduce duplication.
 inline auto Bn(absl::string_view str) { return Bignum::FromString(str); };
@@ -155,8 +157,8 @@ TEST(BignumTest, NegativeOnlyFitsInSigned) {
 }
 
 TEST(BignumTest, FitsInUnsignedBoundsChecks) {
-  const Bignum bn_u8max(u8max);
-  const Bignum bn_u8over(u8max + 1);
+  const Bignum bn_u8max(kU8max);
+  const Bignum bn_u8over(kU8max + 1);
   EXPECT_TRUE(bn_u8max.FitsIn<uint8_t>());
   EXPECT_TRUE(bn_u8max.FitsIn<uint16_t>());
   EXPECT_TRUE(bn_u8max.FitsIn<uint32_t>());
@@ -164,8 +166,8 @@ TEST(BignumTest, FitsInUnsignedBoundsChecks) {
   EXPECT_TRUE(bn_u8over.FitsIn<uint16_t>());
   EXPECT_TRUE(bn_u8over.FitsIn<uint32_t>());
 
-  const Bignum bn_u16max(u16max);
-  const Bignum bn_u16over(u16max + 1);
+  const Bignum bn_u16max(kU16max);
+  const Bignum bn_u16over(kU16max + 1);
   EXPECT_FALSE(bn_u16max.FitsIn<uint8_t>());
   EXPECT_TRUE(bn_u16max.FitsIn<uint16_t>());
   EXPECT_TRUE(bn_u16max.FitsIn<uint32_t>());
@@ -173,8 +175,8 @@ TEST(BignumTest, FitsInUnsignedBoundsChecks) {
   EXPECT_FALSE(bn_u16over.FitsIn<uint16_t>());
   EXPECT_TRUE(bn_u16over.FitsIn<uint32_t>());
 
-  const Bignum bn_u32max(u32max);
-  const Bignum bn_u32over(u32max + 1);
+  const Bignum bn_u32max(kU32max);
+  const Bignum bn_u32over(kU32max + 1);
   EXPECT_FALSE(bn_u32max.FitsIn<uint8_t>());
   EXPECT_FALSE(bn_u32max.FitsIn<uint16_t>());
   EXPECT_TRUE(bn_u32max.FitsIn<uint32_t>());
@@ -182,7 +184,7 @@ TEST(BignumTest, FitsInUnsignedBoundsChecks) {
   EXPECT_FALSE(bn_u32over.FitsIn<uint16_t>());
   EXPECT_FALSE(bn_u32over.FitsIn<uint32_t>());
 
-  const Bignum bn_u64max(u64max);
+  const Bignum bn_u64max(kU64max);
   EXPECT_TRUE(bn_u64max.FitsIn<uint64_t>());
 
   // 2^64, need to use string constructor.
@@ -191,8 +193,8 @@ TEST(BignumTest, FitsInUnsignedBoundsChecks) {
 }
 
 TEST(BignumTest, FitsInSignedBoundsChecks) {
-  const Bignum bn_i8max(i8max);
-  const Bignum bn_i8over(i8max + 1);
+  const Bignum bn_i8max(kI8max);
+  const Bignum bn_i8over(kI8max + 1);
   EXPECT_TRUE(bn_i8max.FitsIn<int8_t>());
   EXPECT_TRUE(bn_i8max.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i8max.FitsIn<int32_t>());
@@ -200,8 +202,8 @@ TEST(BignumTest, FitsInSignedBoundsChecks) {
   EXPECT_TRUE(bn_i8over.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i8over.FitsIn<int32_t>());
 
-  const Bignum bn_i16max(i16max);
-  const Bignum bn_i16over(i16max + 1);
+  const Bignum bn_i16max(kI16max);
+  const Bignum bn_i16over(kI16max + 1);
   EXPECT_FALSE(bn_i16max.FitsIn<int8_t>());
   EXPECT_TRUE(bn_i16max.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i16max.FitsIn<int32_t>());
@@ -209,8 +211,8 @@ TEST(BignumTest, FitsInSignedBoundsChecks) {
   EXPECT_FALSE(bn_i16over.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i16over.FitsIn<int32_t>());
 
-  const Bignum bn_i32max(i32max);
-  const Bignum bn_i32over(i32max + 1);
+  const Bignum bn_i32max(kI32max);
+  const Bignum bn_i32over(kI32max + 1);
   EXPECT_FALSE(bn_i32max.FitsIn<int8_t>());
   EXPECT_FALSE(bn_i32max.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i32max.FitsIn<int32_t>());
@@ -218,15 +220,15 @@ TEST(BignumTest, FitsInSignedBoundsChecks) {
   EXPECT_FALSE(bn_i32over.FitsIn<int16_t>());
   EXPECT_FALSE(bn_i32over.FitsIn<int32_t>());
 
-  Bignum bn_i64max(i64max);
+  Bignum bn_i64max(kI64max);
   EXPECT_TRUE(bn_i64max.FitsIn<int64_t>());
 
   // 2^63, need to use string constructor.
   Bignum bn0 = *Bn("9223372036854775808");
   EXPECT_FALSE(bn0.FitsIn<int64_t>());
 
-  const Bignum bn_i8min(i8min);
-  const Bignum bn_i8under(i8min - 1);
+  const Bignum bn_i8min(kI8min);
+  const Bignum bn_i8under(kI8min - 1);
   EXPECT_TRUE(bn_i8min.FitsIn<int8_t>());
   EXPECT_TRUE(bn_i8min.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i8min.FitsIn<int32_t>());
@@ -234,8 +236,8 @@ TEST(BignumTest, FitsInSignedBoundsChecks) {
   EXPECT_TRUE(bn_i8under.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i8under.FitsIn<int32_t>());
 
-  const Bignum bn_i16min(i16min);
-  const Bignum bn_i16under(i16min - 1);
+  const Bignum bn_i16min(kI16min);
+  const Bignum bn_i16under(kI16min - 1);
   EXPECT_FALSE(bn_i16min.FitsIn<int8_t>());
   EXPECT_TRUE(bn_i16min.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i16min.FitsIn<int32_t>());
@@ -243,8 +245,8 @@ TEST(BignumTest, FitsInSignedBoundsChecks) {
   EXPECT_FALSE(bn_i16under.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i16under.FitsIn<int32_t>());
 
-  const Bignum bn_i32min(i32min);
-  const Bignum bn_i32under(i32min - 1);
+  const Bignum bn_i32min(kI32min);
+  const Bignum bn_i32under(kI32min - 1);
   EXPECT_FALSE(bn_i32min.FitsIn<int8_t>());
   EXPECT_FALSE(bn_i32min.FitsIn<int16_t>());
   EXPECT_TRUE(bn_i32min.FitsIn<int32_t>());
@@ -252,7 +254,7 @@ TEST(BignumTest, FitsInSignedBoundsChecks) {
   EXPECT_FALSE(bn_i32under.FitsIn<int16_t>());
   EXPECT_FALSE(bn_i32under.FitsIn<int32_t>());
 
-  Bignum bn_i64min(i64min);
+  Bignum bn_i64min(kI64min);
   EXPECT_TRUE(bn_i64min.FitsIn<int64_t>());
 }
 
@@ -365,7 +367,7 @@ TEST(BignumTest, Addition) {
   EXPECT_EQ(Bignum(5) + Bignum(-5), Bignum(0));
 
   // Carry propagation
-  const auto bn_u64max = Bignum(u64max);
+  const auto bn_u64max = Bignum(kU64max);
   EXPECT_EQ(bn_u64max + Bignum(1), *Bn("18446744073709551616"));
   EXPECT_EQ(bn_u64max + bn_u64max, *Bn("36893488147419103230"));
 
@@ -389,7 +391,7 @@ TEST(BignumTest, Subtraction) {
   EXPECT_EQ(Bignum(42) - Bignum(42), Bignum(0));
 
   // Borrow propagation
-  const auto bn_u64max = Bignum(u64max);
+  const auto bn_u64max = Bignum(kU64max);
   const auto two_pow_64 = *Bn("18446744073709551616");
   EXPECT_EQ(two_pow_64 - Bignum(1), bn_u64max);
 
@@ -446,7 +448,7 @@ TEST(BignumTest, LeftShift) {
   EXPECT_EQ((Bignum(1) << 64), *Bn("18446744073709551616"));
   EXPECT_EQ((Bignum(-1) << 64), *Bn("-18446744073709551616"));
 
-  const auto bn_u64max = Bignum(u64max);
+  const auto bn_u64max = Bignum(kU64max);
   const auto two_pow_128_minus_two_pow_64 =
       *Bn("340282366920938463444927863358058659840");
   EXPECT_EQ((bn_u64max << 64), two_pow_128_minus_two_pow_64);
@@ -509,11 +511,11 @@ TEST(BignumTest, Multiplication) {
   EXPECT_EQ(Bignum(-10) * Bignum(-20), Bignum(200));
 
   // Simple carry
-  const auto bn_u32max = Bignum(u32max);
+  const auto bn_u32max = Bignum(kU32max);
   EXPECT_EQ(bn_u32max * Bignum(2), *Bn("8589934590"));
 
   // 1x1 bigit fast path
-  const auto bn_u64max = Bignum(u64max);
+  const auto bn_u64max = Bignum(kU64max);
   EXPECT_EQ(Bignum(2) * bn_u64max, *Bn("36893488147419103230"));
 
   // 1xN bigit multiplication
@@ -754,10 +756,11 @@ class OpenSSLBignum {
 // Power of two for fast modulo.
 const int kRandomBignumCount = 128;
 
-static std::vector<std::string> GenerateRandomNumbers(int bits) {
+static std::vector<std::string> GenerateRandomNumbers(absl::BitGenRef bitgen,
+                                                      int bits) {
   std::vector<std::string> numbers;
+  numbers.reserve(kRandomBignumCount);
 
-  absl::BitGen bitgen;
   for (int i = 0; i < kRandomBignumCount; ++i) {
     std::string num;
 
@@ -767,7 +770,7 @@ static std::vector<std::string> GenerateRandomNumbers(int bits) {
     // First digit can't be zero
     absl::StrAppend(&num, absl::StrFormat("%d", absl::Uniform(bitgen, 1, 9)));
     for (int j = 1; j < decimal_digits; ++j) {
-      num += std::to_string(absl::Uniform(bitgen, 0, 9));
+      num += absl::Uniform(bitgen, '0', '9');
     }
 
     numbers.push_back(num);
@@ -807,33 +810,33 @@ TEST(BignumTest, ResultsMatch) {
   OPENSSL_free(ssl_str);
 }
 
-const std::vector<std::string>& SmallNumbers() {
+const std::vector<std::string>& SmallNumbers(absl::BitGenRef bitgen) {
   static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(64));
+      GenerateRandomNumbers(bitgen, 64));
   return *numbers;
 }
 
-const std::vector<std::string>& MediumNumbers() {
+const std::vector<std::string>& MediumNumbers(absl::BitGenRef bitgen) {
   static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(256));
+      GenerateRandomNumbers(bitgen, 256));
   return *numbers;
 }
 
-const std::vector<std::string>& LargeNumbers() {
+const std::vector<std::string>& LargeNumbers(absl::BitGenRef bitgen) {
   static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(1024));
+      GenerateRandomNumbers(bitgen, 1024));
   return *numbers;
 }
 
-const std::vector<std::string>& HugeNumbers() {
+const std::vector<std::string>& HugeNumbers(absl::BitGenRef bitgen) {
   static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(4096));
+      GenerateRandomNumbers(bitgen, 4096));
   return *numbers;
 }
 
-const std::vector<std::string>& MegaNumbers() {
+const std::vector<std::string>& MegaNumbers(absl::BitGenRef bitgen) {
   static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(18000));
+      GenerateRandomNumbers(bitgen, 18000));
   return *numbers;
 }
 
@@ -947,10 +950,13 @@ TEST_P(VsOpenSSLTest, SubtractionCorrect) {
   }
 }
 
+absl::BitGen bitgen;
 INSTANTIATE_TEST_SUITE_P(VsOpenSSL, VsOpenSSLTest,
-                         ::testing::Values(SmallNumbers(), MediumNumbers(),
-                                           LargeNumbers(), HugeNumbers(),
-                                           MediumNumbers()));
+                         ::testing::Values(SmallNumbers(bitgen),
+                                           MediumNumbers(bitgen),
+                                           LargeNumbers(bitgen),
+                                           HugeNumbers(bitgen),
+                                           MediumNumbers(bitgen)));
 
 // TODO: Enable once benchmark is integrated.
 #if 0
@@ -1062,122 +1068,151 @@ void OpenSSLPowBenchmark(benchmark::State& state,
 }
 
 void BM_Bignum_AddSmall(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, SmallNumbers(), std::plus<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, SmallNumbers(bitgen), std::plus<Bignum>{});
 }
 BENCHMARK(BM_Bignum_AddSmall);
 
 void BM_Bignum_AddMedium(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, MediumNumbers(), std::plus<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, MediumNumbers(bitgen), std::plus<Bignum>{});
 }
 BENCHMARK(BM_Bignum_AddMedium);
 
 void BM_Bignum_AddLarge(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, LargeNumbers(), std::plus<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, LargeNumbers(bitgen), std::plus<Bignum>{});
 }
 BENCHMARK(BM_Bignum_AddLarge);
 
 void BM_Bignum_AddHuge(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, HugeNumbers(), std::plus<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, HugeNumbers(bitgen), std::plus<Bignum>{});
 }
 BENCHMARK(BM_Bignum_AddHuge);
 
 void BM_Bignum_AddMega(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, MegaNumbers(), std::plus<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, MegaNumbers(bitgen), std::plus<Bignum>{});
 }
 BENCHMARK(BM_Bignum_AddMega);
 
 void BM_OpenSSL_AddSmall(benchmark::State& state) {
-  OpenSSLBinaryOpBenchmark(state, SmallNumbers(), BN_add);
+  std::mt19937_64 bitgen;
+  OpenSSLBinaryOpBenchmark(state, SmallNumbers(bitgen), BN_add);
 }
 BENCHMARK(BM_OpenSSL_AddSmall);
 
 void BM_OpenSSL_AddMedium(benchmark::State& state) {
-  OpenSSLBinaryOpBenchmark(state, MediumNumbers(), BN_add);
+  std::mt19937_64 bitgen;
+  OpenSSLBinaryOpBenchmark(state, MediumNumbers(bitgen), BN_add);
 }
 BENCHMARK(BM_OpenSSL_AddMedium);
 
 void BM_OpenSSL_AddLarge(benchmark::State& state) {
-  OpenSSLBinaryOpBenchmark(state, LargeNumbers(), BN_add);
+  std::mt19937_64 bitgen;
+  OpenSSLBinaryOpBenchmark(state, LargeNumbers(bitgen), BN_add);
 }
 BENCHMARK(BM_OpenSSL_AddLarge);
 
 void BM_OpenSSL_AddHuge(benchmark::State& state) {
-  OpenSSLBinaryOpBenchmark(state, HugeNumbers(), BN_add);
+  std::mt19937_64 bitgen;
+  OpenSSLBinaryOpBenchmark(state, HugeNumbers(bitgen), BN_add);
 }
 BENCHMARK(BM_OpenSSL_AddHuge);
 
 void BM_OpenSSL_AddMega(benchmark::State& state) {
-  OpenSSLBinaryOpBenchmark(state, MegaNumbers(), BN_add);
+  std::mt19937_64 bitgen;
+  OpenSSLBinaryOpBenchmark(state, MegaNumbers(bitgen), BN_add);
 }
 BENCHMARK(BM_OpenSSL_AddMega);
 
 void BM_Bignum_MulSmall(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, SmallNumbers(), std::multiplies<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, SmallNumbers(bitgen),
+                          std::multiplies<Bignum>{});
 }
 BENCHMARK(BM_Bignum_MulSmall);
 
 void BM_Bignum_MulMedium(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, MediumNumbers(), std::multiplies<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, MediumNumbers(bitgen),
+                          std::multiplies<Bignum>{});
 }
 BENCHMARK(BM_Bignum_MulMedium);
 
 void BM_Bignum_MulLarge(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, LargeNumbers(), std::multiplies<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, LargeNumbers(bitgen),
+                          std::multiplies<Bignum>{});
 }
 BENCHMARK(BM_Bignum_MulLarge);
 
 void BM_Bignum_MulHuge(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, HugeNumbers(), std::multiplies<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, HugeNumbers(bitgen),
+                          std::multiplies<Bignum>{});
 }
 BENCHMARK(BM_Bignum_MulHuge);
 
 void BM_Bignum_MulMega(benchmark::State& state) {
-  BignumBinaryOpBenchmark(state, MegaNumbers(), std::multiplies<Bignum>{});
+  std::mt19937_64 bitgen;
+  BignumBinaryOpBenchmark(state, MegaNumbers(bitgen),
+                          std::multiplies<Bignum>{});
 }
 BENCHMARK(BM_Bignum_MulMega);
 
 void BM_OpenSSL_MulSmall(benchmark::State& state) {
-  OpenSSLMulOpBenchmark(state, SmallNumbers(), BN_mul);
+  std::mt19937_64 bitgen;
+  OpenSSLMulOpBenchmark(state, SmallNumbers(bitgen), BN_mul);
 }
 BENCHMARK(BM_OpenSSL_MulSmall);
 
 void BM_OpenSSL_MulMedium(benchmark::State& state) {
-  OpenSSLMulOpBenchmark(state, MediumNumbers(), BN_mul);
+  std::mt19937_64 bitgen;
+  OpenSSLMulOpBenchmark(state, MediumNumbers(bitgen), BN_mul);
 }
 BENCHMARK(BM_OpenSSL_MulMedium);
 
 void BM_OpenSSL_MulLarge(benchmark::State& state) {
-  OpenSSLMulOpBenchmark(state, LargeNumbers(), BN_mul);
+  std::mt19937_64 bitgen;
+  OpenSSLMulOpBenchmark(state, LargeNumbers(bitgen), BN_mul);
 }
 BENCHMARK(BM_OpenSSL_MulLarge);
 
 void BM_OpenSSL_MulHuge(benchmark::State& state) {
-  OpenSSLMulOpBenchmark(state, HugeNumbers(), BN_mul);
+  std::mt19937_64 bitgen;
+  OpenSSLMulOpBenchmark(state, HugeNumbers(bitgen), BN_mul);
 }
 BENCHMARK(BM_OpenSSL_MulHuge);
 
 void BM_OpenSSL_MulMega(benchmark::State& state) {
-  OpenSSLMulOpBenchmark(state, MegaNumbers(), BN_mul);
+  std::mt19937_64 bitgen;
+  OpenSSLMulOpBenchmark(state, MegaNumbers(bitgen), BN_mul);
 }
 BENCHMARK(BM_OpenSSL_MulMega);
 
 void BM_Bignum_PowSmall(benchmark::State& state) {
-  BignumPowBenchmark(state, SmallNumbers(), 20);
+  std::mt19937_64 bitgen;
+  BignumPowBenchmark(state, SmallNumbers(bitgen), 20);
 }
 BENCHMARK(BM_Bignum_PowSmall);
 
 void BM_Bignum_PowMedium(benchmark::State& state) {
-  BignumPowBenchmark(state, MediumNumbers(), 10);
+  std::mt19937_64 bitgen;
+  BignumPowBenchmark(state, MediumNumbers(bitgen), 10);
 }
 BENCHMARK(BM_Bignum_PowMedium);
 
 void BM_OpenSSL_PowSmall(benchmark::State& state) {
-  OpenSSLPowBenchmark(state, SmallNumbers(), 20);
+  std::mt19937_64 bitgen;
+  OpenSSLPowBenchmark(state, SmallNumbers(bitgen), 20);
 }
 BENCHMARK(BM_OpenSSL_PowSmall);
 
 void BM_OpenSSL_PowMedium(benchmark::State& state) {
-  OpenSSLPowBenchmark(state, MediumNumbers(), 10);
+  std::mt19937_64 bitgen;
+  OpenSSLPowBenchmark(state, MediumNumbers(bitgen), 10);
 }
 BENCHMARK(BM_OpenSSL_PowMedium);
 #endif
