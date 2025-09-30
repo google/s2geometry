@@ -541,13 +541,16 @@ static std::pair<absl::Span<T>, absl::Span<T>> Split(  //
   return {span.subspan(0, a), {}};
 };
 
-// A simple bump allocator to avoid allocating memory during recursion.
+// A simple bump allocator to allow us to very efficiently allocate temporary
+// space when recursing in the Karatsuba multiply. The arena is pre-sized and
+// returns spans of memory via Alloc() which are then returned to the arena via
+// Release.
 class Arena {
  public:
-  explicit Arena(ssize_t size) { data_.reserve(size); }
+  explicit Arena(size_t size) { data_.reserve(size); }
 
   // Allocates a span of length n from the arena.
-  absl::Span<Bigit> Alloc(ssize_t n) {
+  absl::Span<Bigit> Alloc(size_t n) {
     ABSL_DCHECK_LE(used_ + n, data_.capacity());
     size_t start = used_;
     used_ += n;
@@ -556,13 +559,13 @@ class Arena {
 
   size_t Used() const { return used_; }
 
-  void Release(ssize_t n) {
+  void Release(size_t n) {
     ABSL_DCHECK_LE(n, used_);
     used_ -= n;
   }
 
  private:
-  ssize_t used_ = 0;
+  size_t used_ = 0;
   std::vector<Bigit> data_;
 };
 
