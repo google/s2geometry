@@ -25,11 +25,8 @@
 #include <limits>
 #include <string>
 
-#include "absl/base/macros.h"
-#include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-#include "absl/numeric/bits.h"  // IWYU pragma: keep
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 
@@ -69,10 +66,13 @@ ExactFloat::ExactFloat(double v) {
 
 ExactFloat::ExactFloat(int v) {
   sign_ = (v >= 0) ? 1 : -1;
-
-  // Note that this works even for INT_MIN, as |INT_MIN| < |INT_MAX|.
-  bn_ = Bignum(abs(v));
   bn_exp_ = 0;
+
+  if (v == std::numeric_limits<int>::min()) {
+    bn_ = Bignum(unsigned(0) - static_cast<unsigned>(v));
+  } else {
+    bn_ = Bignum(abs(v));
+  }
   Canonicalize();
 }
 
@@ -104,19 +104,19 @@ int ExactFloat::exp() const {
 void ExactFloat::set_zero(int sign) {
   sign_ = sign;
   bn_exp_ = kExpZero;
-  bn_.SetZero();
+  bn_.set_zero();
 }
 
 void ExactFloat::set_inf(int sign) {
   sign_ = sign;
   bn_exp_ = kExpInfinity;
-  bn_.SetZero();
+  bn_.set_zero();
 }
 
 void ExactFloat::set_nan() {
   sign_ = 1;
   bn_exp_ = kExpNaN;
-  bn_.SetZero();
+  bn_.set_zero();
 }
 
 int fpclassify(ExactFloat const& x) {
@@ -152,12 +152,12 @@ double ExactFloat::ToDoubleHelper() const {
     }
     return std::copysign(std::numeric_limits<double>::quiet_NaN(), sign_);
   }
-  auto opt_mantissa = bn_.ConvertTo<uint64_t>();
-  ABSL_DCHECK(opt_mantissa.has_value());
+
+  const double d_mantissa = static_cast<double>(bn_.Cast<uint64_t>());
 
   // We rely on ldexp() to handle overflow and underflow.  (It will return a
   // signed zero or infinity if the result is too small or too large.)
-  return sign_ * ldexp(static_cast<double>(*opt_mantissa), bn_exp_);
+  return sign_ * ldexp(d_mantissa, bn_exp_);
 }
 
 ExactFloat ExactFloat::RoundToMaxPrec(int max_prec, RoundingMode mode) const {
@@ -205,7 +205,7 @@ ExactFloat ExactFloat::RoundToPowerOf2(int bit_exp, RoundingMode mode) const {
     // Never increment.
   } else if (mode == kRoundTiesAwayFromZero) {
     // Increment if the highest discarded bit is 1.
-    if (bn_.Bit(shift - 1)) increment = true;
+    if (bn_.is_bit_set(shift - 1)) increment = true;
   } else if (mode == kRoundAwayFromZero) {
     // Increment unless all discarded bits are zero.
     if (countr_zero(bn_) < shift) increment = true;
@@ -217,8 +217,8 @@ ExactFloat ExactFloat::RoundToPowerOf2(int bit_exp, RoundingMode mode) const {
     //    0/10*       ->    Don't increment (fraction = 1/2, kept part even)
     //    1/10*       ->    Increment (fraction = 1/2, kept part odd)
     //    ./1.*1.*    ->    Increment (fraction > 1/2)
-    if (bn_.Bit(shift - 1) &&
-        ((bn_.Bit(shift) || countr_zero(bn_) < shift - 1))) {
+    if (bn_.is_bit_set(shift - 1) &&
+        ((bn_.is_bit_set(shift) || countr_zero(bn_) < shift - 1))) {
       increment = true;
     }
   }
@@ -338,8 +338,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
   } else {
     // Set bn = bn_ * (5 ** -bn_exp_) and bn_exp10 = bn_exp_.  This is
     // equivalent to the original value of (bn_ * (2 ** bn_exp_)).
-    int power = -bn_exp_;
-    bn = Bignum(5).Pow(power) * bn_;
+    bn = bn_ * Bignum(5).Pow(-bn_exp_);
     bn_exp10 = bn_exp_;
   }
   // Now convert "bn" to a decimal string using our Bignum's string conversion.
@@ -357,7 +356,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
     // up only if the lowest kept digit is odd.
     if (all_digits[max_digits] >= '5' &&
         ((all_digits[max_digits - 1] & 1) == 1 ||
-         all_digits.substr(max_digits + 1).find_first_of("123456789") !=
+         all_digits.substr(max_digits + 1).find_first_not_of("0") !=
              std::string::npos)) {
       // This can increase the number of digits by 1, but in that case at
       // least one trailing zero will be stripped off below.
@@ -421,24 +420,25 @@ ExactFloat ExactFloat::SignedSum(int a_sign, const ExactFloat* a, int b_sign,
     swap(a_sign, b_sign);
     swap(a, b);
   }
+
   // Shift "a" if necessary so that both values have the same bn_exp_.
   ExactFloat r;
-  Bignum a_bn;
-  if (a->bn_exp_ > b->bn_exp_) {
-    a_bn = a->bn_ << (a->bn_exp_ - b->bn_exp_);
-  } else {
-    a_bn = a->bn_;
-  }
+  r.bn_ = a->bn_;
+  r.bn_ <<= (a->bn_exp_ - b->bn_exp_);
+
   r.bn_exp_ = b->bn_exp_;
   if (a_sign == b_sign) {
-    r.bn_ = a_bn + b->bn_;
+    r.bn_ += b->bn_;
     r.sign_ = a_sign;
   } else {
-    if (a_bn >= b->bn_) {
-      r.bn_ = a_bn - b->bn_;
+    if (r.bn_ >= b->bn_) {
+      // |a| >= |b|, compute |a| - |b|, result has same sign as a.
+      r.bn_ -= b->bn_;
       r.sign_ = a_sign;
     } else {
-      r.bn_ = b->bn_ - a_bn;
+      // |a| < |b|, compute -|a| + |b| == |b| - |a|, result has same sign as b.
+      r.bn_.negate();
+      r.bn_ += b->bn_;
       r.sign_ = b_sign;
     }
     if (r.bn_.is_zero()) {
@@ -521,9 +521,7 @@ int ExactFloat::ScaleAndCompare(const ExactFloat& b) const {
   ABSL_DCHECK(isnormal(*this) && isnormal(b) && bn_exp_ >= b.bn_exp_);
   ExactFloat tmp = *this;
   tmp.bn_ <<= (bn_exp_ - b.bn_exp_);
-  if (tmp.bn_ < b.bn_) return -1;
-  if (tmp.bn_ > b.bn_) return 1;
-  return 0;
+  return tmp.bn_.Compare(b.bn_);
 }
 
 bool ExactFloat::UnsignedLess(const ExactFloat& b) const {
@@ -615,9 +613,7 @@ T ExactFloat::ToInteger(RoundingMode mode) const {
   if (!isinf(r)) {
     // If the unsigned value has more than 63 bits it is always clamped.
     if (r.exp() < 64) {
-      auto opt_value = r.bn_.ConvertTo<uint64_t>();
-      ABSL_DCHECK(opt_value.has_value());
-      int64_t value = static_cast<int64_t>(opt_value.value()) << r.bn_exp_;
+      int64_t value = r.bn_.Cast<int64_t>() << r.bn_exp_;
       if (r.sign_ < 0) value = -value;
       return std::clamp(value, kMinValue, kMaxValue);
     }

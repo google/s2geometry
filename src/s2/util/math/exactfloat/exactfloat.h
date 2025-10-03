@@ -491,7 +491,10 @@ class ExactFloat {
   //  - bn_ is a Bignum with a positive value
   //  - bn_exp_ is the base-2 exponent applied to bn_.
   //
-  // Bignum supports negative values so that subtraction can be supported.
+  // bn_ stores the magnitude for the mantissa of the floating point value.  We
+  // store a sign bit here separately from bn_ so that functions like exp() are
+  // easier to reason about (as the sign would flip depending on whether the
+  // exponent were odd or even).
   int32_t sign_ = 1;
   int32_t bn_exp_ = kExpZero;
   Bignum bn_;
