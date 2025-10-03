@@ -33,20 +33,20 @@
 
 namespace exactfloat_internal {
 
+// A digit of a bignum. A contraction of "big digit" (rhymes with the latter).
 using Bigit = uint64_t;
-
-// Compares magnitude magnitude of two bigit vectors, returning -1, 0, or +1.
-//
-// Magnitudes are compared lexicographically from the most significant bigit
-// to the least significant.
-int CmpAbs(absl::Span<const Bigit> a, absl::Span<const Bigit> b);
 
 // A class to support arithmetic on large, arbitrary precision integers.
 //
 // Large integers are represented as an array of uint64_t values.
 class Bignum {
  public:
-  using BigitVector = absl::InlinedVector<Bigit, 2>;
+  // The most common use of ExactFloat involves evaluating a 3x3 determinant to
+  // determine whether 3 points are oriented clockwise or counter-clockwise.
+  //
+  // The typical number of mantissa bits in the result is probably about 170, so
+  // we allocate 4 bigits (256 bits) inline.
+  using BigitVector = absl::InlinedVector<Bigit, 4>;
 
   static constexpr int kBigitBits = std::numeric_limits<Bigit>::digits;
 
@@ -75,8 +75,8 @@ class Bignum {
     return os << absl::StrFormat("%v", b);
   }
 
-  friend std::ostream& operator<<(  //
-      std::ostream& os, const std::optional<Bignum>& b) {
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const std::optional<Bignum>& b) {
     if (!b) {
       return os << "[nullopt]";
     }
@@ -110,64 +110,40 @@ class Bignum {
   //--------------------------------------
 
   // Returns the number of bits required for the magnitude of the value.
+  //
+  // Named to match std::bit_width.
   friend int bit_width(const Bignum& a);
 
   // Returns the number of consecutive 0 bits in the value, starting from the
   // least significant bit.
+  //
+  // Named to match std::countr_zero.
   friend int countr_zero(const Bignum& a);
 
-  // Returns true if the n-th bit of the number's magnitude is set.
-  bool Bit(int nbit) const;
+  // Returns true if the n-th bit of the number's magnitude is 1.
+  bool is_bit_set(int nbit) const;
 
   // Clears this bignum and sets it to zero.
-  Bignum& SetZero() {
-    sign_ = 0;
+  Bignum& set_zero() {
+    negative_ = false;
     bigits_.clear();
     return *this;
   }
 
-  // Unconditionally makes the sign of this bignum negative.
-  Bignum& SetNegative() {
-    sign_ = -1;
+  // Sets the negative flag on the value. If the value is zero, has no effect.
+  Bignum& set_negative(bool negative = true) {
+    negative_ = !bigits_.empty() && negative;
     return *this;
-  }
-
-  // Unconditionally makes the sign of this bignum positive.
-  Bignum& SetPositive() {
-    sign_ = +1;
-    return *this;
-  }
-
-  // Unconditionally set the sign of this bignum to match the sign of the
-  // argument. If the argument is zero, set the bignum to zero.
-  Bignum& SetSign(int sign) {
-    if (sign == 0) {
-      return SetZero();
-    }
-
-    if (sign < 0) {
-      return SetNegative();
-    }
-    return SetPositive();
   }
 
   // Returns true if the number is zero.
-  bool is_zero() const {  //
-    return sign_ == 0;
-  }
-
-  // Returns true if the number is greater than zero.
-  bool positive() const {  //
-    return sign_ > 0;
-  }
+  bool is_zero() const { return bigits_.empty(); }
 
   // Returns true if the number is less than zero.
-  bool negative() const {  //
-    return sign_ < 0;
-  }
+  bool is_negative() const { return negative_; }
 
   // Returns true if the number is odd (least significant bit is 1).
-  bool is_odd() const { return Bit(0); }
+  bool is_odd() const { return is_bit_set(0); }
 
   // Returns true if the number is even (least significant bit is 0).
   bool is_even() const { return !is_odd(); }
@@ -177,7 +153,7 @@ class Bignum {
   //--------------------------------------
 
   bool operator==(const Bignum& b) const {
-    return sign_ == b.sign_ && bigits_ == b.bigits_;
+    return negative_ == b.negative_ && bigits_ == b.bigits_;
   }
 
   bool operator!=(const Bignum& b) const { return !(*this == b); }
@@ -208,91 +184,43 @@ class Bignum {
   friend Bignum operator<<(Bignum a, int nbit) { return a <<= nbit; }
   friend Bignum operator>>(Bignum a, int nbit) { return a >>= nbit; }
 
+  // Negates this bignum in place.
+  void negate() {
+    negative_ = !negative_;
+    Normalize();
+  }
+
+  // Compares to another bignum, returning -1, 0, +1.
+  int Compare(const Bignum& b) const;
+
  private:
   // Constructs a Bignum from bigits and an optional sign bit.
-  explicit Bignum(BigitVector bigits, int sign = +1)
-      : bigits_(std::move(bigits)) {
-    NormalizeSign(sign);
-  }
-
-  // Returns the number of bigits in this bignum.
-  size_t size() const {  //
-    return bigits_.size();
-  }
-
-  // Returns true if this value has no digits.
-  bool empty() const {  //
-    return bigits_.empty();
-  }
-
-  // Compare to another bignum, returns -1, 0, +1.
-  int Compare(const Bignum& b) const {
-    if (sign_ != b.sign_) {
-      return sign_ < b.sign_ ? -1 : 1;
-    }
-
-    // Signs are equal, are they both zero?
-    if (sign_ == 0) {
-      return 0;
-    }
-
-    // Signs are equal and non-zero, compare magnitude.
-    return positive() ? CmpAbs(b) : -CmpAbs(b);
+  explicit Bignum(BigitVector bigits, bool negative = false)
+      : bigits_(std::move(bigits)), negative_(negative) {
+    Normalize();
   }
 
   // Multiplies two unsigned bigit vectors together using Karatsuba's algorithm.
-  static BigitVector KaratsubaMul(  //
-      absl::Span<const Bigit> a, absl::Span<const Bigit> b);
+  static BigitVector KaratsubaMul(absl::Span<const Bigit> a,
+                                  absl::Span<const Bigit> b);
 
-  // Drop leading zero bigits.
+  // Drop leading zero bigits, and ensure sign is positive if result is zero.
   void Normalize() {
-    while (!empty() && bigits_.back() == 0) {
+    while (!bigits_.empty() && bigits_.back() == 0) {
       bigits_.pop_back();
     }
-
-    if (empty()) {
-      sign_ = 0;
-    }
-  }
-
-  // Drop leading zero bigits and canonicalize sign.
-  void NormalizeSign(int sign) {
-    Normalize();
-    sign_ = empty() ? 0 : sign;
+    negative_ = !bigits_.empty() && negative_;
   }
 
   // Returns true if the bignum is in normal form (no extra leading zeros).
-  bool Normalized() const {  //
-    return bigits_.empty() || bigits_.back() != 0;
-  }
+  bool is_normalized() const { return bigits_.empty() || bigits_.back() != 0; }
 
-  // Returns true if the bignum magnitude is the given power of two.
-  bool IsPow2(int pow2) const {
-    const size_t bigits = pow2 / kBigitBits;
-    if (bigits_.size() != bigits + 1) {
-      return false;
-    }
-
-    // Verify lower words are zero.
-    for (size_t i = 0; i < bigits; ++i) {
-      if (bigits_[i] != 0) {
-        return false;
-      }
-    }
-
-    // Check final word is power of two.
-    pow2 -= bigits * kBigitBits;
-    ABSL_DCHECK_LT(pow2, kBigitBits);
-    return bigits_.back() == (Bigit(1) << pow2);
-  }
-
-  // Compares magnitude with another bignum, returning -1, 0, or +1.
-  int CmpAbs(const Bignum& b) const {
-    return ::exactfloat_internal::CmpAbs(bigits_, b.bigits_);
-  }
-
+  // We store bignums in sign-magnitude form. bigits_ contains the individual
+  // 64-bit digits of the bignum. If bigits_ is non-empty, then the last element
+  // must be non-zero and when it is empty (representing a zero value),
+  // negative_ must be false.
   BigitVector bigits_;
-  int sign_ = 0;
+  bool negative_ = false;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -308,9 +236,10 @@ Bignum::Bignum(T value) {
     return;
   }
 
-  sign_ = +1;
+  negative_ = false;
   if constexpr (std::is_signed_v<T>) {
-    sign_ = (value < 0) ? -1 : +1;
+    // Put into constexpr if to avoid warnings when T is unsigned.
+    negative_ = (value < 0);
   }
 
   // Get magnitude of value, handle minimum value of T cleanly.
@@ -341,24 +270,27 @@ void AbslStringify(Sink& sink, const Bignum& b) {
   }
 
   // Sign
-  if (b.negative()) {
+  if (b.is_negative()) {
     sink.Append("-");
   }
 
   // Work on a copy of the magnitude.
   Bignum copy = b;
-  copy.sign_ = 1;
+  copy.negative_ = false;
 
-  // Repeatedly divide and modulo by 10^19 to get decimal chunks.
-  static constexpr uint64_t kBase = 10'000'000'000'000'000'000u;
+  // 10**19 is the largest power of 10 that fits in 64-bits. So we can
+  // repeatedly divide and modulo the bignum to get uint64_t values we can
+  // format as 19 decimal digits.
+  static_assert(sizeof(Bigit) * 8 == 64);
+  static constexpr uint64_t kChunkDivisor = 10'000'000'000'000'000'000u;
   Bignum::BigitVector chunks;
 
   while (!copy.is_zero()) {
     absl::uint128 rem = 0;
     for (int i = static_cast<int>(copy.bigits_.size()) - 1; i >= 0; --i) {
       absl::uint128 acc = (rem << 64) + copy.bigits_[i];
-      Bigit quot = static_cast<Bigit>(acc / kBase);
-      rem = acc - absl::uint128(quot) * kBase;
+      Bigit quot = static_cast<Bigit>(acc / kChunkDivisor);
+      rem = acc - absl::uint128(quot) * kChunkDivisor;
       copy.bigits_[i] = quot;
     }
 
@@ -380,7 +312,7 @@ template <typename T, typename>
 inline bool Bignum::FitsIn() const {
   using UT = std::make_unsigned_t<T>;
 
-  if (sign_ == 0) {
+  if (is_zero()) {
     return true;
   }
 
@@ -396,7 +328,7 @@ inline bool Bignum::FitsIn() const {
   // Unsigned type T can hold the value iff the value is non-negative and
   // the bitwidth is <= the maximum bit width of the type.
   if constexpr (!std::is_signed_v<T>) {
-    if (negative()) {
+    if (is_negative()) {
       return false;
     }
     return bit_width(*this) <= kTBitWidth;
@@ -405,16 +337,16 @@ inline bool Bignum::FitsIn() const {
   // T is signed and our bignum isn't zero.
   ABSL_DCHECK(std::is_signed_v<T> && !is_zero());
 
-  if (positive()) {
-    return bit_width(*this) <= (kTBitWidth - 1);
-  } else /* negative() */ {
+  if (is_negative()) {
     // Magnitude must fit in negative value. If the value is negative and
     // the same bit width as the output type, the only valid value is
     // -2^(k-1).
     if (bit_width(*this) == kTBitWidth) {
-      return IsPow2(kTBitWidth - 1);
+      return countr_zero(*this) == kTBitWidth - 1;
     }
     return bit_width(*this) < kTBitWidth;
+  } else /* positive */ {
+    return bit_width(*this) <= (kTBitWidth - 1);
   }
 }
 
@@ -424,28 +356,24 @@ T Bignum::Cast() const {
 
   constexpr int kTBitWidth = std::numeric_limits<UT>::digits;
 
-  if (empty()) {
+  if (bigits_.empty()) {
     return 0;
   }
 
-  // Grab the bottom bits into an unsigned value.
+  // T fits in a Bigit, so just cast to truncate.
   UT residue = 0;
-  for (size_t i = 0; i < bigits_.size(); ++i) {
-    const int shift = i * kBigitBits;
-    if (shift >= kTBitWidth) {
-      break;
+  if (kTBitWidth <= kBigitBits) {
+    residue = static_cast<UT>(bigits_[0]);
+  } else {
+    ABSL_DCHECK_EQ(kTBitWidth % kBigitBits, 0);
+    for (int i = 0; i < kTBitWidth / kBigitBits; ++i) {
+      UT chunk = static_cast<UT>(bigits_[i]);
+      residue |= chunk << (i * kBigitBits);
     }
-
-    const int room = kTBitWidth - shift;
-    UT chunk = static_cast<UT>(bigits_[i]);
-    if (room < kBigitBits && room < std::numeric_limits<UT>::digits) {
-      chunk &= (UT(1) << room) - UT(1);
-    }
-    residue |= (chunk << shift);
   }
 
   // Compute two's complement of the residue if value is negative.
-  if (negative()) {
+  if (is_negative()) {
     residue = UT(0) - residue;
   }
 

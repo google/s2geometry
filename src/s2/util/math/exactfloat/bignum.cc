@@ -1,13 +1,54 @@
+// Copyright 2025 Google LLC
+// Author: smcallis@google.com (Sean McAllister)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "s2/util/math/exactfloat/bignum.h"
+
+#include <algorithm>
+#include <array>
+#include <charconv>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <optional>
+#include <utility>
+#include <vector>
+
+#include "absl/algorithm/container.h"
+#include "absl/base/nullability.h"
+#include "absl/log/absl_check.h"
+#include "absl/numeric/bits.h"
+#include "absl/numeric/int128.h"
+#include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
 namespace exactfloat_internal {
 
-// Threshold for fallback to simple multiplication, determined empirically.
-static constexpr int kKaratsubaThreshold = 64;
+// Number of bigits in the result of a multiplication before we fall back to
+// simple multiplication in the Karatsuba recursion. Determined empirically.
+static constexpr int kSimpleMulThreshold = 64;
 
-static Bigit MulAdd(  //
-    absl::Span<Bigit> out, absl::Span<const Bigit> a, Bigit b, Bigit c);
+// Computes out[i] = a[i]*b + c
+//
+// Returns the final carry, if any.
+inline Bigit MulAdd(absl::Span<Bigit> out, absl::Span<const Bigit> a, Bigit b,
+                    Bigit c);
 
+// Compares magnitude magnitude of two bigit vectors, returning -1, 0, or +1.
+//
+// Magnitudes are compared lexicographically from the most significant bigit
+// to the least significant.
 int CmpAbs(absl::Span<const Bigit> a, absl::Span<const Bigit> b) {
   if (a.size() != b.size()) {
     return a.size() < b.size() ? -1 : +1;
@@ -22,9 +63,24 @@ int CmpAbs(absl::Span<const Bigit> a, absl::Span<const Bigit> b) {
   return 0;
 }
 
+int Bignum::Compare(const Bignum& b) const {
+  if (is_negative() != b.is_negative()) {
+    return is_negative() ? -1 : +1;
+  }
+
+  // Signs are equal, are they both zero?
+  if (is_zero() && b.is_zero()) {
+    return 0;
+  }
+
+  // Signs are equal and non-zero, compare magnitude.
+  const int compare = CmpAbs(bigits_, b.bigits_);
+  return is_negative() ? -compare : compare;
+}
+
 std::optional<Bignum> Bignum::FromString(absl::string_view s) {
   // A chunk is up to 19 decimal digits, which can always fit into a Bigit.
-  constexpr int kMaxChunkDigits = std::numeric_limits<uint64_t>::digits10;
+  constexpr ssize_t kMaxChunkDigits = std::numeric_limits<Bigit>::digits10;
 
   // NOTE: We use a simple multiply-and-add (aka Horner's) method here for the
   // sake of simplicity. This isn't the fastest algorithm, being quadratic in
@@ -46,61 +102,44 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
     return out;
   }
 
-  // Reserve space for bigits.
   out.bigits_.reserve((s.size() + kMaxChunkDigits - 1) / kMaxChunkDigits);
 
-  int sign = +1;
-  Bigit chunk = 0;
-  int clen = 0;
-
-  // Finish processing the current chunk.
-  auto FlushChunk = [&]() {
-    if (clen) {
-      auto outspan = absl::MakeSpan(out.bigits_);
-      if (Bigit carry = MulAdd(outspan, outspan, kPow10[clen], chunk)) {
-        out.bigits_.emplace_back(carry);
-      }
-      chunk = 0;
-      clen = 0;
-    }
-  };
+  bool negative = false;
 
   // Consume optional +/- at the front.
-  int start = 0;
-  if ((s[0] == '+' || s[0] == '-')) {
-    sign = (s[0] == '-') ? -1 : +1;
-    ++start;
+  auto begin = s.cbegin();
+  if ((*begin == '+' || *begin == '-')) {
+    negative = (s[0] == '-');
+    ++begin;
   }
 
-  bool seen_digit = false;
-  for (char c : s.substr(start)) {
-    if (!absl::ascii_isdigit(c)) {
+  const auto end = s.cend();
+  while (begin < end) {
+    size_t chunk_len = std::min(std::distance(begin, end), kMaxChunkDigits);
+
+    Bigit chunk;
+    auto result = std::from_chars(begin, begin + chunk_len, chunk);
+    if (result.ec != std::errc() || (result.ptr - begin) != chunk_len) {
       return std::nullopt;
     }
+    begin += chunk_len;
 
-    // Accumulate digit into the local 64-bit chunk.  Skip leading zeros.
-    uint64_t digit = static_cast<uint64_t>(c - '0');
-    if (!seen_digit && digit == 0) {
-      continue;
-    }
-    seen_digit = true;
-
-    chunk = 10 * chunk + digit;
-    ++clen;
-
-    if (clen == kMaxChunkDigits) {
-      FlushChunk();
+    // Shift out up by chunk_len digits and add the chunk to it.
+    auto outspan = absl::MakeSpan(out.bigits_);
+    Bigit carry = MulAdd(outspan, outspan, kPow10[chunk_len], chunk);
+    if (carry) {
+      out.bigits_.emplace_back(carry);
     }
   }
-  FlushChunk();
 
-  out.NormalizeSign(sign);
+  out.negative_ = negative;
+  out.Normalize();
   return out;
 }
 
 int bit_width(const Bignum& a) {
-  ABSL_DCHECK(a.Normalized());
-  if (a.empty()) {
+  ABSL_DCHECK(a.is_normalized());
+  if (a.bigits_.empty()) {
     return 0;
   }
 
@@ -122,14 +161,14 @@ int countr_zero(const Bignum& a) {
     if (bigit == 0) {
       nzero += Bignum::kBigitBits;
     } else {
-      nzero += absl::countr_zero(static_cast<uint64_t>(bigit));
+      nzero += absl::countr_zero(bigit);
       break;
     }
   }
   return nzero;
 }
 
-bool Bignum::Bit(int nbit) const {
+bool Bignum::is_bit_set(int nbit) const {
   ABSL_DCHECK_GE(nbit, 0);
   if (is_zero()) {
     return false;
@@ -138,7 +177,7 @@ bool Bignum::Bit(int nbit) const {
   const size_t digit = nbit / kBigitBits;
   const size_t shift = nbit % kBigitBits;
 
-  if (digit >= size()) {
+  if (digit >= bigits_.size()) {
     return false;
   }
 
@@ -147,7 +186,7 @@ bool Bignum::Bit(int nbit) const {
 
 Bignum Bignum::operator-() const {
   Bignum result = *this;
-  result.sign_ = -result.sign_;
+  result.set_negative(!result.negative_);
   return result;
 }
 
@@ -188,7 +227,7 @@ Bignum& Bignum::operator>>=(int nbit) {
 
   // Shifting by more than the bit width results in zero.
   if (nbit >= bit_width(*this)) {
-    return SetZero();
+    return set_zero();
   }
 
   const int nbigit = nbit / kBigitBits;
@@ -208,7 +247,7 @@ Bignum& Bignum::operator>>=(int nbit) {
   }
 
   // Result might be smaller or zero, so normalize.
-  NormalizeSign(sign_);
+  Normalize();
   return *this;
 }
 
@@ -223,14 +262,6 @@ Bignum Bignum::Pow(int32_t pow) const {
 
   if (is_zero()) {
     return Bignum(0);
-  }
-
-  if (*this == Bignum(1)) {
-    return Bignum(1);
-  }
-
-  if (*this == Bignum(-1)) {
-    return (pow % 2 != 0) ? Bignum(-1) : Bignum(1);
   }
 
   // Core algorithm: Exponentiation by squaring.
@@ -249,37 +280,55 @@ Bignum Bignum::Pow(int32_t pow) const {
   return result;
 }
 
-// Computes a + b + c and updates the carry.
-static Bigit AddCarry(Bigit a, Bigit b, Bigit& c) {
-  auto sum = absl::uint128(a) + b + c;
-  c = absl::Uint128High64(sum);
+// Computes a + b + carry and updates the carry.
+inline Bigit AddCarry(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
+  auto sum = absl::uint128(a) + b + *carry;
+  *carry = absl::Uint128High64(sum);
   return static_cast<Bigit>(sum);
 }
 
-// Computes a - b - c and updates the borrow.
-static Bigit SubBorrow(Bigit a, Bigit b, Bigit& borrow) {
-  Bigit diff = a - b - borrow;
-  borrow = (a < b) || (borrow && (a == b));
+// Computes a - b - borrow  and updates the borrow.
+//
+// NOTE: Borrow must be one or zero.
+inline Bigit SubBorrow(Bigit a, Bigit b, Bigit* absl_nonnull borrow) {
+  ABSL_DCHECK_LE(borrow, 1);
+  Bigit diff = a - b - *borrow;
+  *borrow = (a < b) || (*borrow && (a == b));
   return diff;
 }
 
-// Computes a * b + c and updates the carry.
-static Bigit MulCarry(Bigit a, Bigit b, Bigit& c) {
-  auto sum = absl::uint128(a) * b + c;
-  c = absl::Uint128High64(sum);
+// Computes a * b + carry and updates the carry.
+inline Bigit MulCarry(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
+  auto sum = absl::uint128(a) * b + *carry;
+  *carry = absl::Uint128High64(sum);
   return static_cast<Bigit>(sum);
 }
 
 // Computes out += a * b + c and updates the carry.
-static void MulAddCarry(Bigit& out, Bigit a, Bigit b, Bigit& c) {
-  auto sum = absl::uint128(a) * b + c + out;
-  c = absl::Uint128High64(sum);
+//
+// NOTE: Will not overflow even if a, b, and c are their maximum values.
+inline void MulAddCarry(Bigit& out, Bigit a, Bigit b,
+                        Bigit* absl_nonnull carry) {
+  auto sum = absl::uint128(a) * b + *carry + out;
+  *carry = absl::Uint128High64(sum);
   out = static_cast<Bigit>(sum);
 }
 
 // Computes a += b in place. Returns the final carry (if any).
-// NOTE: the a operand must be pre-expanded to fit b.
-static Bigit AddInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
+//
+// A operand must be at least as large as B. When adding two same-sized values,
+// the result may overflow and be larger than either of them, in which case we
+// will return the final carry value.
+//
+// This allows a work flow like this:
+//    Bigit carry = AddInPlace(a, b);
+//    if (carry) {
+//      a.bigits_.emplace_back(carry);
+//    }
+//
+// Rather than having to expand A to B.bigits_.size() + 1, and popping off the
+// top bigit if it's unused (which is the most common case).
+inline Bigit AddInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   ABSL_DCHECK_GE(a.size(), b.size());
 
   Bigit* pa = a.data();
@@ -290,32 +339,42 @@ static Bigit AddInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
 
   // Dispatch four at a time to help loop unrolling.
   while (left >= 4) {
-    for (int i = 0; i < 4; ++i) {
-      *pa = AddCarry(*pa, *pb++, carry);
-      ++pa;
+    for (int i = 0; i < 4; ++i, ++pa, ++pb) {
+      *pa = AddCarry(*pa, *pb, &carry);
       --left;
     }
   }
 
   // Finish remainder.
-  while (left--) {
-    *pa = AddCarry(*pa, *pb++, carry);
-    ++pa;
+  for (; left > 0; --left, pa++, pb++) {
+    *pa = AddCarry(*pa, *pb, &carry);
   }
 
   // Propagate carry through the rest of a.
   int remaining = a.size() - b.size();
-  while (carry && remaining--) {
-    *pa = AddCarry(*pa, 0, carry);
-    ++pa;
+  for (; carry && remaining > 0; --remaining, pa++) {
+    *pa = AddCarry(*pa, 0, &carry);
   }
 
   return carry;
 }
 
-static size_t AddInto(  //
-    absl::Span<Bigit> dst, absl::Span<const Bigit> a,
-    absl::Span<const Bigit> b) {
+// Computes dst = a + b out of place. Returns the number of bigits actually
+// written into dst.
+//
+// NOTE: dst must be sized to be larger than max(a.size(), b.size()) + 1 (i.e.
+// it must be able to hold the carry bigit, if any.
+//
+// This allows for using a pre-allocated buffer to store the result of an
+// addition followed by trimming down to size:
+//
+//     auto out = arena.Alloc(std::max(a.size(), b.size()) + 1);
+//     out = out.first(AddInto(out, a, b));
+//
+// Which is used in the Karatsuba multiplication, where we don't have the option
+// to expand the allocate space on demand.
+inline size_t AddOutOfPlace(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
+                            absl::Span<const Bigit> b) {
   const size_t max_size = std::max(a.size(), b.size());
   const size_t min_size = std::min(a.size(), b.size());
   ABSL_DCHECK_GE(dst.size(), max_size + 1);
@@ -328,18 +387,17 @@ static size_t AddInto(  //
   Bigit carry = 0;
 
   // Dispatch four at a time to help loop unrolling.
-  size_t size = min_size;
   size_t i = 0;
-  while (size >= i + 4) {
+  while (i + 4 < min_size) {
     for (int j = 0; j < 4; ++j) {
-      pdst[i] = AddCarry(pa[i], pb[i], carry);
+      pdst[i] = AddCarry(pa[i], pb[i], &carry);
       ++i;
     }
   }
 
   // Finish remainder of common parts.
-  for (; i < size; ++i) {
-    pdst[i] = AddCarry(pa[i], pb[i], carry);
+  for (; i < min_size; ++i) {
+    pdst[i] = AddCarry(pa[i], pb[i], &carry);
   }
 
   // Copy remaining digits from the longer operand and propagate carry.
@@ -347,17 +405,17 @@ static size_t AddInto(  //
   const Bigit* plonger = (a.size() > b.size()) ? pa : pb;
 
   // Dispatch four at a time for the remaining part.
-  size = longer.size();
-  while (size >= i + 4) {
+  const int size = longer.size();
+  while (i + 4 < size) {
     for (int j = 0; j < 4; ++j) {
-      pdst[i] = AddCarry(plonger[i], 0, carry);
+      pdst[i] = AddCarry(plonger[i], 0, &carry);
       ++i;
     }
   }
 
   // Finish remainder.
   for (; i < size; ++i) {
-    pdst[i] = AddCarry(plonger[i], 0, carry);
+    pdst[i] = AddCarry(plonger[i], 0, &carry);
   }
 
   if (carry) {
@@ -373,8 +431,8 @@ static size_t AddInto(  //
 // actually set in A must be passed in via a_digits.
 //
 // REQUIRES: |a| < |b|.
-static Bigit SubLtInPlace(  //
-    absl::Span<Bigit> a, absl::Span<const Bigit> b, size_t a_digits) {
+inline Bigit SubLtInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b,
+                          size_t a_digits) {
   ABSL_DCHECK_EQ(a.size(), b.size());
   ABSL_DCHECK_LT(CmpAbs(a, b), 0);
 
@@ -385,21 +443,21 @@ static Bigit SubLtInPlace(  //
   // Dispatch four at a time to help loop unrolling.
   size_t size = a_digits;
   size_t i = 0;
-  while (size >= i + 4) {
+  while (i + 4 < size) {
     for (int j = 0; j < 4; ++j) {
-      pa[i] = SubBorrow(pb[i], pa[i], borrow);
+      pa[i] = SubBorrow(pb[i], pa[i], &borrow);
       ++i;
     }
   }
 
   // Finish remainder.
   for (; i < a_digits; ++i) {
-    pa[i] = SubBorrow(pb[i], pa[i], borrow);
+    pa[i] = SubBorrow(pb[i], pa[i], &borrow);
   }
 
   // Propagate borrow through the rest of b.
   for (; borrow && i < b.size(); ++i) {
-    pa[i] = SubBorrow(pb[i], 0, borrow);
+    pa[i] = SubBorrow(pb[i], 0, &borrow);
   }
   return borrow;
 }
@@ -407,7 +465,7 @@ static Bigit SubLtInPlace(  //
 // Computes a -= b. Returns the final borrow (if any).
 //
 // REQUIRES: |a| >= |b|.
-static Bigit SubGeInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
+inline Bigit SubGeInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   ABSL_DCHECK_GE(a.size(), b.size());
   ABSL_DCHECK_GE(CmpAbs(a, b), 0);
 
@@ -419,16 +477,16 @@ static Bigit SubGeInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   // Dispatch four at a time to help loop unrolling.
   size_t size = b.size();
   size_t done = 0;
-  while (size >= done + 4) {
+  while (done + 4 < size) {
     for (int i = 0; i < 4; ++i) {
-      pa[done] = SubBorrow(pa[done], pb[done], borrow);
+      pa[done] = SubBorrow(pa[done], pb[done], &borrow);
       ++done;
     }
   }
 
   // Finish remainder of subtraction.
   for (; done < size; ++done) {
-    pa[done] = SubBorrow(pa[done], pb[done], borrow);
+    pa[done] = SubBorrow(pa[done], pb[done], &borrow);
   }
 
   // Propagate the borrow through a.
@@ -439,11 +497,8 @@ static Bigit SubGeInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   return borrow;
 }
 
-// Computes out[i] = a[i]*b + c
-//
-// Returns the final carry, if any.
-Bigit MulAdd(  //
-    absl::Span<Bigit> out, absl::Span<const Bigit> a, Bigit b, Bigit c = 0) {
+Bigit MulAdd(absl::Span<Bigit> out, absl::Span<const Bigit> a, Bigit b,
+             Bigit c) {
   ABSL_DCHECK_GE(out.size(), a.size());
 
   Bigit* pout = out.data();
@@ -453,14 +508,14 @@ Bigit MulAdd(  //
 
   // Dispatch four at a time to help loop unrolling.
   while (left >= 4) {
-    for (int i = 0; i < 4; ++i) {
-      *pout++ = MulCarry(*pa++, b, c);
+    for (int i = 0; i < 4; ++i, pa++, pout++) {
+      *pout = MulCarry(*pa, b, &c);
       --left;
     }
   }
 
-  while (left--) {
-    *pout++ = MulCarry(*pa++, b, c);
+  for (; left > 0; --left, pa++, pout++) {
+    *pout = MulCarry(*pa, b, &c);
   }
   return c;
 }
@@ -468,8 +523,8 @@ Bigit MulAdd(  //
 // Computes out[i] += a[i]*b in place.
 //
 // Returns the final carry, if any.
-static Bigit MulAddInPlace(  //
-    absl::Span<Bigit> out, absl::Span<const Bigit> a, Bigit b) {
+inline Bigit MulAddInPlace(absl::Span<Bigit> out, absl::Span<const Bigit> a,
+                           Bigit b) {
   Bigit* pout = out.data();
   const Bigit* pa = a.data();
 
@@ -479,22 +534,21 @@ static Bigit MulAddInPlace(  //
   Bigit carry = 0;
   while (left >= 4) {
     for (int i = 0; i < 4; ++i) {
-      MulAddCarry(*pout++, *pa++, b, carry);
+      MulAddCarry(*pout++, *pa++, b, &carry);
       --left;
     }
   }
 
   // Finish remainder.
   while (left--) {
-    MulAddCarry(*pout++, *pa++, b, carry);
+    MulAddCarry(*pout++, *pa++, b, &carry);
   }
 
   return carry;
 }
 
-static void MulQuadratic(   //
-    absl::Span<Bigit> out,  //
-    absl::Span<const Bigit> a, absl::Span<const Bigit> b) {
+inline void MulQuadratic(absl::Span<Bigit> out, absl::Span<const Bigit> a,
+                         absl::Span<const Bigit> b) {
   ABSL_DCHECK_GE(out.size(), a.size() + b.size());
 
   // Make sure A is the longer of the two arguments.
@@ -509,7 +563,7 @@ static void MulQuadratic(   //
   }
 
   auto upper = out.subspan(a.size());
-  upper[0] = MulAdd(out, a, b[0]);
+  upper[0] = MulAdd(out, a, b[0], 0);
 
   const size_t size = b.size();
   size_t i = 1;
@@ -533,8 +587,8 @@ static void MulQuadratic(   //
 
 // Split a span into two contiguous pieces of length a and b, respectively.
 template <typename T>
-static std::pair<absl::Span<T>, absl::Span<T>> Split(  //
-    absl::Span<T> span, int a, int b) {
+inline std::pair<absl::Span<T>, absl::Span<T>> Split(absl::Span<T> span,
+                                                     size_t a, size_t b) {
   if (a < span.size()) {
     return {span.subspan(0, a), span.subspan(a, b)};
   }
@@ -569,9 +623,8 @@ class Arena {
   std::vector<Bigit> data_;
 };
 
-static void KaratsubaMulRec(  //
-    absl::Span<Bigit> dst,    //
-    absl::Span<const Bigit> a, absl::Span<const Bigit> b, Arena& arena) {
+inline void KaratsubaMulRec(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
+                            absl::Span<const Bigit> b, Arena& arena) {
   ABSL_DCHECK_GE(dst.size(), a.size() + b.size());
   if (a.empty() || b.empty()) {
     absl::c_fill(dst, 0);
@@ -605,7 +658,7 @@ static void KaratsubaMulRec(  //
   // with those individual multiplies able to be recursively divided.
 
   // Fall back to long multiplication when we're small enough.
-  if (dst.size() <= kKaratsubaThreshold) {
+  if (dst.size() <= kSimpleMulThreshold) {
     MulQuadratic(dst, a, b);
     return;
   }
@@ -634,12 +687,12 @@ static void KaratsubaMulRec(  //
   absl::Span<const Bigit> sb = b0;
   if (!a1.empty()) {
     absl::Span<Bigit> tmp = arena.Alloc(half + 1);
-    sa = tmp.first(AddInto(tmp, a0, a1));
+    sa = tmp.first(AddOutOfPlace(tmp, a0, a1));
   }
 
   if (!b1.empty()) {
     absl::Span<Bigit> tmp = arena.Alloc(half + 1);
-    sb = tmp.first(AddInto(tmp, b0, b1));
+    sb = tmp.first(AddOutOfPlace(tmp, b0, b1));
   }
 
   // Compute z1 = sa*sb - z0 - z2 = (a0 + a1)*(b0 + b1) - z0 - z2
@@ -672,8 +725,8 @@ static void KaratsubaMulRec(  //
   arena.Release(arena.Used() - arena_start);
 }
 
-Bignum::BigitVector Bignum::KaratsubaMul(  //
-    absl::Span<const Bigit> a, absl::Span<const Bigit> b) {
+Bignum::BigitVector Bignum::KaratsubaMul(absl::Span<const Bigit> a,
+                                         absl::Span<const Bigit> b) {
   if (a.empty() || b.empty()) {
     return {};
   }
@@ -691,7 +744,7 @@ Bignum::BigitVector Bignum::KaratsubaMul(  //
     int next = half + 1;
     peak += 4 * next;
     size = next;
-  } while (size > kKaratsubaThreshold);
+  } while (size > kSimpleMulThreshold);
 
   Arena arena(peak);
   BigitVector out(a.size() + b.size(), 0);
@@ -709,27 +762,31 @@ Bignum& Bignum::operator+=(const Bignum& b) {
     return *this;
   }
 
-  if (sign_ == b.sign_) {
+  if (is_negative() == b.is_negative()) {
     // Same sign:
-    //   (+a) + (+b) == +(a + b)
-    //   (-a) + (-b) == -(a + b)
-    bigits_.resize(std::max(size(), b.size()), 0);
+    //   +|a| + +|b| == +|a + b|
+    //   -|a| + -|b| == -|a + b|
+    //
+    // So we can just sum magnitudes.
+    bigits_.resize(std::max(bigits_.size(), b.bigits_.size()), 0);
     Bigit carry = AddInPlace(absl::MakeSpan(bigits_), b.bigits_);
     if (carry) {
       bigits_.emplace_back(carry);
     }
     Normalize();
   } else {
-    if (CmpAbs(b) >= 0) {
-      // |a| >= |b|, so a - b is same sign as a.
+    if (CmpAbs(bigits_, b.bigits_) >= 0) {
+      // |a| >= |b|, so a - b is the same sign as a.
       SubGeInPlace(absl::MakeSpan(bigits_), b.bigits_);
-      NormalizeSign(sign_);
+      Normalize();
     } else {
-      // |a| < |b|, so a - b is same sign as b.
-      const int prev_size = size();
-      bigits_.resize(b.size());
+      // |a| < |b|, so a - b is the same sign as b.
+      const int prev_size = bigits_.size();
+      bigits_.resize(b.bigits_.size());
       SubLtInPlace(absl::MakeSpan(bigits_), b.bigits_, prev_size);
-      NormalizeSign(b.sign_);
+
+      negative_ = b.negative_;
+      Normalize();
     }
   }
 
@@ -737,45 +794,28 @@ Bignum& Bignum::operator+=(const Bignum& b) {
 }
 
 Bignum& Bignum::operator-=(const Bignum& b) {
-  if (b.is_zero()) {
+  if (this == &b) {
+    set_zero();
     return *this;
   }
 
-  if (is_zero()) {
-    return *this = -b;
-  }
-
-  if (sign_ != b.sign_) {
-    bigits_.resize(std::max(size(), b.size()), 0);
-    uint64_t carry = AddInPlace(absl::MakeSpan(bigits_), b.bigits_);
-    if (carry) {
-      bigits_.emplace_back(carry);
-    }
-    Normalize();
-  } else {
-    if (CmpAbs(b) >= 0) {
-      SubGeInPlace(absl::MakeSpan(bigits_), b.bigits_);
-      NormalizeSign(sign_);
-    } else {
-      const int prev_size = size();
-      bigits_.resize(b.size());
-      SubLtInPlace(absl::MakeSpan(bigits_), b.bigits_, prev_size);
-      NormalizeSign(-sign_);
-    }
-  }
-
+  // Compute -(-a + b) == a - b
+  negate();
+  *this += b;
+  negate();
   return *this;
 }
 
 Bignum& Bignum::operator*=(const Bignum& b) {
   if (is_zero() || b.is_zero()) {
-    return SetZero();
+    return set_zero();
   }
 
-  const int new_sign = sign_ * b.sign_;
+  // Result is only negative if signs are different.
+  const bool negative = (is_negative() != b.is_negative());
 
   // Fast path for single-bigit multiplication.
-  if (size() == 1 && b.size() == 1) {
+  if (bigits_.size() == 1 && b.bigits_.size() == 1) {
     absl::uint128 prod = absl::uint128(bigits_[0]) * b.bigits_[0];
     const uint64_t lo = absl::Uint128Low64(prod);
     const uint64_t hi = absl::Uint128High64(prod);
@@ -784,14 +824,16 @@ Bignum& Bignum::operator*=(const Bignum& b) {
     } else {
       bigits_ = {lo, hi};
     }
-    sign_ = new_sign;
+    set_negative(negative);
     return *this;
   }
 
   // Use Karatsuba multiplication.
   // If the inputs are small enough this will just do long multiplication.
   bigits_ = KaratsubaMul(bigits_, b.bigits_);
-  NormalizeSign(new_sign);
+
+  negative_ = negative;
+  Normalize();
   return *this;
 }
 

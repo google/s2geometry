@@ -15,7 +15,11 @@
 
 #include "s2/util/math/exactfloat/bignum.h"
 
-#include <memory>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <optional>
 #include <random>
 #include <string>
 #include <vector>
@@ -25,10 +29,10 @@
 #include "benchmark/benchmark.h"
 #endif
 
-#include "absl/base/no_destructor.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "gtest/gtest.h"
 #include "openssl/bn.h"
@@ -566,34 +570,34 @@ TEST(BignumTest, CountrZero) {
   EXPECT_EQ(countr_zero(neg_large_shifted), 200);
 }
 
-TEST(BignumTest, Bit) {
-  EXPECT_FALSE(Bignum(0).Bit(0));
-  EXPECT_FALSE(Bignum(0).Bit(100));
+TEST(BignumTest, is_bit_set) {
+  EXPECT_FALSE(Bignum(0).is_bit_set(0));
+  EXPECT_FALSE(Bignum(0).is_bit_set(100));
 
   // 5 = 0b101
   Bignum five(5);
-  EXPECT_TRUE(five.Bit(0));
-  EXPECT_FALSE(five.Bit(1));
-  EXPECT_TRUE(five.Bit(2));
-  EXPECT_FALSE(five.Bit(3));
+  EXPECT_TRUE(five.is_bit_set(0));
+  EXPECT_FALSE(five.is_bit_set(1));
+  EXPECT_TRUE(five.is_bit_set(2));
+  EXPECT_FALSE(five.is_bit_set(3));
 
   // Negative numbers should test the magnitude.
   Bignum neg_five(-5);
-  EXPECT_TRUE(neg_five.Bit(0));
-  EXPECT_FALSE(neg_five.Bit(1));
-  EXPECT_TRUE(neg_five.Bit(2));
+  EXPECT_TRUE(neg_five.is_bit_set(0));
+  EXPECT_FALSE(neg_five.is_bit_set(1));
+  EXPECT_TRUE(neg_five.is_bit_set(2));
 
   // Test edges of and across bigits.
-  Bignum high_bit_63 = Bignum(1) << 63;
-  EXPECT_FALSE(high_bit_63.Bit(62));
-  EXPECT_TRUE(high_bit_63.Bit(63));
-  EXPECT_FALSE(high_bit_63.Bit(64));
+  Bignum high_is_bit_set_63 = Bignum(1) << 63;
+  EXPECT_FALSE(high_is_bit_set_63.is_bit_set(62));
+  EXPECT_TRUE(high_is_bit_set_63.is_bit_set(63));
+  EXPECT_FALSE(high_is_bit_set_63.is_bit_set(64));
 
   Bignum cross_bigit = (Bignum(1) << 100) + Bignum(1);
-  EXPECT_TRUE(cross_bigit.Bit(0));
-  EXPECT_TRUE(cross_bigit.Bit(100));
-  EXPECT_FALSE(cross_bigit.Bit(50));
-  EXPECT_FALSE(cross_bigit.Bit(1000));
+  EXPECT_TRUE(cross_bigit.is_bit_set(0));
+  EXPECT_TRUE(cross_bigit.is_bit_set(100));
+  EXPECT_FALSE(cross_bigit.is_bit_set(50));
+  EXPECT_FALSE(cross_bigit.is_bit_set(1000));
 }
 
 TEST(BignumTest, Pow) {
@@ -626,35 +630,29 @@ TEST(BignumTest, Pow) {
 
 TEST(BignumTest, SetZero) {
   Bignum a(123);
-  a.SetZero();
+  a.set_zero();
   EXPECT_TRUE(a.is_zero());
 
   Bignum b(-456);
-  b.SetZero();
+  b.set_zero();
   EXPECT_EQ(b, Bignum(0));
 }
 
 TEST(BignumTest, SetNegativeSetPositive) {
   Bignum a(42);
-  a.SetNegative();
-  EXPECT_TRUE(a.negative());
+  a.set_negative();
+  EXPECT_TRUE(a.is_negative());
   EXPECT_EQ(a, Bignum(-42));
 
-  a.SetPositive();
-  EXPECT_TRUE(a.positive());
+  a.set_negative(false);
+  EXPECT_FALSE(a.is_negative());
   EXPECT_EQ(a, Bignum(42));
-}
 
-TEST(BignumTest, SetSign) {
-  Bignum a(99);
-  a.SetSign(-10);  // any negative
-  EXPECT_EQ(a, Bignum(-99));
-
-  a.SetSign(5);  // any positive
-  EXPECT_EQ(a, Bignum(99));
-
-  a.SetSign(0);
-  EXPECT_TRUE(a.is_zero());
+  // set_negative() has no effect on zero.
+  Bignum b(0);
+  b.set_negative();
+  EXPECT_FALSE(b.is_negative());
+  EXPECT_EQ(b, Bignum(0));
 }
 
 TEST(BignumTest, Comparisons) {
@@ -715,7 +713,9 @@ class OpenSSLBignum {
   OpenSSLBignum() : bn_(BN_new()) {}
 
   // Construct from a decimal number in a string.
-  explicit OpenSSLBignum(const absl::string_view& decimal) : bn_(BN_new()) {
+  //
+  // We take decimal as a string so that it's explicitly zero-terminated.
+  explicit OpenSSLBignum(const std::string& decimal) : bn_(BN_new()) {
     BN_dec2bn(&bn_, decimal.data());
   }
 
@@ -756,8 +756,8 @@ class OpenSSLBignum {
 // Power of two for fast modulo.
 const int kRandomBignumCount = 128;
 
-static std::vector<std::string> GenerateRandomNumbers(absl::BitGenRef bitgen,
-                                                      int bits) {
+static std::vector<std::string> GenerateRandomNumberStrings(
+    absl::BitGenRef bitgen, int bits) {
   std::vector<std::string> numbers;
   numbers.reserve(kRandomBignumCount);
 
@@ -810,42 +810,35 @@ TEST(BignumTest, ResultsMatch) {
   OPENSSL_free(ssl_str);
 }
 
-const std::vector<std::string>& SmallNumbers(absl::BitGenRef bitgen) {
-  static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(bitgen, 64));
-  return *numbers;
+// Different number sizes for benchmarking.
+enum class NumberSizeClass : uint32_t {
+  kSmall = 64,
+  kMedium = 256,
+  kLarge = 1024,
+  kHuge = 4096,
+  kMega = 18000
+};
+
+std::vector<std::string> RandomNumberStrings(absl::BitGenRef bitgen,
+                                             NumberSizeClass size_class) {
+  return GenerateRandomNumberStrings(bitgen, static_cast<int>(size_class));
 }
 
-const std::vector<std::string>& MediumNumbers(absl::BitGenRef bitgen) {
-  static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(bitgen, 256));
-  return *numbers;
-}
+class VsOpenSSLTest : public TestWithParam<NumberSizeClass> {
+ protected:
+  std::vector<std::string> Numbers() {
+    return RandomNumberStrings(bitgen_, GetParam());
+  }
 
-const std::vector<std::string>& LargeNumbers(absl::BitGenRef bitgen) {
-  static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(bitgen, 1024));
-  return *numbers;
-}
-
-const std::vector<std::string>& HugeNumbers(absl::BitGenRef bitgen) {
-  static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(bitgen, 4096));
-  return *numbers;
-}
-
-const std::vector<std::string>& MegaNumbers(absl::BitGenRef bitgen) {
-  static absl::NoDestructor<std::vector<std::string>> numbers(  //
-      GenerateRandomNumbers(bitgen, 18000));
-  return *numbers;
-}
-
-class VsOpenSSLTest : public TestWithParam<std::vector<std::string>> {};
+ private:
+  absl::BitGen bitgen_;
+};
 
 TEST_P(VsOpenSSLTest, SquaringCorrect) {
-  // Test that multiplication produces correct results by comparing to OpenSSL.
+  // Test that multiplication produces correct results by comparing to
+  // OpenSSL.
   BN_CTX* ctx = BN_CTX_new();
-  for (const auto& number : GetParam()) {
+  for (const auto& number : Numbers()) {
     // Test same number multiplication (most likely to trigger edge cases)
     const Bignum bn_a = *Bignum::FromString(number);
     const Bignum bn_result = bn_a * bn_a;
@@ -870,7 +863,7 @@ TEST_P(VsOpenSSLTest, SquaringCorrect) {
 TEST_P(VsOpenSSLTest, MultiplyCorrect) {
   // Multiply by a small constant to test widely different operand sizes.
   BN_CTX* ctx = BN_CTX_new();
-  for (const auto& number : GetParam()) {
+  for (const auto& number : Numbers()) {
     // Test same number multiplication (most likely to trigger edge cases)
     const Bignum bn_a = *Bignum::FromString(number);
     const Bignum bn_result = Bignum(2) * bn_a;
@@ -894,7 +887,7 @@ TEST_P(VsOpenSSLTest, MultiplyCorrect) {
 
 TEST_P(VsOpenSSLTest, AdditionCorrect) {
   // Test that addition produces correct results by comparing to OpenSSL.
-  const std::vector<std::string> numbers = GetParam();
+  const std::vector<std::string> numbers = Numbers();
   for (size_t i = 0; i < numbers.size(); ++i) {
     const auto& num_a = numbers[i];
     const auto& num_b = numbers[(i + 1) % numbers.size()];
@@ -922,8 +915,9 @@ TEST_P(VsOpenSSLTest, AdditionCorrect) {
 }
 
 TEST_P(VsOpenSSLTest, SubtractionCorrect) {
-  // Test that subtraction produces correct results by comparing to OpenSSL.
-  const std::vector<std::string> numbers = GetParam();
+  // Test that subtraction produces correct results by comparing to
+  // OpenSSL.
+  const std::vector<std::string> numbers = Numbers();
   for (size_t i = 0; i < numbers.size(); ++i) {
     const auto& num_a = numbers[i];
     const auto& num_b = numbers[(i + 1) % numbers.size()];
@@ -950,13 +944,12 @@ TEST_P(VsOpenSSLTest, SubtractionCorrect) {
   }
 }
 
-absl::BitGen bitgen;
 INSTANTIATE_TEST_SUITE_P(VsOpenSSL, VsOpenSSLTest,
-                         ::testing::Values(SmallNumbers(bitgen),
-                                           MediumNumbers(bitgen),
-                                           LargeNumbers(bitgen),
-                                           HugeNumbers(bitgen),
-                                           MediumNumbers(bitgen)));
+                         ::testing::Values(NumberSizeClass::kSmall,
+                                           NumberSizeClass::kMedium,
+                                           NumberSizeClass::kLarge,
+                                           NumberSizeClass::kHuge,
+                                           NumberSizeClass::kMega));
 
 // TODO: Enable once benchmark is integrated.
 #if 0
@@ -1065,6 +1058,26 @@ void OpenSSLPowBenchmark(benchmark::State& state,
   }
 
   BN_CTX_free(ctx);
+}
+
+std::vector<std::string> SmallNumbers(absl::BitGenRef bitgen) {
+  return RandomNumberStrings(bitgen, NumberSizeClass::kSmall);
+}
+
+std::vector<std::string> MediumNumbers(absl::BitGenRef bitgen) {
+  return RandomNumberStrings(bitgen, NumberSizeClass::kMedium);
+}
+
+std::vector<std::string> LargeNumbers(absl::BitGenRef bitgen) {
+  return RandomNumberStrings(bitgen, NumberSizeClass::kLarge);
+}
+
+std::vector<std::string> HugeNumbers(absl::BitGenRef bitgen) {
+  return RandomNumberStrings(bitgen, NumberSizeClass::kHuge);
+}
+
+std::vector<std::string> MegaNumbers(absl::BitGenRef bitgen) {
+  return RandomNumberStrings(bitgen, NumberSizeClass::kMega);
 }
 
 void BM_Bignum_AddSmall(benchmark::State& state) {
