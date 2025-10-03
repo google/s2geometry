@@ -200,10 +200,6 @@ class Bignum {
     Normalize();
   }
 
-  // Multiplies two unsigned bigit vectors together using Karatsuba's algorithm.
-  static BigitVector KaratsubaMul(absl::Span<const Bigit> a,
-                                  absl::Span<const Bigit> b);
-
   // Drop leading zero bigits, and ensure sign is positive if result is zero.
   void Normalize() {
     while (!bigits_.empty() && bigits_.back() == 0) {
