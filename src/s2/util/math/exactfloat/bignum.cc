@@ -80,7 +80,7 @@ int Bignum::Compare(const Bignum& b) const {
 
 std::optional<Bignum> Bignum::FromString(absl::string_view s) {
   // A chunk is up to 19 decimal digits, which can always fit into a Bigit.
-  constexpr int kMaxChunkDigits = std::numeric_limits<Bigit>::digits10;
+  constexpr int64_t kMaxChunkDigits = std::numeric_limits<Bigit>::digits10;
 
   // NOTE: We use a simple multiply-and-add (aka Horner's) method here for the
   // sake of simplicity. This isn't the fastest algorithm, being quadratic in
@@ -115,8 +115,8 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
 
   const auto end = s.cend();
   while (begin < end) {
-    int chunk_len =
-        std::min(static_cast<int>(std::distance(begin, end)), kMaxChunkDigits);
+    int64_t chunk_len = std::min(
+        static_cast<int64_t>(std::distance(begin, end)), kMaxChunkDigits);
 
     Bigit chunk = 0;
     auto result = std::from_chars(begin, begin + chunk_len, chunk);
@@ -240,7 +240,7 @@ Bignum& Bignum::operator>>=(int nbit) {
   // Then, handle the within-bigit shift, if any.
   if (nrem != 0) {
     Bigit carry = 0;
-    for (int i = static_cast<int>(bigits_.size()) - 1; i >= 0; --i) {
+    for (auto i = static_cast<int64_t>(bigits_.size()) - 1; i >= 0; --i) {
       const Bigit old_val = bigits_[i];
       bigits_[i] = (old_val >> nrem) | carry;
       carry = old_val << (kBigitBits - nrem);
@@ -292,7 +292,7 @@ inline Bigit AddCarry(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 //
 // NOTE: Borrow must be one or zero.
 inline Bigit SubBorrow(Bigit a, Bigit b, Bigit* absl_nonnull borrow) {
-  ABSL_DCHECK_LE(*borrow, 1u);
+  ABSL_DCHECK_LE(*borrow, Bigit(1));
   Bigit diff = a - b - *borrow;
   *borrow = (a < b) || (*borrow && (a == b));
   return diff;
