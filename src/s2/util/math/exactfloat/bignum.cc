@@ -117,7 +117,7 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
   while (begin < end) {
     ssize_t chunk_len = std::min(std::distance(begin, end), kMaxChunkDigits);
 
-    Bigit chunk;
+    Bigit chunk = 0;
     auto result = std::from_chars(begin, begin + chunk_len, chunk);
     if (result.ec != std::errc() || (result.ptr - begin) != chunk_len) {
       return std::nullopt;
@@ -291,7 +291,7 @@ inline Bigit AddCarry(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 //
 // NOTE: Borrow must be one or zero.
 inline Bigit SubBorrow(Bigit a, Bigit b, Bigit* absl_nonnull borrow) {
-  ABSL_DCHECK_LE(*borrow, 1);
+  ABSL_DCHECK_LE(*borrow, 1u);
   Bigit diff = a - b - *borrow;
   *borrow = (a < b) || (*borrow && (a == b));
   return diff;
@@ -347,7 +347,6 @@ inline Bigit AddInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   }
 
   // Propagate carry through the rest of a.
-  size_t left = a.size() - b.size();
   for (; carry && i < a.size(); ++i) {
     a[i] = AddCarry(a[i], 0, &carry);
   }
