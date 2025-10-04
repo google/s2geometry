@@ -579,16 +579,23 @@ inline std::pair<absl::Span<T>, absl::Span<T>> Split(absl::Span<T> span,
 // space when recursing in the Karatsuba multiply. The arena is pre-sized and
 // returns spans of memory via Alloc() which are then returned to the arena via
 // Release.
+//
+// NOTE: We use std::unique_ptr here instead of std::vector because we don't
+// want to initialize the memory unnecessarily and using std::vector without
+// resizing (and thus initializing) the container leads to false positives with
+// ASAN.
 class Arena {
  public:
-  explicit Arena(size_t size) { data_.reserve(size); }
+  // TODO: Use make_unique_for_overwrite when on C++20.
+  explicit Arena(size_t size)
+      : size_(size), data_(std::unique_ptr<Bigit[]>(new Bigit[size])){};
 
   // Allocates a span of length n from the arena.
   absl::Span<Bigit> Alloc(size_t n) {
-    ABSL_DCHECK_LE(used_ + n, data_.capacity());
+    ABSL_DCHECK_LE(used_ + n, size_);
     size_t start = used_;
     used_ += n;
-    return absl::Span<Bigit>(data_.data() + start, n);
+    return absl::Span<Bigit>(data_.get() + start, n);
   }
 
   size_t Used() const { return used_; }
@@ -600,8 +607,9 @@ class Arena {
   }
 
  private:
+  size_t size_ = 0;
   size_t used_ = 0;
-  std::vector<Bigit> data_;
+  std::unique_ptr<Bigit[]> data_;
 };
 
 inline void KaratsubaMulRecursive(absl::Span<Bigit> dst,

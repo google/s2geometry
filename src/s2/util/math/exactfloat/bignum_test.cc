@@ -827,6 +827,12 @@ std::vector<std::string> RandomNumberStrings(absl::BitGenRef bitgen,
 class VsOpenSSLTest
     : public TestWithParam<std::pair<NumberSizeClass, NumberSizeClass>> {
  protected:
+  // Returns a vector of pairs of numbers (as decimal strings) based on the
+  // parameters that the test suite was created with.
+  //
+  // E.g. If the test suite was instantiate with (kSmall, kHuge) as the number
+  // classes, then this will return a small value on the left and a huge value
+  // on the right. (kHuge, kSmall) would return the opposite.
   std::vector<std::pair<std::string, std::string>> Numbers() {
     auto numbers0 = RandomNumberStrings(bitgen_, GetParam().first);
     auto numbers1 = RandomNumberStrings(bitgen_, GetParam().second);
