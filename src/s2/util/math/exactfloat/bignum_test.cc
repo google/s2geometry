@@ -824,53 +824,39 @@ std::vector<std::string> RandomNumberStrings(absl::BitGenRef bitgen,
   return GenerateRandomNumberStrings(bitgen, static_cast<int>(size_class));
 }
 
-class VsOpenSSLTest : public TestWithParam<NumberSizeClass> {
+class VsOpenSSLTest
+    : public TestWithParam<std::pair<NumberSizeClass, NumberSizeClass>> {
  protected:
-  std::vector<std::string> Numbers() {
-    return RandomNumberStrings(bitgen_, GetParam());
+  std::vector<std::pair<std::string, std::string>> Numbers() {
+    auto numbers0 = RandomNumberStrings(bitgen_, GetParam().first);
+    auto numbers1 = RandomNumberStrings(bitgen_, GetParam().second);
+    ABSL_CHECK_EQ(numbers0.size(), numbers1.size());
+
+    std::vector<std::pair<std::string, std::string>> numbers;
+    numbers.reserve(numbers0.size());
+
+    for (size_t i = 0; i < numbers0.size(); ++i) {
+      numbers.emplace_back(numbers0[i], numbers1[i]);
+    }
+    return numbers;
   }
 
  private:
   absl::BitGen bitgen_;
 };
 
-TEST_P(VsOpenSSLTest, SquaringCorrect) {
-  // Test that multiplication produces correct results by comparing to
-  // OpenSSL.
-  BN_CTX* ctx = BN_CTX_new();
-  for (const auto& number : Numbers()) {
-    // Test same number multiplication (most likely to trigger edge cases)
-    const Bignum bn_a = *Bignum::FromString(number);
-    const Bignum bn_result = bn_a * bn_a;
-
-    const OpenSSLBignum ssl_a(number);
-    OpenSSLBignum ssl_result;
-    BN_mul(ssl_result.get(), ssl_a.get(), ssl_a.get(), ctx);
-
-    // Compare string representations
-    char* ssl_str = BN_bn2dec(ssl_result.get());
-    std::string bn_str = absl::StrFormat("%v", bn_result);
-
-    EXPECT_EQ(bn_str, std::string(ssl_str))
-        << "Mismatch for multiplication"
-        << "\nBignum result: " << bn_str.substr(0, 100) << "..."
-        << "\nOpenSSL result: " << std::string(ssl_str).substr(0, 100) << "...";
-    OPENSSL_free(ssl_str);
-  }
-  BN_CTX_free(ctx);
-}
-
 TEST_P(VsOpenSSLTest, MultiplyCorrect) {
-  // Multiply by a small constant to test widely different operand sizes.
+  // Test that multiplication produces the same results as OpenSSL.
   BN_CTX* ctx = BN_CTX_new();
-  for (const auto& number : Numbers()) {
-    // Test same number multiplication (most likely to trigger edge cases)
-    const Bignum bn_a = *Bignum::FromString(number);
-    const Bignum bn_result = Bignum(2) * bn_a;
+  for (const auto& [a, b] : Numbers()) {
+    const Bignum bn_a = *Bignum::FromString(a);
+    const Bignum bn_b = *Bignum::FromString(b);
+    const Bignum bn_result = bn_a * bn_b;
 
-    const OpenSSLBignum ssl_a(number);
+    const OpenSSLBignum ssl_a(a);
+    const OpenSSLBignum ssl_b(b);
     OpenSSLBignum ssl_result;
-    BN_mul(ssl_result.get(), OpenSSLBignum("2").get(), ssl_a.get(), ctx);
+    BN_mul(ssl_result.get(), ssl_a.get(), ssl_b.get(), ctx);
 
     // Compare string representations
     char* ssl_str = BN_bn2dec(ssl_result.get());
@@ -887,18 +873,14 @@ TEST_P(VsOpenSSLTest, MultiplyCorrect) {
 
 TEST_P(VsOpenSSLTest, AdditionCorrect) {
   // Test that addition produces correct results by comparing to OpenSSL.
-  const std::vector<std::string> numbers = Numbers();
-  for (size_t i = 0; i < numbers.size(); ++i) {
-    const auto& num_a = numbers[i];
-    const auto& num_b = numbers[(i + 1) % numbers.size()];
-
-    const Bignum bn_a = *Bignum::FromString(num_a);
-    const Bignum bn_b = *Bignum::FromString(num_b);
+  for (const auto& [a, b] : Numbers()) {
+    const Bignum bn_a = *Bignum::FromString(a);
+    const Bignum bn_b = *Bignum::FromString(b);
 
     const Bignum bn_result = bn_a + bn_b;
 
-    const OpenSSLBignum ssl_a(num_a);
-    const OpenSSLBignum ssl_b(num_b);
+    const OpenSSLBignum ssl_a(a);
+    const OpenSSLBignum ssl_b(b);
     OpenSSLBignum ssl_result;
     BN_add(ssl_result.get(), ssl_a.get(), ssl_b.get());
 
@@ -917,18 +899,14 @@ TEST_P(VsOpenSSLTest, AdditionCorrect) {
 TEST_P(VsOpenSSLTest, SubtractionCorrect) {
   // Test that subtraction produces correct results by comparing to
   // OpenSSL.
-  const std::vector<std::string> numbers = Numbers();
-  for (size_t i = 0; i < numbers.size(); ++i) {
-    const auto& num_a = numbers[i];
-    const auto& num_b = numbers[(i + 1) % numbers.size()];
-
-    const Bignum bn_a = *Bignum::FromString(num_a);
-    const Bignum bn_b = *Bignum::FromString(num_b);
+  for (const auto& [a, b] : Numbers()) {
+    const Bignum bn_a = *Bignum::FromString(a);
+    const Bignum bn_b = *Bignum::FromString(b);
 
     const Bignum bn_result = bn_a - bn_b;
 
-    const OpenSSLBignum ssl_a(num_a);
-    const OpenSSLBignum ssl_b(num_b);
+    const OpenSSLBignum ssl_a(a);
+    const OpenSSLBignum ssl_b(b);
     OpenSSLBignum ssl_result;
     BN_sub(ssl_result.get(), ssl_a.get(), ssl_b.get());
 
@@ -944,12 +922,17 @@ TEST_P(VsOpenSSLTest, SubtractionCorrect) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(VsOpenSSL, VsOpenSSLTest,
-                         ::testing::Values(NumberSizeClass::kSmall,
-                                           NumberSizeClass::kMedium,
-                                           NumberSizeClass::kLarge,
-                                           NumberSizeClass::kHuge,
-                                           NumberSizeClass::kMega));
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    VsOpenSSL, VsOpenSSLTest, ::testing::Values(
+      std::make_pair(NumberSizeClass::kSmall, NumberSizeClass::kSmall),
+      std::make_pair(NumberSizeClass::kSmall, NumberSizeClass::kHuge),
+      std::make_pair(NumberSizeClass::kHuge, NumberSizeClass::kSmall),
+      std::make_pair(NumberSizeClass::kMedium, NumberSizeClass::kMedium),
+      std::make_pair(NumberSizeClass::kLarge, NumberSizeClass::kLarge),
+      std::make_pair(NumberSizeClass::kHuge, NumberSizeClass::kHuge),
+      std::make_pair(NumberSizeClass::kMega, NumberSizeClass::kMega)));
+// clang-format on
 
 // TODO: Enable once benchmark is integrated.
 #if 0
