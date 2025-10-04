@@ -18,7 +18,7 @@
 
 #include <atomic>
 
-#include <absl/base/thread_annotations.h>
+#include "absl/base/thread_annotations.h"
 
 class ABSL_LOCKABLE ABSL_ATTRIBUTE_WARN_UNUSED SpinLock {
  public:

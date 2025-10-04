@@ -237,7 +237,6 @@ cc_library(
     ],
     deps = [
         "//s2/base:commandlineflags",
-        "//s2/base:types",
         "//s2/base:logging",
         "//s2/base:port",
         "//s2/base:spinlock",

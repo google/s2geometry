@@ -11,7 +11,7 @@ cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_exten
 use_repo(cc_configure, "local_config_cc")
 
 bazel_dep(name = "boringssl", version = "0.20250514.0")
-bazel_dep(name = "abseil-cpp", version = "20250127.1")
+bazel_dep(name = "abseil-cpp", version = "20250814.1")
 bazel_dep(name = "googletest", version = "1.17.0")
 bazel_dep(name = "rules_cc", version = "0.1.1")
 
