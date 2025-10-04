@@ -41,6 +41,7 @@ jobs:
     - name: Build and Test
       run: |
         bazel test \
-          --keep_going --test_verbose_timeout_warnings --test_output=errors \
+          --jobs=45 --keep_going \
+          --test_verbose_timeout_warnings --test_output=errors \
           //...
       working-directory: src
