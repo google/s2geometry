@@ -774,7 +774,7 @@ Bignum& Bignum::operator+=(const Bignum& b) {
       //   +|a| + -|b| --> -(|b| - |a|)
       //
       // So we can compute |b| - |a| and the final sign is the same as B.
-      size_t prev_size = bigits_.size();
+      size_t prev_size = b.bigits_.size();
       bigits_.resize(b.bigits_.size());
       SubOutOfPlace(absl::MakeSpan(bigits_), b.bigits_, bigits_, prev_size);
       negative_ = b.is_negative();
