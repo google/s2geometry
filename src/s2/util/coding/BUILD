@@ -14,7 +14,6 @@ cc_library(
     ],
     deps = [
         "//s2/base:casts",
-        "//s2/base:types",
         "//s2/base:logging",
         "//s2/base:malloc_extension",
         "//s2/base:port",

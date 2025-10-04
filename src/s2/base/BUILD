@@ -22,11 +22,6 @@ cc_library(
 )
 
 cc_library(
-    name = "types",
-    hdrs = ["types.h"],
-)
-
-cc_library(
     name = "casts",
     hdrs = ["casts.h"],
     deps = [
@@ -46,7 +41,6 @@ cc_library(
         "commandlineflags_declare.h",
     ],
     deps = [
-        ":types",
         "@abseil-cpp//absl/flags:flag",
     ],
 )
@@ -62,5 +56,8 @@ cc_library(
     name = "spinlock",
     hdrs = [
         "spinlock.h",
+    ],
+    deps = [
+        "@abseil-cpp//absl/base:core_headers",
     ],
 )
