@@ -80,7 +80,7 @@ int Bignum::Compare(const Bignum& b) const {
 
 std::optional<Bignum> Bignum::FromString(absl::string_view s) {
   // A chunk is up to 19 decimal digits, which can always fit into a Bigit.
-  constexpr ssize_t kMaxChunkDigits = std::numeric_limits<Bigit>::digits10;
+  constexpr int kMaxChunkDigits = std::numeric_limits<Bigit>::digits10;
 
   // NOTE: We use a simple multiply-and-add (aka Horner's) method here for the
   // sake of simplicity. This isn't the fastest algorithm, being quadratic in
@@ -115,7 +115,8 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
 
   const auto end = s.cend();
   while (begin < end) {
-    ssize_t chunk_len = std::min(std::distance(begin, end), kMaxChunkDigits);
+    int chunk_len =
+        std::min(static_cast<int>(std::distance(begin, end)), kMaxChunkDigits);
 
     Bigit chunk = 0;
     auto result = std::from_chars(begin, begin + chunk_len, chunk);
