@@ -90,7 +90,7 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
 
   // Precomputed powers of 10.
   static constexpr auto kPow10 = []() {
-    std::array<Bigit, 20> out = {1};
+    std::array<Bigit, kMaxChunkDigits + 1> out = {1};
     for (size_t i = 1; i < out.size(); ++i) {
       out[i] = 10 * out[i - 1];
     }
@@ -115,7 +115,7 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
 
   const auto end = s.cend();
   while (begin < end) {
-    size_t chunk_len = std::min(std::distance(begin, end), kMaxChunkDigits);
+    ssize_t chunk_len = std::min(std::distance(begin, end), kMaxChunkDigits);
 
     Bigit chunk;
     auto result = std::from_chars(begin, begin + chunk_len, chunk);
@@ -291,7 +291,7 @@ inline Bigit AddCarry(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 //
 // NOTE: Borrow must be one or zero.
 inline Bigit SubBorrow(Bigit a, Bigit b, Bigit* absl_nonnull borrow) {
-  ABSL_DCHECK_LE(borrow, 1);
+  ABSL_DCHECK_LE(*borrow, 1);
   Bigit diff = a - b - *borrow;
   *borrow = (a < b) || (*borrow && (a == b));
   return diff;
@@ -334,7 +334,7 @@ inline Bigit AddInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   Bigit carry = 0;
 
   // Dispatch four at a time to help loop unrolling.
-  int i = 0;
+  size_t i = 0;
   while (i + 4 <= b.size()) {
     for (int j = 0; j < 4; ++j, ++i) {
       a[i] = AddCarry(a[i], b[i], &carry);
@@ -347,8 +347,8 @@ inline Bigit AddInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   }
 
   // Propagate carry through the rest of a.
-  int left = a.size() - b.size();
-  for (; carry && left > 0; --left, ++i) {
+  size_t left = a.size() - b.size();
+  for (; carry && i < a.size(); ++i) {
     a[i] = AddCarry(a[i], 0, &carry);
   }
 
@@ -395,7 +395,7 @@ inline size_t AddOutOfPlace(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
   auto longer = (a.size() > b.size()) ? a : b;
 
   // Dispatch four at a time for the remaining part.
-  const int size = longer.size();
+  const size_t size = longer.size();
   while (i + 4 < size) {
     for (int j = 0; j < 4; ++j, ++i) {
       dst[i] = AddCarry(longer[i], 0, &carry);
@@ -426,7 +426,7 @@ inline void SubInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
 
   // Dispatch four at a time to help loop unrolling.
   size_t size = b.size();
-  int i = 0;
+  size_t i = 0;
   while (i + 4 <= size) {
     for (int j = 0; j < 4; ++j, ++i) {
       a[i] = SubBorrow(a[i], b[i], &borrow);
@@ -453,7 +453,7 @@ inline void SubInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
 inline Bigit SubOutOfPlace(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
                            absl::Span<const Bigit> b, size_t digits) {
   ABSL_DCHECK_EQ(dst.size(), a.size());
-  ABSL_DCHECK_LT(CmpAbs(a, b), 0);
+  ABSL_DCHECK_GE(CmpAbs(a, b), 1);
 
   Bigit borrow = 0;
 
@@ -486,7 +486,7 @@ Bigit MulAdd(absl::Span<Bigit> out, absl::Span<const Bigit> a, Bigit b,
   int left = a.size();
 
   // Dispatch four at a time to help loop unrolling.
-  int i = 0;
+  size_t i = 0;
   while (i + 4 <= a.size()) {
     for (int j = 0; j < 4; ++j, ++i) {
       out[i] = MulCarry(a[i], b, &carry);
@@ -506,11 +506,9 @@ Bigit MulAdd(absl::Span<Bigit> out, absl::Span<const Bigit> a, Bigit b,
 // Returns the final carry, if any.
 inline Bigit MulAddInPlace(absl::Span<Bigit> out, absl::Span<const Bigit> a,
                            Bigit b) {
-  int left = a.size();
-
   // Dispatch four at a time to help loop unrolling.
   Bigit carry = 0;
-  int i = 0;
+  size_t i = 0;
   while (i + 4 <= a.size()) {
     for (int j = 0; j < 4; ++j, ++i) {
       MulAddCarry(out[i], a[i], b, &carry);
