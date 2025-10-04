@@ -40,3 +40,4 @@ jobs:
 
     - name: Build and Test
       run: bazel test --keep_going --test_output=errors //...
+      working-directory: src
