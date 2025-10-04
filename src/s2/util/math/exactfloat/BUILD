@@ -69,6 +69,7 @@ cc_test(
     srcs = ["exactfloat_underflow_test.cc"],
     deps = [
         ":exactfloat",
+        "@abseil-cpp//absl/random:random",
         "@googletest//:gtest_main",
     ],
 )
