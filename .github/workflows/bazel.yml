@@ -18,12 +18,11 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        # Oldest and newest supported.
-        # https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md
-        # https://bazel.build/release#support-matrix
-        bazel: ['7.6.1', '8.4.2']
+    # We would like to test on the oldest and newest supported.
+    # https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md
+    # https://bazel.build/release#support-matrix
+    # It's not clear how to do that since bazelisk has some magic to pick a
+    # bazel version.
 
     steps:
     - name: Checkout repository
@@ -32,12 +31,10 @@ jobs:
     - name: Setup Bazel ${{ matrix.bazel }}
       uses: bazel-contrib/setup-bazel@4fd964a13a440a8aeb0be47350db2fc640f19ca8  # v0.15.0
       with:
-        bazelisk-version: ${{ matrix.bazel }}
-
         # Avoid downloading Bazel every time.
         bazelisk-cache: true
         # Store build cache per workflow.
-        disk-cache: ${{ github.workflow }}-${{ matrix.bazel }}
+        disk-cache: ${{ github.workflow }}
         # Share repository cache between workflows.
         repository-cache: true
 
