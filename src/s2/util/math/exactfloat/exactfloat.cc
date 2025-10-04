@@ -371,7 +371,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
   std::string::size_type pos = digits->find_last_not_of('0') + 1;
   bn_exp10 += digits->size() - pos;
   digits->erase(pos);
-  ABSL_DCHECK_LE(digits->size(), max_digits);
+  ABSL_DCHECK_LE(static_cast<int>(digits->size()), max_digits);
 
   // Finally, we adjust the base-10 exponent so that the mantissa is a
   // fraction in the range [0.1, 1) rather than an integer.
