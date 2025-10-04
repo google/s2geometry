@@ -39,5 +39,8 @@ jobs:
         repository-cache: true
 
     - name: Build and Test
-      run: bazel test --keep_going --test_output=errors //...
+      run: >
+        bazel test
+          --keep_going --test_verbose_timeout_warnings --test_output=errors
+          //...
       working-directory: src
