@@ -17,9 +17,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <iostream>
 #include <limits>
-#include <optional>
 #include <random>
 #include <string>
 #include <vector>
@@ -29,6 +28,7 @@
 #include "benchmark/benchmark.h"
 #endif
 
+#include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
@@ -37,6 +37,7 @@
 #include "gtest/gtest.h"
 #include "openssl/bn.h"
 #include "openssl/crypto.h"
+#include "s2/s2testing.h"
 
 namespace exactfloat_internal {
 
@@ -833,9 +834,10 @@ class VsOpenSSLTest
   // E.g. If the test suite was instantiate with (kSmall, kHuge) as the number
   // classes, then this will return a small value on the left and a huge value
   // on the right. (kHuge, kSmall) would return the opposite.
-  std::vector<std::pair<std::string, std::string>> Numbers() {
-    auto numbers0 = RandomNumberStrings(bitgen_, GetParam().first);
-    auto numbers1 = RandomNumberStrings(bitgen_, GetParam().second);
+  std::vector<std::pair<std::string, std::string>> Numbers(
+      absl::BitGenRef bitgen) {
+    auto numbers0 = RandomNumberStrings(bitgen, GetParam().first);
+    auto numbers1 = RandomNumberStrings(bitgen, GetParam().second);
     ABSL_CHECK_EQ(numbers0.size(), numbers1.size());
 
     std::vector<std::pair<std::string, std::string>> numbers;
@@ -846,15 +848,15 @@ class VsOpenSSLTest
     }
     return numbers;
   }
-
- private:
-  absl::BitGen bitgen_;
 };
 
 TEST_P(VsOpenSSLTest, MultiplyCorrect) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MULTIPLY_CORRECT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Test that multiplication produces the same results as OpenSSL.
   BN_CTX* ctx = BN_CTX_new();
-  for (const auto& [a, b] : Numbers()) {
+  for (const auto& [a, b] : Numbers(bitgen)) {
     const Bignum bn_a = *Bignum::FromString(a);
     const Bignum bn_b = *Bignum::FromString(b);
     const Bignum bn_result = bn_a * bn_b;
@@ -878,8 +880,11 @@ TEST_P(VsOpenSSLTest, MultiplyCorrect) {
 }
 
 TEST_P(VsOpenSSLTest, AdditionCorrect) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "ADDITION_CORRECT", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Test that addition produces correct results by comparing to OpenSSL.
-  for (const auto& [a, b] : Numbers()) {
+  for (const auto& [a, b] : Numbers(bitgen)) {
     const Bignum bn_a = *Bignum::FromString(a);
     const Bignum bn_b = *Bignum::FromString(b);
 
@@ -903,9 +908,13 @@ TEST_P(VsOpenSSLTest, AdditionCorrect) {
 }
 
 TEST_P(VsOpenSSLTest, SubtractionCorrect) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SUBTRACTION_CORRECT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Test that subtraction produces correct results by comparing to
   // OpenSSL.
-  for (const auto& [a, b] : Numbers()) {
+  for (const auto& [a, b] : Numbers(bitgen)) {
     const Bignum bn_a = *Bignum::FromString(a);
     const Bignum bn_b = *Bignum::FromString(b);
 
