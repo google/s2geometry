@@ -45,6 +45,8 @@ cc_test(
     srcs = ["bignum_test.cc"],
     deps = [
         ":bignum",
+        "//:s2_testing_headers",
+        "@abseil-cpp//absl/log:log_streamer",
         "@abseil-cpp//absl/random:bit_gen_ref",
         "@boringssl//:crypto",
         "@googletest//:gtest_main",

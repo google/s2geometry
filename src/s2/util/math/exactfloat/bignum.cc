@@ -23,7 +23,6 @@
 #include <limits>
 #include <optional>
 #include <utility>
-#include <vector>
 
 #include "absl/algorithm/container.h"
 #include "absl/base/nullability.h"
@@ -587,8 +586,7 @@ inline std::pair<absl::Span<T>, absl::Span<T>> Split(absl::Span<T> span,
 class Arena {
  public:
   // TODO: Use make_unique_for_overwrite when on C++20.
-  explicit Arena(size_t size)
-      : size_(size), data_(std::unique_ptr<Bigit[]>(new Bigit[size])){};
+  explicit Arena(size_t size) : size_(size), data_(new Bigit[size]){};
 
   // Allocates a span of length n from the arena.
   absl::Span<Bigit> Alloc(size_t n) {
