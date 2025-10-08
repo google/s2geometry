@@ -356,7 +356,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
     // up only if the lowest kept digit is odd.
     if (all_digits[max_digits] >= '5' &&
         ((all_digits[max_digits - 1] & 1) == 1 ||
-         all_digits.substr(max_digits + 1).find_first_not_of("0") !=
+         all_digits.find_first_not_of('0', max_digits + 1) !=
              std::string::npos)) {
       // This can increase the number of digits by 1, but in that case at
       // least one trailing zero will be stripped off below.
@@ -431,18 +431,16 @@ ExactFloat ExactFloat::SignedSum(int a_sign, const ExactFloat* a, int b_sign,
     r.bn_ += b->bn_;
     r.sign_ = a_sign;
   } else {
-    if (r.bn_ >= b->bn_) {
-      // |a| >= |b|, compute |a| - |b|, result has same sign as a.
-      r.bn_ -= b->bn_;
-      r.sign_ = a_sign;
-    } else {
-      // |a| < |b|, compute -|a| + |b| == |b| - |a|, result has same sign as b.
-      r.bn_.negate();
-      r.bn_ += b->bn_;
-      r.sign_ = b_sign;
-    }
+    r.bn_ -= b->bn_;
     if (r.bn_.is_zero()) {
       r.sign_ = +1;
+    } else if (r.bn_.is_negative()) {
+      // |b| was greater than |a|.
+      r.sign_ = b_sign;
+      r.bn_.set_negative(false);
+    } else {
+      // |a| was greater than |b|
+      r.sign_ = a_sign;
     }
   }
   r.Canonicalize();
