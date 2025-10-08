@@ -187,7 +187,9 @@ class Bignum {
   // Negates this bignum in place.
   void negate() {
     negative_ = !negative_;
-    Normalize();
+    if (bigits_.empty()) {
+      negative_ = false;
+    }
   }
 
   // Compares to another bignum, returning -1, 0, +1.
@@ -205,11 +207,11 @@ class Bignum {
     while (!bigits_.empty() && bigits_.back() == 0) {
       bigits_.pop_back();
     }
-    negative_ = !bigits_.empty() && negative_;
-  }
 
-  // Returns true if the bignum is in normal form (no extra leading zeros).
-  bool is_normalized() const { return bigits_.empty() || bigits_.back() != 0; }
+    if (bigits_.empty()) {
+      negative_ = false;
+    }
+  }
 
   // We store bignums in sign-magnitude form. bigits_ contains the individual
   // 64-bit digits of the bignum. If bigits_ is non-empty, then the last element
