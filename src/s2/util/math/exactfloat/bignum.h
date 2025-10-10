@@ -214,9 +214,9 @@ class Bignum {
   }
 
   // We store bignums in sign-magnitude form. bigits_ contains the individual
-  // 64-bit digits of the bignum. If bigits_ is non-empty, then the last element
-  // must be non-zero and when it is empty (representing a zero value),
-  // negative_ must be false.
+  // 64-bit digits of the bignum, stored in little-endian order. If bigits_ is
+  // non-empty, then the last element must be non-zero and when it is empty
+  // (representing a zero value), negative_ must be false.
   BigitVector bigits_;
   bool negative_ = false;
 };
