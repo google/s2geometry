@@ -45,8 +45,8 @@ static constexpr int kSimpleMulThreshold = 24;
 // Computes dst[i] = a[i]*b + c
 //
 // Returns the final carry, if any.
-inline Bigit MulAddWithCarry(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
-                             Bigit b, Bigit carry);
+inline Bigit MulWithCarry(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
+                          Bigit b, Bigit carry);
 
 // Compares magnitude magnitude of two bigit vectors, returning -1, 0, or +1.
 //
@@ -130,7 +130,7 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
 
     // Shift left by chunk_len digits and add the chunk to it.
     auto outspan = absl::MakeSpan(out.bigits_);
-    Bigit carry = MulAddWithCarry(outspan, outspan, kPow10[chunk_len], chunk);
+    Bigit carry = MulWithCarry(outspan, outspan, kPow10[chunk_len], chunk);
     if (carry) {
       out.bigits_.emplace_back(carry);
     }
@@ -457,8 +457,11 @@ inline void SubInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
 // Computes a = b - a.
 //
 // NOTE: Requires |b| >= |a|.
+//
+// Since we write the result to a, but b is larger, a must be expanded with
+// enough leading zeros to fit the result.
 inline void SubReverseInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
-  ABSL_DCHECK_GE(b.size(), a.size());
+  ABSL_DCHECK_GE(a.size(), b.size());
   ABSL_DCHECK_GE(CmpAbs(b, a), 0);
 
   Bigit borrow = 0;
@@ -477,14 +480,14 @@ inline void SubReverseInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
     a[i] = SubBigit(b[i], a[i], &borrow);
   }
 
-  // Propagate borrow through the rest of dst.
+  // Propagate borrow through the rest of a.
   for (; borrow && i < a.size(); ++i) {
     a[i] = SubBigit(a[i], 0, &borrow);
   }
 }
 
-inline Bigit MulAddWithCarry(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
-                             Bigit b, Bigit carry) {
+inline Bigit MulWithCarry(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
+                          Bigit b, Bigit carry) {
   ABSL_DCHECK_GE(dst.size(), a.size());
 
   // Dispatch four at a time to help loop unrolling.
@@ -549,7 +552,7 @@ inline void MulQuadratic(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
   // so we manually set the carries as we go. We grab a span to the upper half
   // of out starting at a.size() to facilitate this.
   auto upper = dst.subspan(a.size());
-  upper[0] = MulAddWithCarry(dst, a, b[0], 0);
+  upper[0] = MulWithCarry(dst, a, b[0], 0);
 
   const size_t size = b.size();
   size_t i = 1;
@@ -730,10 +733,11 @@ inline void KaratsubaMulRecursive(absl::Span<Bigit> dst,
   // position in the output.
   auto dst_z1 = dst.subspan(half);
 
-  // Z1 may overflow to half + 1 bigits because of a carry. This is a problem
-  // when we only have space for half bigits in the final sum. Fortunate,
-  // subtracting z0 and z2 will always bring it back into range, and we simply
-  // have to trim the leading zeros, if any.
+  // Although the value of z1 is guaranteed to fit in the available space of
+  // dst, it may have one or more high-order zero bigits because it was sized
+  // conservatively to hold the intermediate result (asum * bsum). We trim these
+  // leading zeros if necessary to ensure that the Add() operation below does
+  // not attempt to write zero bigits past the end of dst.
   AddInPlace(dst_z1, z1.first(std::min(z1.size(), dst_z1.size())));
 
   // Release temporary memory we used.
