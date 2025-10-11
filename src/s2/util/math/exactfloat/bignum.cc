@@ -479,11 +479,6 @@ inline void SubReverseInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
   for (; i < size; ++i) {
     a[i] = SubBigit(b[i], a[i], &borrow);
   }
-
-  // Propagate borrow through the rest of a.
-  for (; borrow && i < a.size(); ++i) {
-    a[i] = SubBigit(a[i], 0, &borrow);
-  }
 }
 
 inline Bigit MulWithCarry(absl::Span<Bigit> dst, absl::Span<const Bigit> a,
