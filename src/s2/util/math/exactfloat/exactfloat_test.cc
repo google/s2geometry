@@ -448,6 +448,12 @@ TEST_F(ExactFloatTest, Constructors) {
   ExpectSameWithPrec(-125, 7, e);
 }
 
+TEST_F(ExactFloatTest, IntMinConstruction) {
+  // Ensure that construction with INT_MIN works properly.
+  ExactFloat f = INT_MIN;
+  ExpectSame(INT_MIN, f);
+}
+
 TEST_F(ExactFloatTest, Constants) {
   EXPECT_TRUE(ExactFloat::SignedZero(+1).is_zero());
   EXPECT_EQ(false, ExactFloat::SignedZero(+1).sign_bit());
