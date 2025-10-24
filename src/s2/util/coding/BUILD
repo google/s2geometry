@@ -16,7 +16,6 @@ cc_library(
         "//s2/base:casts",
         "//s2/base:logging",
         "//s2/base:malloc_extension",
-        "//s2/base:port",
         "//s2/util/bits",
         "//s2/util/endian",
         "@abseil-cpp//absl/base",

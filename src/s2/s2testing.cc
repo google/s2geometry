@@ -34,7 +34,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/commandlineflags.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
@@ -64,8 +63,8 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-S2_DEFINE_int32(s2_random_seed, 1,
-                "Seed value that can be used in benchmarks.");
+ABSL_FLAG(int32_t, s2_random_seed, 1,
+          "Seed value that can be used in benchmarks.");
 
 const double S2Testing::kEarthRadiusKm = 6371.01;
 

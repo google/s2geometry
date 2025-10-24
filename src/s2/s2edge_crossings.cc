@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <ios>
 #include <limits>
 #include <utility>
 
@@ -41,6 +42,7 @@
 namespace S2 {
 
 using absl::string_view;
+using exactfloat::ExactFloat;
 using internal::GetIntersectionExact;
 using internal::intersection_method_tally_;
 using internal::IntersectionMethod;
@@ -314,7 +316,7 @@ inline static Vector3_d EnsureNormalizable(const Vector3_d& p) {
 // call Normalize() since that would create additional error in situations
 // where normalization is not necessary.)
 static Vector3_d NormalizableFromExact(const Vector3_xf& xf) {
-  Vector3_d x(xf[0].ToDouble(), xf[1].ToDouble(), xf[2].ToDouble());
+  Vector3_d x = Vector3_d::Cast(xf);
   if (IsNormalizable(x)) {
     return x;
   }
@@ -323,14 +325,14 @@ static Vector3_d NormalizableFromExact(const Vector3_xf& xf) {
   // representable by an IEEE double precision float.
   int exp = ExactFloat::kMinExp - 1;
   for (int i = 0; i < 3; ++i) {
-    if (xf[i].is_normal()) exp = std::max(exp, xf[i].exp());
+    if (isnormal(xf[i])) exp = std::max(exp, xf[i].exp());
   }
   if (exp < ExactFloat::kMinExp) {
     return Vector3_d(0, 0, 0);  // The exact result is (0, 0, 0).
   }
-  return Vector3_d(ldexp(xf[0], -exp).ToDouble(),
-                   ldexp(xf[1], -exp).ToDouble(),
-                   ldexp(xf[2], -exp).ToDouble());
+  return Vector3_d(static_cast<double>(ldexp(xf[0], -exp)),
+                   static_cast<double>(ldexp(xf[1], -exp)),
+                   static_cast<double>(ldexp(xf[2], -exp)));
 }
 
 namespace internal {
@@ -384,7 +386,7 @@ bool VertexCrossing(const S2Point& a, const S2Point& b,
   if (a == d) return (b == c) || s2pred::OrderedCCW(S2::RefDir(a), c, b, a);
   if (b == c) return s2pred::OrderedCCW(S2::RefDir(b), d, a, b);
 
-  ABSL_LOG(ERROR) << "VertexCrossing called with 4 distinct vertices";
+  ABSL_LOG(DFATAL) << "VertexCrossing called with 4 distinct vertices";
   return false;
 }
 
@@ -405,7 +407,7 @@ int SignedVertexCrossing(const S2Point& a, const S2Point& b,
   }
   if (b == c) return s2pred::OrderedCCW(S2::RefDir(b), d, a, b) ? -1 : 0;
 
-  ABSL_LOG(ERROR) << "SignedVertexCrossing called with 4 distinct vertices";
+  ABSL_LOG(DFATAL) << "SignedVertexCrossing called with 4 distinct vertices";
   return 0;
 }
 
@@ -786,9 +788,13 @@ S2Point GetIntersection(const S2Point& a0, const S2Point& a1,
 
   // Make sure that the intersection point lies on both edges.
   ABSL_DCHECK(
-      ApproximatelyOrdered(a0, result, a1, kIntersectionError.radians()));
+      ApproximatelyOrdered(a0, result, a1, kIntersectionError.radians()))
+      << "Using method " << static_cast<int>(method) << " for intersection of "
+      << std::hexfloat << a0 << ", " << a1 << ", " << b0 << ", " << b1;
   ABSL_DCHECK(
-      ApproximatelyOrdered(b0, result, b1, kIntersectionError.radians()));
+      ApproximatelyOrdered(b0, result, b1, kIntersectionError.radians()))
+      << "Using method " << static_cast<int>(method) << " for intersection of "
+      << std::hexfloat << a0 << ", " << a1 << ", " << b0 << ", " << b1;
 
   return result;
 }

@@ -16,6 +16,7 @@
 
 #include "s2/s2point_compression.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -26,7 +27,6 @@
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
-#include "s2/base/commandlineflags.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
@@ -35,15 +35,10 @@
 #include "s2/s2text_format.h"
 #include "s2/util/coding/coder.h"
 
-using absl::FixedArray;
-using absl::MakeSpan;
-using absl::Span;
-using std::vector;
-
-S2_DEFINE_int32(s2point_compression_bm_level, 30,
-                "Level to encode at for benchmarks.");
-S2_DEFINE_double(s2point_compression_bm_radius_km, 1000.0,
-                 "Radius to use for loop for benchmarks.");
+ABSL_FLAG(int32_t, s2point_compression_bm_level, 30,
+          "Level to encode at for benchmarks.");
+ABSL_FLAG(double, s2point_compression_bm_radius_km, 1000.0,
+          "Radius to use for loop for benchmarks.");
 
 namespace {
 

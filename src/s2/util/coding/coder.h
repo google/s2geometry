@@ -206,13 +206,10 @@ class Encoder {
  private:
   // All encoding operations are done through the Writer. This avoids aliasing
   // between `buf_` and `this` which allows the compiler to avoid reloading
-  // `buf_` repeatedly. See https://godbolt.org/z/zM36s3ded.
+  // `buf_` repeatedly. See https://godbolt.org/z/sfEnePYWP.
   struct Writer {
     Encoder* enc;
-    char* p;
-
-    explicit Writer(Encoder* e)
-        : enc(e), p(reinterpret_cast<char*>(enc->buf_)) {}
+    char* p{reinterpret_cast<char*>(enc->buf_)};
 
     ~Writer() {
       enc->buf_ = reinterpret_cast<unsigned char*>(p);
@@ -249,7 +246,7 @@ class Encoder {
     }
   };
 
-  Writer writer() { return Writer(this); }
+  Writer writer() { return Writer{this}; }
 
   static std::pair<unsigned char*, size_t> NewBuffer(size_t size);
   static void DeleteBuffer(unsigned char* buf, size_t size);
@@ -486,7 +483,7 @@ ABSL_ATTRIBUTE_ALWAYS_INLINE inline bool Encoder::put_varint64_from_decoder(
     if (ABSL_PREDICT_FALSE(enc_ptr >= limit_ - 1)) {
       return false;
     }
-    UNALIGNED_STORE16(enc_ptr, UNALIGNED_LOAD16(dec_ptr));
+    memcpy(enc_ptr, dec_ptr, 2);
     dec->buf_ += 2;
     buf_ += 2;
     return true;

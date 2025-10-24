@@ -566,3 +566,25 @@ S1ChordAngle S2Cell::GetMaxDistance(const S2Cell& target) const {
   }
   return max_dist;
 }
+
+bool S2Cell::IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
+  // TODO: b/284470618 - Use more efficient implementation
+  return GetDistance(target) < limit;
+}
+
+bool S2Cell::IsDistanceLessOrEqual(const S2Cell& target,
+                                   S1ChordAngle limit) const {
+  // TODO: b/284470618 - Use more efficient implementation
+  return GetDistance(target) <= limit;
+}
+
+bool S2Cell::IsMaxDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
+  // TODO: b/284470618 - Use more efficient implementation
+  return GetMaxDistance(target) < limit;
+}
+
+bool S2Cell::IsMaxDistanceLessOrEqual(const S2Cell& target,
+                                      S1ChordAngle limit) const {
+  // TODO: b/284470618 - Use more efficient implementation
+  return GetMaxDistance(target) <= limit;
+}

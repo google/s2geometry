@@ -225,7 +225,7 @@ bool S2DensityTree::InitToVertexDensity(const S2ShapeIndex& index,
           case 2:
             return shape.num_edges();
         }
-        ABSL_LOG(ERROR) << "unexpected shape with " << shape.dimension()
+        ABSL_LOG(DFATAL) << "unexpected shape with " << shape.dimension()
                          << " dimensions";
         return 0;
       },

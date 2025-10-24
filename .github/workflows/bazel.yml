@@ -1,0 +1,47 @@
+name: Bazel CI
+
+on:
+  pull_request:
+  push:
+  release:
+    types:
+      - released
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # We would like to test on the oldest and newest supported.
+    # https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md
+    # https://bazel.build/release#support-matrix
+    # It's not clear how to do that since bazelisk has some magic to pick a
+    # bazel version.
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+
+    - name: Setup Bazel ${{ matrix.bazel }}
+      uses: bazel-contrib/setup-bazel@4fd964a13a440a8aeb0be47350db2fc640f19ca8  # v0.15.0
+      with:
+        # Avoid downloading Bazel every time.
+        bazelisk-cache: true
+        # Store build cache per workflow.
+        disk-cache: ${{ github.workflow }}
+        # Share repository cache between workflows.
+        repository-cache: true
+
+    - name: Build and Test
+      run: |
+        bazel test \
+          --jobs=45 --keep_going \
+          --test_verbose_timeout_warnings --test_output=errors \
+          //...
+      working-directory: src

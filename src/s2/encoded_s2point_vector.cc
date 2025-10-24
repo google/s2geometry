@@ -114,7 +114,7 @@ void EncodeS2PointVector(Span<const S2Point> points, CodingHint hint,
       return EncodeS2PointVectorCompact(points, encoder);
 
     default:
-      ABSL_LOG(ERROR) << "Unknown CodingHint: " << static_cast<int>(hint);
+      ABSL_LOG(DFATAL) << "Unknown CodingHint: " << static_cast<int>(hint);
   }
 }
 
@@ -236,7 +236,7 @@ bool EncodedS2PointVector::InitUncompressedFormat(Decoder* decoder) {
     // Maybe the compiler is smart enough that we can do this all the time,
     // but more likely we will need two cases using the #ifdef above.
     // (Note that even ARMv7 does not support unaligned 64-bit loads.)
-    ABSL_LOG(ERROR)
+    ABSL_LOG(DFATAL)
         << "Needs architecture with 64-bit little-endian unaligned loads";
     return false;
   }

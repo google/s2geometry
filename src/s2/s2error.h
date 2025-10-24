@@ -29,9 +29,8 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
-#include "s2/base/port.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.

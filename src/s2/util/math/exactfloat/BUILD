@@ -19,7 +19,6 @@ cc_library(
     deps = [
         ":bignum",
         "//s2/base:logging",
-        "//s2/base:port",
     ],
 )
 
@@ -42,7 +41,18 @@ cc_test(
     deps = [
         ":exactfloat",
         "//s2/util/math:vector",
-        "@abseil-cpp//absl/random:random",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/log:absl_log",
+        "@abseil-cpp//absl/random",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "exactfloat_underflow_test",
+    srcs = ["exactfloat_underflow_test.cc"],
+    deps = [
+        ":exactfloat",
         "@googletest//:gtest_main",
     ],
 )

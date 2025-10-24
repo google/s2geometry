@@ -30,6 +30,7 @@
 #include "s2/s2predicates_internal.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 
+using exactfloat::ExactFloat;
 using std::fabs;
 using std::max;
 using std::min;
@@ -246,7 +247,7 @@ int ExactSign(const S2Point& a, const S2Point& b, const S2Point& c,
 
   // The precision of ExactFloat is high enough that the result should always
   // be exact (no rounding was performed).
-  ABSL_DCHECK(!det.is_nan());
+  ABSL_DCHECK(!isnan(det));
   ABSL_DCHECK_LT(det.prec(), det.max_prec());
 
   // If the exact determinant is non-zero, we're done.

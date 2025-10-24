@@ -59,7 +59,7 @@ std::pair<unsigned char*, size_t> Encoder::NewBuffer(size_t size) {
 }
 
 void Encoder::DeleteBuffer(unsigned char* buf, size_t size) {
-  base::sized_delete(buf, size);
+  ::operator delete(buf, size);
 }
 
 void Encoder::EnsureSlowPath(size_t N) {
@@ -69,11 +69,7 @@ void Encoder::EnsureSlowPath(size_t N) {
 
   // Double buffer size, but make sure we always have at least N extra bytes
   const size_t current_len = length();
-  // Used in opensource; avoid structured bindings (a C++17 feature) to
-  // remain C++11-compatible.  b/210097200
-  unsigned char* new_buffer;
-  size_t new_capacity;
-  std::tie(new_buffer, new_capacity) =
+  const auto [new_buffer, new_capacity] =
       NewBuffer(std::max(current_len + N, 2 * current_len));
 
   if (underlying_buffer_) {

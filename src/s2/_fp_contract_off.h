@@ -41,13 +41,14 @@
 // appears before the first non-inline function definition.  It is
 // named with an underscore so that it is included first among the S2 headers.
 
-// Assume all compilers support or ignore the standard pragma.
-#pragma STDC FP_CONTRACT OFF
-
 #if defined(__GNUC__) && !defined(__clang__)
 // GCC defines its own pragma that operates at the function level rather than
 // the statement level.
 #pragma GCC optimize("fp-contract=off")
+#else
+// Assume all other compilers support or ignore the standard pragma.
+// Avoid gcc `-Wunknown-pragmas` warnings by not using this for gcc.
+#pragma STDC FP_CONTRACT OFF
 #endif
 
 #endif  // S2__FP_CONTRACT_OFF_H_

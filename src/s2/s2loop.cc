@@ -36,7 +36,6 @@
 #include "absl/utility/utility.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/commandlineflags.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
@@ -83,10 +82,9 @@ using std::vector;
 
 // The maximum number of vertices we'll allow when decoding a loop.
 // The default value of 50 million is about 30x bigger than the number of
-S2_DEFINE_int32(
-    s2polygon_decode_max_num_vertices, 50000000,
-    "The upper limit on the number of loops that are allowed by the "
-    "S2Polygon::Decode method.");
+ABSL_FLAG(int32_t, s2polygon_decode_max_num_vertices, 50000000,
+          "The upper limit on the number of loops that are allowed by the "
+          "S2Polygon::Decode method.");
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 

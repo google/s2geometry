@@ -28,11 +28,10 @@
 #include <utility>
 #include <vector>
 
+#include "absl/flags/declare.h"
 #include "absl/strings/string_view.h"
 
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -60,7 +59,7 @@ class S2Region;
 // std::mt19937_64 bitgen(seed);
 // // Use `bitgen`.
 // ```
-S2_DECLARE_int32(s2_random_seed);
+ABSL_DECLARE_FLAG(int32_t, s2_random_seed);
 
 // This class defines various static functions that are useful for writing
 // unit tests.

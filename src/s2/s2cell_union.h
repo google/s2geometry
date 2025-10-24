@@ -27,13 +27,12 @@
 
 #include "absl/algorithm/container.h"
 #include "absl/base/macros.h"
+#include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
 
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_iterator.h"
@@ -47,8 +46,8 @@ class S2Cap;
 class S2Cell;
 class S2LatLngRect;
 
-S2_DECLARE_bool(s2debug);
-S2_DECLARE_int32(s2cell_union_decode_max_num_cells);
+ABSL_DECLARE_FLAG(bool, s2debug);
+ABSL_DECLARE_FLAG(int32_t, s2cell_union_decode_max_num_cells);
 
 // An S2CellUnion is a region consisting of cells of various sizes.  Typically
 // a cell union is used to approximate some other shape.  There is a tradeoff

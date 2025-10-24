@@ -16,23 +16,20 @@
 #include <string>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
-#include "s2/s2earth.h"
 #include "absl/container/btree_set.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
 #include "absl/strings/str_format.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2earth.h"
 #include "s2/s2point.h"
 #include "s2/s2random.h"
 #include "s2/s2region_term_indexer.h"
 
-using std::string;
-
-S2_DEFINE_int32(num_documents, 10000, "Number of documents");
-S2_DEFINE_int32(num_queries, 10000, "Number of queries");
-S2_DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
+ABSL_FLAG(int32_t, num_documents, 10000, "Number of documents");
+ABSL_FLAG(int32_t, num_queries, 10000, "Number of queries");
+ABSL_FLAG(double, query_radius_km, 100, "Query radius in kilometers");
 
 // A prefix added to spatial terms to distinguish them from other index terms
 // (e.g. representing words or phrases).

@@ -49,7 +49,7 @@ namespace s2shapeutil {
 bool FastEncodeShape(const S2Shape& shape, Encoder* encoder) {
   uint32_t tag = shape.type_tag();
   if (tag == S2Shape::kNoTypeTag) {
-    ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
+    ABSL_LOG(DFATAL) << "Unsupported S2Shape type: " << tag;
     return false;
   }
   // Update the following constant when adding new S2Shape encodings.
@@ -61,7 +61,7 @@ bool FastEncodeShape(const S2Shape& shape, Encoder* encoder) {
 bool CompactEncodeShape(const S2Shape& shape, Encoder* encoder) {
   uint32_t tag = shape.type_tag();
   if (tag == S2Shape::kNoTypeTag) {
-    ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
+    ABSL_LOG(DFATAL) << "Unsupported S2Shape type: " << tag;
     return false;
   }
   // Update the following constant when adding new S2Shape encodings.
@@ -101,7 +101,7 @@ unique_ptr<S2Shape> FullDecodeShape(S2Shape::TypeTag tag, Decoder* decoder) {
       return std::move(shape);  // Converts to S2Shape.
     }
     default: {
-      ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
+      ABSL_LOG(DFATAL) << "Unsupported S2Shape type: " << tag;
       return nullptr;
     }
   }

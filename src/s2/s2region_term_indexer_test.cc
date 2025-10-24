@@ -17,6 +17,7 @@
 
 #include "s2/s2region_term_indexer.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -32,7 +33,6 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/commandlineflags.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -47,7 +47,7 @@ using absl::string_view;
 using std::string;
 using std::vector;
 
-S2_DEFINE_int32(iters, 400, "number of iterations for testing");
+ABSL_FLAG(int32_t, iters, 400, "number of iterations for testing");
 
 namespace {
 

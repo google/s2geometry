@@ -47,8 +47,6 @@
 #include "absl/types/span.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include "s2/base/log_severity.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"

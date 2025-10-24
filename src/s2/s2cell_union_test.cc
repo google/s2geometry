@@ -27,6 +27,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 #include "absl/hash/hash_testing.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/log_streamer.h"
@@ -34,8 +36,6 @@
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -52,9 +52,9 @@
 #include "s2/s2text_format.h"
 #include "s2/util/coding/coder.h"
 
-S2_DECLARE_bool(s2debug);
+ABSL_DECLARE_FLAG(bool, s2debug);
 
-S2_DEFINE_int32(iters, 2000, "Number of iterations for tests.");
+ABSL_FLAG(int32_t, iters, 2000, "Number of iterations for tests.");
 
 using absl::StrCat;
 using std::max;

@@ -190,7 +190,7 @@ S1Angle S2EdgeTessellator::kMinTolerance() {
 S2EdgeTessellator::S2EdgeTessellator(const S2::Projection* projection,
                                      S1Angle tolerance)
     : proj_(projection) {
-  if (tolerance < kMinTolerance()) ABSL_LOG(ERROR) << "Tolerance too small";
+  if (tolerance < kMinTolerance()) ABSL_LOG(DFATAL) << "Tolerance too small";
 
   // Rather than scaling the error estimate as described above, instead we scale
   // the tolerance.  See algorithm description at the top of this file.

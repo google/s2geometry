@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
     steps:
-      - uses: zacharyburnett/setup-abseil-cpp@713a4383f10b05948a6d9d4906056063c8da1168 # Not a release, but has #423 fix.
+      - uses: zacharyburnett/setup-abseil-cpp@4189ecb9fcc7441ed7536774fb0a3f04d3cb779a # Not a release, but has #423 fix.
         with:
           cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
           abseil-version: "20250814.1"

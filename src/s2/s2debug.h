@@ -52,12 +52,14 @@
 #ifndef S2_S2DEBUG_H_
 #define S2_S2DEBUG_H_
 
-#include "s2/base/commandlineflags_declare.h"
+#include <cstdint>
+
+#include "absl/flags/declare.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 
 // Command line flag that enables extra validity checking throughout the S2
 // code.  It is turned on by default in debug-mode builds.
-S2_DECLARE_bool(s2debug);
+ABSL_DECLARE_FLAG(bool, s2debug);
 
 // Class that allows the --s2debug validity checks to be enabled or disabled
 // for specific objects (e.g., see S2Polygon).

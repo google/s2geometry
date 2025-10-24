@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/log/absl_check.h"

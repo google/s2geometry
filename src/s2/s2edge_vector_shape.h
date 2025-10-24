@@ -40,18 +40,17 @@
 class S2EdgeVectorShape : public S2Shape {
  public:
   // Constructs an empty edge vector.
-  S2EdgeVectorShape() : dimension_(1) {}
+  S2EdgeVectorShape() = default;
 
   S2EdgeVectorShape(S2EdgeVectorShape&& other) noexcept = default;
   S2EdgeVectorShape& operator=(S2EdgeVectorShape&& other) noexcept = default;
 
   // Constructs an S2EdgeVectorShape from a vector of edges.
   explicit S2EdgeVectorShape(std::vector<std::pair<S2Point, S2Point>> edges)
-      : dimension_(1), edges_(std::move(edges)) {}
+      : edges_(std::move(edges)) {}
 
   // Creates an S2EdgeVectorShape containing a single edge.
-  S2EdgeVectorShape(const S2Point& a, const S2Point& b)
-      : dimension_(1) {
+  S2EdgeVectorShape(const S2Point& a, const S2Point& b) {
     edges_.push_back(std::make_pair(a, b));
   }
 
