@@ -30,12 +30,12 @@ using std::fabs;
 namespace S2 {
 
 bool IsUnitLength(const S2Point& p) {
-  // Normalize() is guaranteed to return a vector whose L2-norm differs from 1
-  // by less than 2 * DBL_EPSILON.  Thus the squared L2-norm differs by less
-  // than 4 * DBL_EPSILON.  The actual calculated Norm2() can have up to 1.5 *
-  // DBL_EPSILON of additional error.  The total error of 5.5 * DBL_EPSILON
-  // can then be rounded down since the result must be a representable
-  // double-precision value.
+  // If a.Norm2() of S2Point if not denormalized, a.Normalize() is guaranteed to
+  // return a vector whose L2-norm differs from 1 by less than 2 * DBL_EPSILON.
+  // Thus the squared L2-norm differs by less than 4 * DBL_EPSILON.  The actual
+  // calculated Norm2() can have up to 1.5 * DBL_EPSILON of additional error.
+  // The total error of 5.5 * DBL_EPSILON can then be rounded down since the
+  // result must be a representable double-precision value.
   return fabs(p.Norm2() - 1) <= 5 * DBL_EPSILON;  // About 1.11e-15
 }
 

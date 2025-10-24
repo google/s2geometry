@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdint>
 #include <iterator>
 #include <limits>
 #include <string>
@@ -40,7 +41,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 
-#include "s2/base/commandlineflags.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
@@ -52,8 +52,8 @@
 #include "s2/s2random.h"
 #include "s2/s2testing.h"
 
-S2_DEFINE_int32(consistency_iters, 5000,
-             "Number of iterations for precision consistency tests");
+ABSL_FLAG(int32_t, consistency_iters, 5000,
+          "Number of iterations for precision consistency tests");
 
 using absl::string_view;
 using std::back_inserter;

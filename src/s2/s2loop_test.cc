@@ -44,8 +44,6 @@
 #include "absl/types/span.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"

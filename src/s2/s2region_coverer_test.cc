@@ -39,7 +39,6 @@
 #include "absl/strings/str_split.h"
 #include "absl/types/span.h"
 
-#include "s2/base/commandlineflags.h"
 #include "s2/base/log_severity.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -54,11 +53,11 @@
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
 
-S2_DEFINE_string(max_cells, "4,8",
-              "Comma-separated list of values to use for 'max_cells'");
+ABSL_FLAG(std::string, max_cells, "4,8",
+          "Comma-separated list of values to use for 'max_cells'");
 
-S2_DEFINE_int32(iters, S2_DEBUG_MODE ? 1000 : 100000,
-                "Number of random caps to try for each max_cells value");
+ABSL_FLAG(int32_t, iters, S2_DEBUG_MODE ? 1000 : 100000,
+          "Number of random caps to try for each max_cells value");
 
 namespace {
 

@@ -59,7 +59,7 @@ constexpr bool kHasLongDouble = (LD_ERR < DBL_ERR);
 constexpr double kSqrt3 = 1.7320508075688772935274463415058;
 
 using Vector3_ld = Vector3<long double>;
-using Vector3_xf = Vector3<ExactFloat>;
+using Vector3_xf = Vector3<exactfloat::ExactFloat>;
 
 inline static Vector3_ld ToLD(const S2Point& x) {
   return Vector3_ld::Cast(x);
@@ -108,7 +108,7 @@ template <class T>
 int TriageCompareCosDistance(const Vector3<T>& x, const Vector3<T>& y, T r2);
 
 int ExactCompareDistance(const Vector3_xf& x, const Vector3_xf& y,
-                         const ExactFloat& r2);
+                         const exactfloat::ExactFloat& r2);
 
 template <class T>
 int TriageCompareEdgeDistance(const Vector3<T>& x, const Vector3<T>& a0,
@@ -172,7 +172,7 @@ Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
 
 Excluded ExactVoronoiSiteExclusion(const Vector3_xf& a, const Vector3_xf& b,
                                    const Vector3_xf& x0, const Vector3_xf& x1,
-                                   const ExactFloat& r2);
+                                   const exactfloat::ExactFloat& r2);
 }  // namespace s2pred
 
 #endif  // S2_S2PREDICATES_INTERNAL_H_

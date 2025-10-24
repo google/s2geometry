@@ -30,22 +30,6 @@ cc_library(
 )
 
 cc_library(
-    name = "port",
-    hdrs = ["port.h"],
-)
-
-cc_library(
-    name = "commandlineflags",
-    hdrs = [
-        "commandlineflags.h",
-        "commandlineflags_declare.h",
-    ],
-    deps = [
-        "@abseil-cpp//absl/flags:flag",
-    ],
-)
-
-cc_library(
     name = "timer",
     hdrs = [
         "timer.h",

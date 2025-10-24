@@ -30,6 +30,7 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
@@ -40,8 +41,6 @@
 #include "absl/strings/str_format.h"
 #include "absl/types/span.h"
 
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include "s2/base/log_severity.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -84,7 +83,7 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-S2_DECLARE_double(s2shape_index_min_short_edge_fraction);
+ABSL_DECLARE_FLAG(double, s2shape_index_min_short_edge_fraction);
 
 class MutableS2ShapeIndexTest : public ::testing::Test {
  protected:

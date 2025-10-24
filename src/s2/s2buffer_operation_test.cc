@@ -368,6 +368,9 @@ void TestHausdorffDistance(const MutableS2ShapeIndex& input,
 // verifies that the output is correct.
 void TestBuffer(const MutableS2ShapeIndex& input, S1Angle buffer_radius,
                 double error_fraction) {
+  ABSL_LOG(INFO) << "TestBuffer: " << s2textformat::ToString(input)
+                 << " buffer_radius: " << buffer_radius.radians()
+                 << " error_fraction: " << error_fraction;
   // Ideally we would verify the correctness of buffering as follows.  Suppose
   // that B = Buffer(A, r) and let ~X denote the complement of region X.  Then
   // if r > 0, we would verify:
@@ -525,19 +528,22 @@ void TestRadiiAndErrorFractions(string_view index_str) {
   }
 }
 
-TEST(S2BufferOperation, RadiiAndErrorFractionCoverage) {
-  // Test buffering simple shapes with a wide range of different buffer radii
-  // and error fractions.
-
-  // A single point.
+// Test buffering simple shapes with a wide range of different buffer radii
+// and error fractions.
+TEST(S2BufferOperation, RadiiAndErrorFractionCoverageSinglePoint) {
   TestRadiiAndErrorFractions("1:1 # #");
+}
 
-  // A zig-zag polyline.
+TEST(S2BufferOperation, RadiiAndErrorFractionCoverageZigZagPolyline) {
   TestRadiiAndErrorFractions("# 0:0, 0:30, 30:30, 30:60 #");
+}
 
+TEST(S2BufferOperation, RadiiAndErrorFractionCoverageTriangleWithHole) {
   // A triangular polygon with a triangular hole.  (The hole is clockwise.)
   TestRadiiAndErrorFractions("# # 0:0, 0:100, 70:50; 10:20, 50:50, 10:80");
+}
 
+TEST(S2BufferOperation, RadiiAndErrorFractionCoverageTriangleTwoLongEdges) {
   // A triangle with one very short and two very long edges.
   TestRadiiAndErrorFractions("# # 0:0, 0:179.99999999999, 1e-300:0");
 }

@@ -91,7 +91,7 @@ else()
     # match [-Wattributes]
     add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
-    # `base/port.h` uses sized deallocation, which should be enabled by
+    # Some files use sized deallocation, which should be enabled by
     # default for C++14 and later.  There appears to be a bug with clang
     # < 19 causing this not to be enabled.
     # https://github.com/google/s2geometry/issues/411#issuecomment-2726949607
@@ -432,11 +432,8 @@ if(S2_ENABLE_INSTALL)
                 src/s2/internal/s2meta.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/internal")
   install(FILES src/s2/base/casts.h
-                src/s2/base/commandlineflags.h
-                src/s2/base/commandlineflags_declare.h
                 src/s2/base/log_severity.h
                 src/s2/base/malloc_extension.h
-                src/s2/base/port.h
                 src/s2/base/spinlock.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
   install(FILES src/s2/testing/gtest_prod.h
@@ -622,7 +619,8 @@ if (BUILD_TESTS)
       src/s2/s2wrapped_shape_test.cc
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc
-      src/s2/util/math/exactfloat/exactfloat_test.cc)
+      src/s2/util/math/exactfloat/exactfloat_test.cc
+      src/s2/util/math/exactfloat/exactfloat_underflow_test.cc)
 
   enable_testing()
 

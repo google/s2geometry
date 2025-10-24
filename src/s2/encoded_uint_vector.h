@@ -26,12 +26,13 @@
 
 #include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
+#include "absl/numeric/bits.h"
 #include "absl/types/span.h"
 
-#include "s2/base/port.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
-#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
+#include "s2/util/gtl/unaligned.h"
 
 namespace s2coding {
 
@@ -174,22 +175,17 @@ inline T GetUintWithLength(const char* ptr, int length) {
   // following page in the address space is unmapped.)
 
   if (length & sizeof(T)) {
-    // There is also a `gtl::UnalignedLoad<T>()`, but it has slightly heavier
-    // dependencies.  We could use it with an open-source shim, or switch
-    // to `LittleEndian::Load*()` if we want to handle big-endian architectures.
-    if (sizeof(T) == 8) return UNALIGNED_LOAD64(ptr);
-    if (sizeof(T) == 4) return UNALIGNED_LOAD32(ptr);
-    if (sizeof(T) == 2) return UNALIGNED_LOAD16(ptr);
-    ABSL_DCHECK_EQ(sizeof(T), 1);
-    return *ptr;
+    // If we care about big-endian, we need to use `LittleEndian::Load*()` here.
+    static_assert(absl::endian::native == absl::endian::little);
+    return gtl::UnalignedLoad<T>(ptr);
   }
   T x = 0;
   ptr += length;
   if (sizeof(T) > 4 && (length & 4)) {
-    x = UNALIGNED_LOAD32(ptr -= sizeof(uint32_t));
+    x = gtl::UnalignedLoad<uint32_t>(ptr -= sizeof(uint32_t));
   }
   if (sizeof(T) > 2 && (length & 2)) {
-    x = (x << 16) + UNALIGNED_LOAD16(ptr -= sizeof(uint16_t));
+    x = (x << 16) + gtl::UnalignedLoad<uint16_t>(ptr -= sizeof(uint16_t));
   }
   if (sizeof(T) > 1 && (length & 1)) {
     x = (x << 8) + static_cast<uint8_t>(*--ptr);
