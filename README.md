@@ -224,6 +224,8 @@ python -m build
 
 The resulting wheel will be in the `dist` directory.
 
+> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR`;
+> see above for more information.
 
 ## Other S2 implementations
 
