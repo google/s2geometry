@@ -69,7 +69,7 @@ ExactFloat::ExactFloat(int v) {
   bn_exp_ = 0;
 
   if (v == std::numeric_limits<int>::min()) {
-    bn_ = Bignum(unsigned(0) - static_cast<unsigned>(v));
+    bn_ = Bignum(static_cast<unsigned>(v));
   } else {
     bn_ = Bignum(abs(v));
   }
