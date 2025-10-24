@@ -121,15 +121,11 @@ void ExactFloat::set_nan() {
 
 int fpclassify(ExactFloat const& x) {
   switch (x.bn_exp_) {
-    case ExactFloat::kExpNaN:
-      return FP_NAN;
-    case ExactFloat::kExpInfinity:
-      return FP_INFINITE;
-    case ExactFloat::kExpZero:
-      return FP_ZERO;
+    case ExactFloat::kExpNaN:      return FP_NAN;
+    case ExactFloat::kExpInfinity: return FP_INFINITE;
+    case ExactFloat::kExpZero:     return FP_ZERO;
     // There are no subnormal `ExactFloat`s.
-    default:
-      return FP_NORMAL;
+    default:                       return FP_NORMAL;
   }
 }
 
