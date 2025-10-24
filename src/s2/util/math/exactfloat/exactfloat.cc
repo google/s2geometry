@@ -18,6 +18,7 @@
 #include "s2/util/math/exactfloat/exactfloat.h"
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -27,14 +28,17 @@
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free
 
-#include "absl/base/macros.h"
-#include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-// Used by !defined(OPENSSL_IS_BORINGSSL).
-#include "absl/numeric/bits.h"  // IWYU pragma: keep
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+
+#ifndef OPENSSL_IS_BORINGSSL
+#include "absl/container/fixed_array.h"  // IWYU pragma: keep
+#include "absl/numeric/bits.h"  // IWYU pragma: keep
+#endif
+
+namespace exactfloat {
 
 using std::max;
 using std::min;
@@ -63,7 +67,7 @@ inline static void BN_ext_set_uint64(BIGNUM* bn, uint64_t v) {
 inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
   uint64_t u64;
   if (!BN_get_u64(bn, &u64)) {
-    ABSL_DCHECK(false) << "BN has " << BN_num_bits(bn) << " bits";
+    ABSL_DLOG(FATAL) << "BN has " << BN_num_bits(bn) << " bits";
     return 0;
   }
   return u64;
@@ -181,7 +185,7 @@ ExactFloat ExactFloat::NaN() {
 int ExactFloat::prec() const { return BN_num_bits(bn_.get()); }
 
 int ExactFloat::exp() const {
-  ABSL_DCHECK(is_normal());
+  ABSL_DCHECK(isnormal(*this));
   return bn_exp_ + BN_num_bits(bn_.get());
 }
 
@@ -203,7 +207,17 @@ void ExactFloat::set_nan() {
   if (!BN_is_zero(bn_.get())) BN_zero(bn_.get());
 }
 
-double ExactFloat::ToDouble() const {
+int fpclassify(ExactFloat const& x) {
+  switch (x.bn_exp_) {
+    case ExactFloat::kExpNaN:      return FP_NAN;
+    case ExactFloat::kExpInfinity: return FP_INFINITE;
+    case ExactFloat::kExpZero:     return FP_ZERO;
+    // There are no subnormal `ExactFloat`s.
+    default:                       return FP_NORMAL;
+  }
+}
+
+ExactFloat::operator double() const {
   // If the mantissa has too many bits, we need to round it.
   if (prec() <= kDoubleMantissaBits) {
     return ToDoubleHelper();
@@ -215,9 +229,9 @@ double ExactFloat::ToDouble() const {
 
 double ExactFloat::ToDoubleHelper() const {
   ABSL_DCHECK_LE(BN_num_bits(bn_.get()), kDoubleMantissaBits);
-  if (!is_normal()) {
+  if (!isnormal(*this)) {
     if (is_zero()) return copysign(0, sign_);
-    if (is_inf()) {
+    if (isinf(*this)) {
       return std::copysign(std::numeric_limits<double>::infinity(), sign_);
     }
     return std::copysign(std::numeric_limits<double>::quiet_NaN(), sign_);
@@ -253,7 +267,7 @@ ExactFloat ExactFloat::RoundToPowerOf2(int bit_exp, RoundingMode mode) const {
   // or NaN, then there is nothing to do.
   int shift = bit_exp - bn_exp_;
   if (shift <= 0) return *this;
-  ABSL_DCHECK(is_normal());
+  ABSL_DCHECK(isnormal(*this));
 
   // Convert rounding up/down to toward/away from zero, so that we don't need
   // to consider the sign of the number from this point onward.
@@ -331,8 +345,8 @@ std::string ExactFloat::ToString() const {
 
 std::string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
   ABSL_DCHECK_GT(max_digits, 0);
-  if (!is_normal()) {
-    if (is_nan()) return "nan";
+  if (!isnormal(*this)) {
+    if (isnan(*this)) return "nan";
     if (is_zero()) return (sign_ < 0) ? "-0" : "0";
     return (sign_ < 0) ? "-inf" : "inf";
   }
@@ -395,32 +409,30 @@ static void IncrementDecimalDigits(std::string* digits) {
 }
 
 int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
-  ABSL_DCHECK(is_normal());
+  ABSL_DCHECK(isnormal(*this));
   // Convert the value to the form (bn * (10 ** bn_exp10)) where "bn" is a
   // positive integer (BIGNUM).
-  BIGNUM* bn = BN_new();
+  BigNum bn;
   int bn_exp10;
   if (bn_exp_ >= 0) {
     // The easy case: bn = bn_ * (2 ** bn_exp_)), bn_exp10 = 0.
-    ABSL_CHECK(BN_lshift(bn, bn_.get(), bn_exp_));
+    ABSL_CHECK(BN_lshift(bn.get(), bn_.get(), bn_exp_));
     bn_exp10 = 0;
   } else {
     // Set bn = bn_ * (5 ** -bn_exp_) and bn_exp10 = bn_exp_.  This is
     // equivalent to the original value of (bn_ * (2 ** bn_exp_)).
-    BIGNUM* power = BN_new();
-    ABSL_CHECK(BN_set_word(power, -bn_exp_));
-    ABSL_CHECK(BN_set_word(bn, 5));
+    BigNum power;
+    ABSL_CHECK(BN_set_word(power.get(), -bn_exp_));
+    ABSL_CHECK(BN_set_word(bn.get(), 5));
     BN_CTX* ctx = BN_CTX_new();
-    ABSL_CHECK(BN_exp(bn, bn, power, ctx));
-    ABSL_CHECK(BN_mul(bn, bn, bn_.get(), ctx));
+    ABSL_CHECK(BN_exp(bn.get(), bn.get(), power.get(), ctx));
+    ABSL_CHECK(BN_mul(bn.get(), bn.get(), bn_.get(), ctx));
     BN_CTX_free(ctx);
-    BN_free(power);
     bn_exp10 = bn_exp_;
   }
   // Now convert "bn" to a decimal string.
-  char* all_digits = BN_bn2dec(bn);
+  char* all_digits = BN_bn2dec(bn.get());
   ABSL_DCHECK(all_digits != nullptr);
-  BN_free(bn);
   // Check whether we have too many digits and round if necessary.
   int num_digits = strlen(all_digits);
   if (num_digits <= max_digits) {
@@ -480,16 +492,16 @@ ExactFloat operator-(const ExactFloat& a, const ExactFloat& b) {
 
 ExactFloat ExactFloat::SignedSum(int a_sign, const ExactFloat* a, int b_sign,
                                  const ExactFloat* b) {
-  if (!a->is_normal() || !b->is_normal()) {
+  if (!isnormal(*a) || !isnormal(*b)) {
     // Handle zero, infinity, and NaN according to IEEE 754-2008.
-    if (a->is_nan()) return *a;
-    if (b->is_nan()) return *b;
-    if (a->is_inf()) {
+    if (isnan(*a)) return *a;
+    if (isnan(*b)) return *b;
+    if (isinf(*a)) {
       // Adding two infinities with opposite sign yields NaN.
-      if (b->is_inf() && a_sign != b_sign) return NaN();
+      if (isinf(*b) && a_sign != b_sign) return NaN();
       return Infinity(a_sign);
     }
-    if (b->is_inf()) return Infinity(b_sign);
+    if (isinf(*b)) return Infinity(b_sign);
     if (a->is_zero()) {
       if (!b->is_zero()) return b->CopyWithSign(b_sign);
       // Adding two zeros with the same sign preserves the sign.
@@ -537,7 +549,7 @@ ExactFloat ExactFloat::SignedSum(int a_sign, const ExactFloat* a, int b_sign,
 }
 
 void ExactFloat::Canonicalize() {
-  if (!is_normal()) return;
+  if (!isnormal(*this)) return;
 
   // Underflow/overflow occurs if exp() is not in [kMinExp, kMaxExp].
   // We also convert a zero mantissa to signed zero.
@@ -564,16 +576,16 @@ void ExactFloat::Canonicalize() {
 
 ExactFloat operator*(const ExactFloat& a, const ExactFloat& b) {
   int result_sign = a.sign_ * b.sign_;
-  if (!a.is_normal() || !b.is_normal()) {
+  if (!isnormal(a) || !isnormal(b)) {
     // Handle zero, infinity, and NaN according to IEEE 754-2008.
-    if (a.is_nan()) return a;
-    if (b.is_nan()) return b;
-    if (a.is_inf()) {
+    if (isnan(a)) return a;
+    if (isnan(b)) return b;
+    if (isinf(a)) {
       // Infinity times zero yields NaN.
       if (b.is_zero()) return ExactFloat::NaN();
       return ExactFloat::Infinity(result_sign);
     }
-    if (b.is_inf()) {
+    if (isinf(b)) {
       if (a.is_zero()) return ExactFloat::NaN();
       return ExactFloat::Infinity(result_sign);
     }
@@ -592,7 +604,7 @@ ExactFloat operator*(const ExactFloat& a, const ExactFloat& b) {
 
 bool operator==(const ExactFloat& a, const ExactFloat& b) {
   // NaN is not equal to anything, not even itself.
-  if (a.is_nan() || b.is_nan()) return false;
+  if (isnan(a) || isnan(b)) return false;
 
   // Since Canonicalize() strips low-order zero bits, all other cases
   // (including non-normal values) require bn_exp_ to be equal.
@@ -607,7 +619,7 @@ bool operator==(const ExactFloat& a, const ExactFloat& b) {
 }
 
 int ExactFloat::ScaleAndCompare(const ExactFloat& b) const {
-  ABSL_DCHECK(is_normal() && b.is_normal() && bn_exp_ >= b.bn_exp_);
+  ABSL_DCHECK(isnormal(*this) && isnormal(b) && bn_exp_ >= b.bn_exp_);
   ExactFloat tmp = *this;
   ABSL_CHECK(BN_lshift(tmp.bn_.get(), tmp.bn_.get(), bn_exp_ - b.bn_exp_));
   return BN_ucmp(tmp.bn_.get(), b.bn_.get());
@@ -615,8 +627,8 @@ int ExactFloat::ScaleAndCompare(const ExactFloat& b) const {
 
 bool ExactFloat::UnsignedLess(const ExactFloat& b) const {
   // Handle the zero/infinity cases (NaN has already been done).
-  if (is_inf() || b.is_zero()) return false;
-  if (is_zero() || b.is_inf()) return true;
+  if (isinf(*this) || b.is_zero()) return false;
+  if (is_zero() || isinf(b)) return true;
   // If the high-order bit positions differ, we are done.
   int cmp = exp() - b.exp();
   if (cmp != 0) return cmp < 0;
@@ -628,7 +640,7 @@ bool ExactFloat::UnsignedLess(const ExactFloat& b) const {
 
 bool operator<(const ExactFloat& a, const ExactFloat& b) {
   // NaN is unordered compared to everything, including itself.
-  if (a.is_nan() || b.is_nan()) return false;
+  if (isnan(a) || isnan(b)) return false;
   // Positive and negative zero are equal.
   if (a.is_zero() && b.is_zero()) return false;
   // Otherwise, anything negative is less than anything positive.
@@ -643,8 +655,8 @@ ExactFloat abs(const ExactFloat& a) { return a.CopyWithSign(+1); }
 
 ExactFloat fmax(const ExactFloat& a, const ExactFloat& b) {
   // If one argument is NaN, return the other argument.
-  if (a.is_nan()) return b;
-  if (b.is_nan()) return a;
+  if (isnan(a)) return b;
+  if (isnan(b)) return a;
   // Not required by IEEE 754, but we prefer +0 over -0.
   if (a.sign_ != b.sign_) {
     return (a.sign_ < b.sign_) ? b : a;
@@ -654,8 +666,8 @@ ExactFloat fmax(const ExactFloat& a, const ExactFloat& b) {
 
 ExactFloat fmin(const ExactFloat& a, const ExactFloat& b) {
   // If one argument is NaN, return the other argument.
-  if (a.is_nan()) return b;
-  if (b.is_nan()) return a;
+  if (isnan(a)) return b;
+  if (isnan(b)) return a;
   // Not required by IEEE 754, but we prefer -0 over +0.
   if (a.sign_ != b.sign_) {
     return (a.sign_ < b.sign_) ? a : b;
@@ -697,19 +709,20 @@ T ExactFloat::ToInteger(RoundingMode mode) const {
   const int64_t kMaxValue = numeric_limits<T>::max();
 
   ExactFloat r = RoundToPowerOf2(0, mode);
-  if (r.is_nan()) return kMaxValue;
+  if (isnan(r)) return kMaxValue;
   if (r.is_zero()) return 0;
-  if (!r.is_inf()) {
+  if (!isinf(r)) {
     // If the unsigned value has more than 63 bits it is always clamped.
     if (r.exp() < 64) {
       int64_t value = BN_ext_get_uint64(r.bn_.get()) << r.bn_exp_;
       if (r.sign_ < 0) value = -value;
-      return max(kMinValue, min(kMaxValue, value));
+      return std::clamp(value, kMinValue, kMaxValue);
     }
   }
   return (r.sign_ < 0) ? kMinValue : kMaxValue;
 }
 
+// NOLINTBEGIN(runtime/int, google-runtime-int)
 long lrint(const ExactFloat& a) {
   return a.ToInteger<long>(ExactFloat::kRoundTiesToEven);
 }
@@ -725,13 +738,14 @@ long lround(const ExactFloat& a) {
 long long llround(const ExactFloat& a) {
   return a.ToInteger<long long>(ExactFloat::kRoundTiesAwayFromZero);
 }
+// NOLINTEND(runtime/int, google-runtime-int)
 
 ExactFloat copysign(const ExactFloat& a, const ExactFloat& b) {
   return a.CopyWithSign(b.sign_);
 }
 
 ExactFloat frexp(const ExactFloat& a, int* exp) {
-  if (!a.is_normal()) {
+  if (!isnormal(a)) {
     // If a == 0, exp should be zero.  If a.is_inf() or a.is_nan(), exp is not
     // defined but the glibc implementation returns zero.
     *exp = 0;
@@ -742,13 +756,14 @@ ExactFloat frexp(const ExactFloat& a, int* exp) {
 }
 
 ExactFloat ldexp(const ExactFloat& a, int exp) {
-  if (!a.is_normal()) return a;
+  if (!isnormal(a)) return a;
 
   // To prevent integer overflow, we first clamp "exp" so that
   // (kMinExp - 1) <= (a_exp + exp) <= (kMaxExp + 1).
   int a_exp = a.exp();
-  exp = min(ExactFloat::kMaxExp + 1 - a_exp,
-            max(ExactFloat::kMinExp - 1 + a_exp, exp));
+  exp = std::clamp(exp,  //
+                   ExactFloat::kMinExp - 1 + a_exp,
+                   ExactFloat::kMaxExp + 1 - a_exp);
 
   // Now modify the exponent and check for overflow/underflow.
   ExactFloat r = a;
@@ -759,22 +774,23 @@ ExactFloat ldexp(const ExactFloat& a, int exp) {
 
 ExactFloat scalbln(const ExactFloat& a, long exp) {
   // Clamp the exponent to the range of "int" in order to avoid truncation.
-  exp = max(static_cast<long>(INT_MIN), min(static_cast<long>(INT_MAX), exp));
-  return ldexp(a, exp);
+  // NOLINTNEXTLINE(runtime/int, google-runtime-int)
+  exp = std::clamp<long>(exp, INT_MIN, INT_MAX);
+  return ldexp(a, static_cast<int>(exp));
 }
 
 int ilogb(const ExactFloat& a) {
   if (a.is_zero()) return FP_ILOGB0;
-  if (a.is_inf()) return INT_MAX;
-  if (a.is_nan()) return FP_ILOGBNAN;
+  if (isinf(a)) return INT_MAX;
+  if (isnan(a)) return FP_ILOGBNAN;
   // a.exp() assumes the significand is in the range [0.5, 1).
   return a.exp() - 1;
 }
 
 ExactFloat logb(const ExactFloat& a) {
   if (a.is_zero()) return ExactFloat::Infinity(-1);
-  if (a.is_inf()) return ExactFloat::Infinity(+1);  // Even if a < 0.
-  if (a.is_nan()) return a;
+  if (isinf(a)) return ExactFloat::Infinity(+1);  // Even if a < 0.
+  if (isnan(a)) return a;
   // exp() assumes the significand is in the range [0.5,1).
   return ExactFloat(a.exp() - 1);
 }
@@ -783,3 +799,5 @@ ExactFloat ExactFloat::Unimplemented() {
   ABSL_LOG(FATAL) << "Unimplemented ExactFloat method called";
   return NaN();
 }
+
+}  // namespace exactfloat

@@ -9,18 +9,18 @@
 #include <random>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
-#include "s2/s2earth.h"
 #include "absl/flags/flag.h"
 #include "absl/strings/str_format.h"
+
 #include "s2/s1angle.h"
 #include "s2/s2closest_point_query.h"
+#include "s2/s2earth.h"
 #include "s2/s2point_index.h"
 #include "s2/s2random.h"
 
-S2_DEFINE_int32(num_index_points, 10000, "Number of points to index");
-S2_DEFINE_int32(num_queries, 10000, "Number of queries");
-S2_DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
+ABSL_FLAG(int32_t, num_index_points, 10000, "Number of points to index");
+ABSL_FLAG(int32_t, num_queries, 10000, "Number of queries");
+ABSL_FLAG(double, query_radius_km, 100, "Query radius in kilometers");
 
 int main(int argc, char **argv) {
   std::mt19937_64 bitgen;

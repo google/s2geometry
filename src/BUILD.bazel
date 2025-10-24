@@ -236,9 +236,7 @@ cc_library(
         "//s2:value_lexicon.h",
     ],
     deps = [
-        "//s2/base:commandlineflags",
         "//s2/base:logging",
-        "//s2/base:port",
         "//s2/base:spinlock",
         "//s2/testing",
         "//s2/util/bitmap",
@@ -387,7 +385,6 @@ cc_library(
     includes = ["src"],
     deps = [
         ":s2",
-        "//s2/base:commandlineflags",
         "//s2/base:timer",
         "@abseil-cpp//absl/base",
         "@abseil-cpp//absl/flags:flag",

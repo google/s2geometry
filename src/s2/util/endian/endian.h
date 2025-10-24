@@ -18,9 +18,9 @@
 
 #include <cstdint>
 
-#include "s2/base/port.h"
 #include "absl/numeric/bits.h"
 #include "absl/numeric/int128.h"
+#include "s2/util/gtl/unaligned.h"
 
 namespace s2endian {
 // TODO(user): Trim unused Encoder functions and drop int128 API.
@@ -59,39 +59,47 @@ class LittleEndian {
 
   // Functions to do unaligned loads and stores in little-endian order.
   static uint16_t Load16(const void* p) {
-    return ToHost16(UNALIGNED_LOAD16(p));
+    const char* pc = reinterpret_cast<const char*>(p);
+    return ToHost16(gtl::UnalignedLoad<uint16_t>(pc));
   }
 
   static void Store16(void* p, uint16_t v) {
-    UNALIGNED_STORE16(p, FromHost16(v));
+    char* pc = reinterpret_cast<char*>(p);
+    gtl::UnalignedStore<uint16_t>(FromHost16(v), pc);
   }
 
   static uint32_t Load32(const void* p) {
-    return ToHost32(UNALIGNED_LOAD32(p));
+    const char* pc = reinterpret_cast<const char*>(p);
+    return ToHost32(gtl::UnalignedLoad<uint32_t>(pc));
   }
 
   static void Store32(void* p, uint32_t v) {
-    UNALIGNED_STORE32(p, FromHost32(v));
+    char* pc = reinterpret_cast<char*>(p);
+    gtl::UnalignedStore<uint32_t>(FromHost32(v), pc);
   }
 
   static uint64_t Load64(const void* p) {
-    return ToHost64(UNALIGNED_LOAD64(p));
+    const char* pc = reinterpret_cast<const char*>(p);
+    return ToHost64(gtl::UnalignedLoad<uint64_t>(pc));
   }
 
   static void Store64(void* p, uint64_t v) {
-    UNALIGNED_STORE64(p, FromHost64(v));
+    char* pc = reinterpret_cast<char*>(p);
+    gtl::UnalignedStore<uint64_t>(FromHost64(v), pc);
   }
 
   static absl::uint128 Load128(const void* p) {
+    const char* pc = reinterpret_cast<const char*>(p);
     return absl::MakeUint128(
-        ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64_t*>(p) + 1)),
-        ToHost64(UNALIGNED_LOAD64(p)));
+        ToHost64(gtl::UnalignedLoad<uint64_t>(pc + sizeof(uint64_t))),
+        ToHost64(gtl::UnalignedLoad<uint64_t>(pc)));
   }
 
   static void Store128(void* p, const absl::uint128 v) {
-    UNALIGNED_STORE64(p, FromHost64(absl::Uint128Low64(v)));
-    UNALIGNED_STORE64(reinterpret_cast<uint64_t*>(p) + 1,
-                      FromHost64(absl::Uint128High64(v)));
+    char* pc = reinterpret_cast<char*>(p);
+    gtl::UnalignedStore<uint64_t>(FromHost64(absl::Uint128Low64(v)), pc);
+    gtl::UnalignedStore<uint64_t>(FromHost64(absl::Uint128High64(v)),
+                                  pc + sizeof(uint64_t));
   }
 
  private:

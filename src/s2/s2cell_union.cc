@@ -28,7 +28,6 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
-#include "s2/base/commandlineflags.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -44,8 +43,8 @@ using std::min;
 using std::string;
 using std::vector;
 
-S2_DEFINE_int32(s2cell_union_decode_max_num_cells, 1000000,
-                "The maximum number of cells allowed by S2CellUnion::Decode");
+ABSL_FLAG(int32_t, s2cell_union_decode_max_num_cells, 1000000,
+          "The maximum number of cells allowed by S2CellUnion::Decode");
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 

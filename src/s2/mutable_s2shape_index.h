@@ -27,13 +27,12 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/container/btree_map.h"
+#include "absl/flags/declare.h"
 #include "absl/log/absl_check.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
 
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include "s2/base/spinlock.h"
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
@@ -602,8 +601,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 // when building an S2ShapeIndex.  See the .cc file for details.
 //
 // DEFAULT: 100 MB
-S2_DECLARE_int64(s2shape_index_tmp_memory_budget);
-
+ABSL_DECLARE_FLAG(int64_t, s2shape_index_tmp_memory_budget);
 
 //////////////////   Implementation details follow   ////////////////////
 
