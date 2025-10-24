@@ -60,12 +60,18 @@ add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 if (NOT TARGET absl::base)
     find_package(absl REQUIRED)
 endif()
+find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 
 if (NOT TARGET absl::vlog_is_on)
     message(FATAL_ERROR "Could not find absl vlog module. Are you using an older version?")
 endif()
+
+# If OpenSSL is installed in a non-standard location, configure with
+# something like:
+# OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
+include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
     # Should be easy to make it work with swig3, but some args to %pythonprepend
@@ -628,6 +634,7 @@ if (BUILD_TESTS)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
+        ${OPENSSL_CRYPTO_LIBRARIES}
         s2testing s2
         absl::base
         absl::btree
@@ -642,8 +649,7 @@ if (BUILD_TESTS)
         absl::status
         absl::strings
         absl::synchronization
-        gmock_main
-        crypto)
+        gmock_main)
     add_test(${test} ${test})
   endforeach()
 endif()
