@@ -25,17 +25,14 @@
 #include <limits>
 #include <string>
 
-#include "absl/container/fixed_array.h"  // IWYU pragma: keep
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-#include "absl/numeric/bits.h"  // IWYU pragma: keep
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 
 namespace exactfloat {
 
 using std::max;
-using std::min;
 
 // To simplify the overflow/underflow logic, we limit the exponent and
 // precision range so that (2 * bn_exp_) does not overflow an "int".  We take
@@ -124,15 +121,11 @@ void ExactFloat::set_nan() {
 
 int fpclassify(ExactFloat const& x) {
   switch (x.bn_exp_) {
-    case ExactFloat::kExpNaN:
-      return FP_NAN;
-    case ExactFloat::kExpInfinity:
-      return FP_INFINITE;
-    case ExactFloat::kExpZero:
-      return FP_ZERO;
+    case ExactFloat::kExpNaN:      return FP_NAN;
+    case ExactFloat::kExpInfinity: return FP_INFINITE;
+    case ExactFloat::kExpZero:     return FP_ZERO;
     // There are no subnormal `ExactFloat`s.
-    default:
-      return FP_NORMAL;
+    default:                       return FP_NORMAL;
   }
 }
 
