@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
+#include "absl/flags/flag.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
@@ -63,8 +63,8 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-DEFINE_int32(s2_random_seed, 1,
-             "Seed value that can be used in benchmarks.");
+ABSL_FLAG(int32_t, s2_random_seed, 1,
+          "Seed value that can be used in benchmarks.");
 
 const double S2Testing::kEarthRadiusKm = 6371.01;
 

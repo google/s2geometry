@@ -27,7 +27,6 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/container/flat_hash_map.h"
@@ -53,11 +52,11 @@
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
 
-DEFINE_string(max_cells, "4,8",
-              "Comma-separated list of values to use for 'max_cells'");
+ABSL_FLAG(std::string, max_cells, "4,8",
+          "Comma-separated list of values to use for 'max_cells'");
 
-DEFINE_int32(iters, S2_DEBUG_MODE ? 1000 : 100000,
-             "Number of random caps to try for each max_cells value");
+ABSL_FLAG(int32_t, iters, S2_DEBUG_MODE ? 1000 : 100000,
+          "Number of random caps to try for each max_cells value");
 
 namespace {
 

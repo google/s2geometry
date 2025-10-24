@@ -26,11 +26,20 @@
 #include <gtest/gtest.h>
 #include "absl/base/casts.h"
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/random/random.h"
 #include "s2/util/math/vector.h"
 
 namespace {
+
+using ::exactfloat::ExactFloat;
+// Usually, these would be found by ADL, but we use them as function pointers.
+using ::exactfloat::isfinite;
+using ::exactfloat::isinf;
+using ::exactfloat::isnan;
+using ::exactfloat::isnormal;
+using ::exactfloat::signbit;
 
 // To check the handling of boundary cases (NaN, infinities, out of range,
 // overflow, etc), we check the ExactFloat versions of all the operators and
@@ -253,7 +262,7 @@ class ExactFloatTest : public ::testing::Test {
   // Two values are considered equivalent if they have the same bit pattern or
   // they are both NaN.  (So for example, +0 and -0 are not equivalent.)
   void ExpectSame(double expected, const ExactFloat &xf_actual) {
-    double actual = xf_actual.ToDouble();
+    double actual = static_cast<double>(xf_actual);
     if (std::isnan(expected)) {
       EXPECT_TRUE(std::isnan(actual));
     } else {
@@ -289,7 +298,7 @@ class ExactFloatTest : public ::testing::Test {
     for (int i = 0; i < kSpecialDoubleValues.size(); ++i) {
       double a = kSpecialDoubleValues[i];
       double expected = f(a);
-      double actual = mp_f(ExactFloat(a)).ToDouble();
+      double actual = static_cast<double>(mp_f(ExactFloat(a)));
       if (!IsExpected(expected, actual, ulps)) {
         AddMathcallFailure(testing::Message()
                                << fname << "(" << ExactFloat(a) << ")",
@@ -309,7 +318,7 @@ class ExactFloatTest : public ::testing::Test {
       for (int j = 0; j < kSpecialDoubleValues.size(); ++j) {
         double b = kSpecialDoubleValues[j];
         double expected = f(a, b);
-        double actual = mp_f(ExactFloat(a), ExactFloat(b)).ToDouble();
+        double actual = static_cast<double>(mp_f(ExactFloat(a), ExactFloat(b)));
         if (!IsExpected(expected, actual, ulps)) {
           AddMathcallFailure(testing::Message() << fname << "(" << ExactFloat(a)
                                                 << ", " << ExactFloat(b) << ")",
@@ -323,12 +332,12 @@ class ExactFloatTest : public ::testing::Test {
   // function "mp_f", check that they return the same result on a range of
   // test arguments.
   template <typename ResultType>
-  void TestMethod0(const char *fname, ResultType f(double),
-                   ResultType (ExactFloat::*mp_f)() const) {
+  void TestFn(const char *fname, ResultType f_dbl(double),
+              ResultType f_xf(const ExactFloat&)) {
     for (int i = 0; i < kSpecialDoubleValues.size(); ++i) {
       double a = kSpecialDoubleValues[i];
-      ResultType expected = f(a);
-      ResultType actual = (ExactFloat(a).*mp_f)();
+      ResultType expected = f_dbl(a);
+      ResultType actual = f_xf(ExactFloat(a));
       if (expected != actual) {
         AddMathcallFailure(testing::Message()
                                << ExactFloat(a) << "." << fname << "()",
@@ -395,7 +404,7 @@ class ExactFloatTest : public ::testing::Test {
         for (int sign = -1; sign <= +1; sign += 2) {
           ExpType exp = sign * kUnsignedExpValues[j];
           double expected = f(a, exp);
-          double actual = mp_f(ExactFloat(a), exp).ToDouble();
+          double actual = static_cast<double>(mp_f(ExactFloat(a), exp));
           if (!IsExpected(expected, actual, 0)) {
             AddMathcallFailure(testing::Message()
                                    << fname << "(" << ExactFloat(a) << ", "
@@ -450,16 +459,16 @@ TEST_F(ExactFloatTest, Constructors) {
 
 TEST_F(ExactFloatTest, Constants) {
   EXPECT_TRUE(ExactFloat::SignedZero(+1).is_zero());
-  EXPECT_EQ(false, ExactFloat::SignedZero(+1).sign_bit());
+  EXPECT_EQ(false, signbit(ExactFloat::SignedZero(+1)));
   EXPECT_TRUE(ExactFloat::SignedZero(-1).is_zero());
-  EXPECT_EQ(true, ExactFloat::SignedZero(-1).sign_bit());
+  EXPECT_EQ(true, signbit(ExactFloat::SignedZero(-1)));
 
-  EXPECT_TRUE(ExactFloat::Infinity(+1).is_inf());
-  EXPECT_EQ(false, ExactFloat::Infinity(+1).sign_bit());
-  EXPECT_TRUE(ExactFloat::Infinity(-1).is_inf());
-  EXPECT_EQ(true, ExactFloat::Infinity(-1).sign_bit());
+  EXPECT_TRUE(isinf(ExactFloat::Infinity(+1)));
+  EXPECT_EQ(false, signbit(ExactFloat::Infinity(+1)));
+  EXPECT_TRUE(isinf(ExactFloat::Infinity(-1)));
+  EXPECT_EQ(true, signbit(ExactFloat::Infinity(-1)));
 
-  EXPECT_TRUE(ExactFloat::NaN().is_nan());
+  EXPECT_TRUE(isnan(ExactFloat::NaN()));
 }
 
 TEST_F(ExactFloatTest, Accessors) {
@@ -493,59 +502,62 @@ TEST_F(ExactFloatTest, set_zero) {
 
 TEST_F(ExactFloatTest, set_inf) {
   ExactFloat x;
-  EXPECT_FALSE(x.is_inf());
+  EXPECT_FALSE(isinf(x));
 
   x.set_inf(+1);
-  EXPECT_TRUE(x.is_inf());
+  EXPECT_TRUE(isinf(x));
   ExpectSameWithPrec(INFINITY, 0, x);
 
   x.set_inf(-1);
-  EXPECT_TRUE(x.is_inf());
+  EXPECT_TRUE(isinf(x));
   ExpectSameWithPrec(-INFINITY, 0, x);
 
   x = NAN;
-  EXPECT_FALSE(x.is_inf());
+  EXPECT_FALSE(isinf(x));
 
   x = INFINITY;
-  EXPECT_TRUE(x.is_inf());
+  EXPECT_TRUE(isinf(x));
   ExpectSameWithPrec(INFINITY, 0, x);
 
   x = -INFINITY;
-  EXPECT_TRUE(x.is_inf());
+  EXPECT_TRUE(isinf(x));
   ExpectSameWithPrec(-INFINITY, 0, x);
 }
 
 TEST_F(ExactFloatTest, set_nan) {
   ExactFloat x;
-  EXPECT_FALSE(x.is_nan());
+  EXPECT_FALSE(isnan(x));
   ExpectSameWithPrec(0.0, 0, x);
 
   x.set_nan();
-  EXPECT_TRUE(x.is_nan());
+  EXPECT_TRUE(isnan(x));
   ExpectSameWithPrec(NAN, 0, x);
 
   x = 2;
-  EXPECT_FALSE(x.is_nan());
+  EXPECT_FALSE(isnan(x));
 
   x = NAN;
-  EXPECT_TRUE(x.is_nan());
+  EXPECT_TRUE(isnan(x));
   ExpectSameWithPrec(NAN, 0, x);
 }
 
-TEST_F(ExactFloatTest, ToDouble) {
-  EXPECT_EQ(0, ExactFloat(0).ToDouble());
+TEST_F(ExactFloatTest, OperatorDouble) {
+  EXPECT_EQ(0, static_cast<double>(ExactFloat(0)));
   ExpectSame(copysign(0.0, -1), -ExactFloat(0));
-  EXPECT_EQ(std::numeric_limits<double>::max(),
-            ExactFloat(std::numeric_limits<double>::max()).ToDouble());
-  EXPECT_EQ(-std::numeric_limits<double>::min(),
-            ExactFloat(-std::numeric_limits<double>::min()).ToDouble());
+  EXPECT_EQ(
+      std::numeric_limits<double>::max(),
+      static_cast<double>(ExactFloat(std::numeric_limits<double>::max())));
+  EXPECT_EQ(
+      -std::numeric_limits<double>::min(),
+      static_cast<double>(ExactFloat(-std::numeric_limits<double>::min())));
   EXPECT_EQ(std::numeric_limits<double>::denorm_min(),
-            ExactFloat(std::numeric_limits<double>::denorm_min()).ToDouble());
-  EXPECT_EQ(-12.7, ExactFloat(-12.7).ToDouble());
-  EXPECT_EQ(M_PI, ExactFloat(M_PI).ToDouble());
-  EXPECT_EQ(INFINITY, ExactFloat(INFINITY).ToDouble());
-  EXPECT_EQ(-INFINITY, ExactFloat(-INFINITY).ToDouble());
-  EXPECT_TRUE(std::isnan(ExactFloat(NAN).ToDouble()));
+            static_cast<double>(
+                ExactFloat(std::numeric_limits<double>::denorm_min())));
+  EXPECT_EQ(-12.7, static_cast<double>(ExactFloat(-12.7)));
+  EXPECT_EQ(M_PI, static_cast<double>(ExactFloat(M_PI)));
+  EXPECT_EQ(INFINITY, static_cast<double>(ExactFloat(INFINITY)));
+  EXPECT_EQ(-INFINITY, static_cast<double>(ExactFloat(-INFINITY)));
+  EXPECT_TRUE(std::isnan(static_cast<double>(ExactFloat(NAN))));
 }
 
 TEST_F(ExactFloatTest, ToString) {
@@ -597,7 +609,7 @@ TEST_F(ExactFloatTest, ToUniqueString) {
 }
 
 TEST_F(ExactFloatTest, RoundToMaxPrec) {
-  // This method is used by the ToDouble() implementation and also the
+  // This method is used by the `operator double()` implementation and also the
   // rounding function such as trunc(), floor(), etc, so it is already pretty
   // well tested.  We do a few other tests here.
   EXPECT_EQ(ExactFloat(pow(2, 500)),
@@ -761,33 +773,59 @@ TEST_LDEXP_CALL(long, scalbln);
 #endif
 // Test a zero-argument ExactFloat member function against a corresponding
 // one-argument reference function.
-#define TEST_METHOD0_VS_FUNCTION(ResultType, method, function)       \
-  TEST_F(ExactFloatTest, method) {                                   \
-    TestMethod0<ResultType>(#method, function, &ExactFloat::method); \
+#define TEST_FN_VS_REF(ResultType, fn_xf, fn_dbl)       \
+  TEST_F(ExactFloatTest, fn_xf) {                                   \
+    TestFn<ResultType>(#fn_xf, fn_dbl, fn_xf); \
   }
 
 // "Reference versions" of various zero-argument methods.
-bool ref_is_zero(double a) { return a == 0; }
-bool ref_is_normal(double a) {
+bool ref_iszero(double a) { return a == 0; }
+bool ref_isnormal(double a) {
   return (a != 0) && !std::isinf(a) && !std::isnan(a);
 }
-bool ref_sign_bit(double a) { return std::signbit(a); }
 int ref_sgn(double a) { return (a > 0) ? 1 : (a < 0) ? -1 : 0; }
 
-TEST_METHOD0_VS_FUNCTION(bool, is_zero, ref_is_zero)
-TEST_METHOD0_VS_FUNCTION(bool, is_normal, ref_is_normal)
-TEST_METHOD0_VS_FUNCTION(bool, sign_bit, ref_sign_bit)
-TEST_METHOD0_VS_FUNCTION(int, sgn, ref_sgn)
+bool xf_iszero(const ExactFloat& xf) { return xf.is_zero(); }
+int xf_sgn(const ExactFloat& xf) { return xf.sgn(); }
+
+TEST_FN_VS_REF(bool, isnormal, ref_isnormal)
+TEST_FN_VS_REF(bool, xf_iszero, ref_iszero)
+TEST_FN_VS_REF(int, xf_sgn, ref_sgn)
 
 // Test a zero-argument ExactFloat member function against a corresponding
 // one-argument std:: function.
-#define TEST_METHOD0_VS_STD_FN(ResultType, method, fn) \
+#define TEST_FN_VS_STD_FN(ResultType, fn) \
   ResultType ref_##fn(double a) { return std::fn(a); }  \
-  TEST_METHOD0_VS_FUNCTION(ResultType, method, ref_##fn)
+  TEST_FN_VS_REF(ResultType, fn, ref_##fn)
 
-TEST_METHOD0_VS_STD_FN(bool, is_inf, isinf)
-TEST_METHOD0_VS_STD_FN(bool, is_nan, isnan)
-TEST_METHOD0_VS_STD_FN(bool, is_finite, isfinite)
+TEST_FN_VS_STD_FN(bool, isinf)
+TEST_FN_VS_STD_FN(bool, isnan)
+TEST_FN_VS_STD_FN(bool, isfinite)
+TEST_FN_VS_STD_FN(bool, signbit)
+
+TEST(FpClassify, Nan) {
+  EXPECT_EQ(fpclassify(ExactFloat(NAN)), FP_NAN);
+}
+
+TEST(FpClassify, Infinity) {
+  EXPECT_EQ(fpclassify(ExactFloat(INFINITY)), FP_INFINITE);
+  EXPECT_EQ(fpclassify(ExactFloat(-INFINITY)), FP_INFINITE);
+}
+
+TEST(FpClassify, Zero) {
+  EXPECT_EQ(fpclassify(ExactFloat(0.0)), FP_ZERO);
+  EXPECT_EQ(fpclassify(ExactFloat(std::copysign(0.0, -1.0))), FP_ZERO);
+}
+
+TEST(FpClassify, Normal) {
+  EXPECT_EQ(fpclassify(ExactFloat(1.0)), FP_NORMAL);
+  // Would be FP_INFINITE with double arg.
+  EXPECT_EQ(fpclassify(2.0 * ExactFloat(std::numeric_limits<double>::max())),
+            FP_NORMAL);
+  // Would be FP_SUBNORMAL with double arg.
+  EXPECT_EQ(fpclassify(ExactFloat(std::numeric_limits<double>::denorm_min())),
+            FP_NORMAL);
+}
 
 typedef Vector2<ExactFloat> MyVec2;
 typedef Vector3<ExactFloat> MyVec3;
@@ -820,10 +858,15 @@ TEST_F(ExactFloatTest, Vector3_Part1) {
   EXPECT_EQ(MyVec3(1, -2, 3), MyVec3::Cast(Vector3_d(1, -2, 3)));
   EXPECT_EQ(MyVec3(1, -2, 3), MyVec3::Cast(Vector3<ExactFloat>(1, -2, 3)));
 
+  // Two ways to convert, these are the same.
   MyVec3 x(1.5, 2.5, 3.5);
-  // Vector3_d y = Vector3_d::Cast(x);  // NOT ALLOWED
-  Vector3_d y = Vector3_d(x[0].ToDouble(), x[1].ToDouble(), x[2].ToDouble());
-  static_cast<void>(y);
+
+  Vector3_d y1 = Vector3_d::Cast(x);
+  EXPECT_EQ(y1, Vector3_d(1.5, 2.5, 3.5));
+
+  Vector3_d y2 = Vector3_d(static_cast<double>(x[0]), static_cast<double>(x[1]),
+                           static_cast<double>(x[2]));
+  EXPECT_EQ(y2, Vector3_d(1.5, 2.5, 3.5));
 }
 
 TEST_F(ExactFloatTest, Vector3_Part2) {
@@ -884,6 +927,16 @@ TEST_F(ExactFloatTest, Vector3_Part3) {
   y.Clear();
   EXPECT_EQ(MyVec3(0, 0, 0), y);
   ABSL_LOG(INFO) << "Test of Vector3 stream output: " << y;
+}
+
+TEST_F(ExactFloatTest, Vector3_IsNaN_NoNaNsReturnsFalse) {
+  EXPECT_FALSE(MyVec3(1, 2, 3).IsNaN());
+}
+
+TEST_F(ExactFloatTest, Vector3_IsNaN_AnyNanReturnsTrue) {
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+  EXPECT_TRUE(MyVec3(kNaN, 2, 3).IsNaN());
+  EXPECT_TRUE(MyVec3(1, 2, kNaN).IsNaN());
 }
 
 TEST_F(ExactFloatTest, ImplicitConversions) {

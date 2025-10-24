@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.11)
 project(s2-geometry)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CMakeDependentOption)
@@ -353,11 +353,8 @@ install(FILES src/s2/internal/s2disjoint_set.h
               src/s2/internal/s2meta.h
         DESTINATION include/s2/internal)
 install(FILES src/s2/base/casts.h
-              src/s2/base/commandlineflags.h
-              src/s2/base/commandlineflags_declare.h
               src/s2/base/log_severity.h
               src/s2/base/malloc_extension.h
-              src/s2/base/port.h
               src/s2/base/spinlock.h
         DESTINATION include/s2/base)
 install(FILES src/s2/testing/gtest_prod.h
@@ -375,6 +372,7 @@ install(FILES src/s2/util/gtl/compact_array.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/requires.h
+              src/s2/util/gtl/unaligned.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
@@ -517,7 +515,8 @@ if (GOOGLETEST_ROOT)
       src/s2/s2wrapped_shape_test.cc
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc
-      src/s2/util/math/exactfloat/exactfloat_test.cc)
+      src/s2/util/math/exactfloat/exactfloat_test.cc
+      src/s2/util/math/exactfloat/exactfloat_underflow_test.cc)
 
   enable_testing()
 

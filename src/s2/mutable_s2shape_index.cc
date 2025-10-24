@@ -26,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include "absl/base/attributes.h"
 #include "absl/container/btree_map.h"
 #include "absl/flags/flag.h"
@@ -72,8 +71,8 @@ using std::vector;
 // If a cell has more than this many edges, and it is not a leaf cell, then it
 // is subdivided.  This flag can be overridden via MutableS2ShapeIndex::Options.
 // Reasonable values range from 10 to about 50 or so.
-DEFINE_int32(
-    s2shape_index_default_max_edges_per_cell, 10,
+ABSL_FLAG(
+    int32_t, s2shape_index_default_max_edges_per_cell, 10,
     "Default maximum number of edges per cell (not counting 'long' edges); "
     "reasonable values range from 10 to 50.  Small values makes queries "
     "faster, while large values make construction faster and use less memory.");
@@ -91,8 +90,8 @@ DEFINE_int32(
 //      with huge numbers of edges may exceed the budget;
 //  (3) shapes being removed are always processed in a single batch.  (This
 //      could be fixed, but it seems better to keep the code simpler for now.)
-DEFINE_int64(
-    s2shape_index_tmp_memory_budget, int64_t{100} << 20 /*100 MB*/,
+ABSL_FLAG(
+    int64_t, s2shape_index_tmp_memory_budget, int64_t{100} << 20 /*100 MB*/,
     "Attempts to limit the amount of temporary memory used by "
     "MutableS2ShapeIndex when creating or updating very large indexes to at "
     "most this number of bytes.  If more memory than this is needed, updates "
@@ -108,8 +107,8 @@ DEFINE_int64(
 // max_edges_per_cell() limit because such edges typically need to be
 // propagated to several children, which increases time and memory costs
 // without commensurate benefits.
-DEFINE_double(
-    s2shape_index_cell_size_to_long_edge_ratio, 1.0,
+ABSL_FLAG(
+    double, s2shape_index_cell_size_to_long_edge_ratio, 1.0,
     "The maximum cell size, relative to an edge's length, for which that "
     "edge is considered 'long'.  Long edges are not counted towards the "
     "max_edges_per_cell() limit.  The size and speed of the index are "
@@ -158,8 +157,8 @@ DEFINE_double(
 // largely affects only pathological geometry.  The default value of 0.2 was
 // chosen to make index construction as fast as possible while still
 // protecting against possible quadratic space usage.
-DEFINE_double(
-    s2shape_index_min_short_edge_fraction, 0.2,
+ABSL_FLAG(
+    double, s2shape_index_min_short_edge_fraction, 0.2,
     "The minimum fraction of 'short' edges that must be present in a cell in "
     "order for it to be subdivided.  If this parameter is non-zero then the "
     "total index size and construction time are guaranteed to be linear in the "
@@ -1677,7 +1676,7 @@ void MutableS2ShapeIndex::AbsorbIndexCell(const S2PaddedCell& pcell,
       if (edge.has_interior) tracker->TestEdge(shape_id, edge.edge);
       if (!S2::ClipToPaddedFace(edge.edge.v0, edge.edge.v1, pcell.id().face(),
                                 kCellPadding, &edge.a, &edge.b)) {
-        ABSL_LOG(ERROR) << "Invariant failure in MutableS2ShapeIndex";
+        ABSL_LOG(DFATAL) << "Invariant failure in MutableS2ShapeIndex";
       }
       face_edges->push_back(edge);
     }

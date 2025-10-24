@@ -27,7 +27,6 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include "s2/base/timer.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
@@ -106,8 +105,8 @@ using InputEdgeId = S2Builder::Graph::InputEdgeId;
 using Graph = S2Builder::Graph;
 using GraphOptions = S2Builder::GraphOptions;
 
-DEFINE_int32(iteration_multiplier, 1,
-             "Iteration multiplier for randomized tests");
+ABSL_FLAG(int32_t, iteration_multiplier, 1,
+          "Iteration multiplier for randomized tests");
 
 namespace {
 

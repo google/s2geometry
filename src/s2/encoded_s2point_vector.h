@@ -63,7 +63,7 @@ class EncodedS2PointVector {
   //
   // Encoded types do not necessarily read all of their data when calling
   // Init(), instead only data necessary to decode further is read, which means
-  // that encoded types may in general log ERROR errors when reading from an
+  // that encoded types may in general log DFATAL errors when reading from an
   // untrusted byte stream using unchecked accessors (e.g. operator[]).
   //
   // Checked accessors such as Decode(S2Error&) will instead set an error
@@ -182,7 +182,7 @@ inline S2Point EncodedS2PointVector::operator[](int i) const {
   S2Error error;
   S2Point point = At(i, error);
   if (!error.ok()) {
-    ABSL_LOG(ERROR) << error.message();
+    ABSL_LOG(DFATAL) << error.message();
   }
   return point;
 #else

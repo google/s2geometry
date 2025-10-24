@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -710,6 +711,145 @@ TEST(S2Cell, GetMaxDistanceToCell) {
     S1ChordAngle dist_from_max = cell.GetMaxDistance(test_cell);
     EXPECT_NEAR(dist_from_min.radians(), dist_from_max.radians(), 1e-8);
   }
+}
+
+TEST(S2Cell, IsDistanceLess) {
+  const S2Cell cell1(S2CellId::FromToken("1b"));
+  const S2Cell cell2(S2CellId::FromToken("104"));  // Adjacent to cell1
+  const S2Cell cell3(S2CellId::FromToken("0c"));   // Adjacent to cell1
+  const S2Cell cell4(S2CellId::FromToken("8f"));   // Not adjacent to cell1
+
+  const S1ChordAngle dist12 = cell1.GetDistance(cell2);
+  const S1ChordAngle dist13 = cell1.GetDistance(cell3);
+  const S1ChordAngle dist14 = cell1.GetDistance(cell4);
+
+  const S1ChordAngle kEpsilon = S1ChordAngle::Radians(1e-10);
+
+  ASSERT_EQ(dist12, S1ChordAngle::Zero());
+  ASSERT_EQ(dist13, S1ChordAngle::Zero());
+  ASSERT_GT(dist14, kEpsilon);
+
+  EXPECT_FALSE(cell1.IsDistanceLess(cell2, S1ChordAngle::Zero()));
+  EXPECT_TRUE(cell1.IsDistanceLess(cell2, kEpsilon));
+  EXPECT_FALSE(cell1.IsDistanceLess(cell2, dist12));
+  EXPECT_TRUE(cell1.IsDistanceLess(cell2, dist12 + kEpsilon));
+
+  EXPECT_FALSE(cell1.IsDistanceLess(cell3, S1ChordAngle::Zero()));
+  EXPECT_TRUE(cell1.IsDistanceLess(cell3, kEpsilon));
+  EXPECT_FALSE(cell1.IsDistanceLess(cell3, dist13));
+  EXPECT_TRUE(cell1.IsDistanceLess(cell3, dist13 + kEpsilon));
+
+  EXPECT_FALSE(cell1.IsDistanceLess(cell4, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsDistanceLess(cell4, kEpsilon));
+  EXPECT_FALSE(cell1.IsDistanceLess(cell4, dist14 - kEpsilon));
+  EXPECT_FALSE(cell1.IsDistanceLess(cell4, dist14));
+  EXPECT_TRUE(cell1.IsDistanceLess(cell4, dist14 + kEpsilon));
+}
+
+TEST(S2Cell, IsDistanceLessOrEqual) {
+  const S2Cell cell1(S2CellId::FromToken("1b"));
+  const S2Cell cell2(S2CellId::FromToken("104"));  // Adjacent to cell1
+  const S2Cell cell3(S2CellId::FromToken("0c"));   // Adjacent to cell1
+  const S2Cell cell4(S2CellId::FromToken("8f"));   // Not adjacent to cell1
+
+  const S1ChordAngle dist12 = cell1.GetDistance(cell2);
+  const S1ChordAngle dist13 = cell1.GetDistance(cell3);
+  const S1ChordAngle dist14 = cell1.GetDistance(cell4);
+
+  const S1ChordAngle kEpsilon = S1ChordAngle::Radians(1e-10);
+
+  ASSERT_EQ(dist12, S1ChordAngle::Zero());
+  ASSERT_EQ(dist13, S1ChordAngle::Zero());
+  ASSERT_GT(dist14, kEpsilon);
+
+  // IsDistanceLessOrEqual
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell2, S1ChordAngle::Zero()));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell2, kEpsilon));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell2, dist12));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell2, dist12 + kEpsilon));
+
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell3, S1ChordAngle::Zero()));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell3, kEpsilon));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell3, dist13));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell3, dist13 + kEpsilon));
+
+  EXPECT_FALSE(cell1.IsDistanceLessOrEqual(cell4, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsDistanceLessOrEqual(cell4, kEpsilon));
+  EXPECT_FALSE(cell1.IsDistanceLessOrEqual(cell4, dist14 - kEpsilon));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell4, dist14));
+  EXPECT_TRUE(cell1.IsDistanceLessOrEqual(cell4, dist14 + kEpsilon));
+}
+
+TEST(S2Cell, IsMaxDistanceLess) {
+  const S2Cell cell1(S2CellId::FromToken("1b"));
+  const S2Cell cell2(S2CellId::FromToken("104"));  // Adjacent to cell1
+  const S2Cell cell3(S2CellId::FromToken("0c"));   // Adjacent to cell1
+  const S2Cell cell4(S2CellId::FromToken("8f"));   // Not adjacent to cell1
+
+  const S1ChordAngle max_dist12 = cell1.GetMaxDistance(cell2);
+  const S1ChordAngle max_dist13 = cell1.GetMaxDistance(cell3);
+  const S1ChordAngle max_dist14 = cell1.GetMaxDistance(cell4);
+
+  const S1ChordAngle kEpsilon = S1ChordAngle::Radians(1e-10);
+
+  ASSERT_GT(max_dist12, kEpsilon);
+  ASSERT_GT(max_dist13, kEpsilon);
+  ASSERT_GT(max_dist14, kEpsilon);
+
+  // IsMaxDistanceLess
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell2, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell2, kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell2, max_dist12 - kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell2, max_dist12));
+  EXPECT_TRUE(cell1.IsMaxDistanceLess(cell2, max_dist12 + kEpsilon));
+
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell3, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell3, kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell3, max_dist13 - kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell3, max_dist13));
+  EXPECT_TRUE(cell1.IsMaxDistanceLess(cell3, max_dist13 + kEpsilon));
+
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell4, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell4, kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell4, max_dist14 - kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLess(cell4, max_dist14));
+  EXPECT_TRUE(cell1.IsMaxDistanceLess(cell4, max_dist14 + kEpsilon));
+}
+
+TEST(S2Cell, IsMaxDistanceLessOrEqual) {
+  const S2Cell cell1(S2CellId::FromToken("1b"));
+  const S2Cell cell2(S2CellId::FromToken("104"));  // Adjacent to cell1
+  const S2Cell cell3(S2CellId::FromToken("0c"));   // Adjacent to cell1
+  const S2Cell cell4(S2CellId::FromToken("8f"));   // Not adjacent to cell1
+
+  const S1ChordAngle max_dist12 = cell1.GetMaxDistance(cell2);
+  const S1ChordAngle max_dist13 = cell1.GetMaxDistance(cell3);
+  const S1ChordAngle max_dist14 = cell1.GetMaxDistance(cell4);
+
+  const S1ChordAngle kEpsilon = S1ChordAngle::Radians(1e-10);
+
+  ASSERT_GT(max_dist12, kEpsilon);
+  ASSERT_GT(max_dist13, kEpsilon);
+  ASSERT_GT(max_dist14, kEpsilon);
+
+  // IsMaxDistanceLessOrEqual
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell2, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell2, kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell2, max_dist12 - kEpsilon));
+  EXPECT_TRUE(cell1.IsMaxDistanceLessOrEqual(cell2, max_dist12));
+  EXPECT_TRUE(cell1.IsMaxDistanceLessOrEqual(cell2, max_dist12 + kEpsilon));
+
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell3, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell3, kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell3, max_dist13 - kEpsilon));
+  EXPECT_TRUE(cell1.IsMaxDistanceLessOrEqual(cell3, max_dist13));
+  EXPECT_TRUE(cell1.IsMaxDistanceLessOrEqual(cell3, max_dist13 + kEpsilon));
+
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell4, S1ChordAngle::Zero()));
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell4, kEpsilon));
+  EXPECT_FALSE(cell1.IsMaxDistanceLessOrEqual(cell4, max_dist14 - kEpsilon));
+  EXPECT_TRUE(cell1.IsMaxDistanceLessOrEqual(cell4, max_dist14));
+  EXPECT_TRUE(cell1.IsMaxDistanceLessOrEqual(cell4, max_dist14 + kEpsilon));
 }
 
 TEST(S2Cell, EncodeDecode) {

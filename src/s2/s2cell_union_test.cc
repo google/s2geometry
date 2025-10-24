@@ -24,10 +24,9 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/hash/hash_testing.h"
 #include "absl/log/absl_check.h"
@@ -52,9 +51,9 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-DECLARE_bool(s2debug);
+ABSL_DECLARE_FLAG(bool, s2debug);
 
-DEFINE_int32(iters, 2000, "Number of iterations for tests.");
+ABSL_FLAG(int32_t, iters, 2000, "Number of iterations for tests.");
 
 using absl::StrCat;
 using std::max;

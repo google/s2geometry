@@ -455,7 +455,7 @@ void GraphEdgeClipper::Run() {
         a_isolated[a_index] = true;
       } else {
         // TODO(b/112043775): fix this condition.
-        ABSL_LOG(ERROR) << "Failed to get crossed vertex index.";
+        ABSL_LOG(DFATAL) << "Failed to get crossed vertex index.";
       }
     }
 
@@ -549,7 +549,7 @@ int GraphEdgeClipper::GetCrossedVertexIndex(absl::Span<const VertexId> a,
                                             const CrossingGraphEdgeVector& b,
                                             bool left_to_right) const {
   if (a.empty() || b.empty()) {
-    ABSL_LOG(ERROR) << "GraphEdgeClipper::GetCrossedVertexIndex called with "
+    ABSL_LOG(DFATAL) << "GraphEdgeClipper::GetCrossedVertexIndex called with "
                      << a.size() << " vertex ids and " << b.size()
                      << " crossing graph edges.";
     return -1;

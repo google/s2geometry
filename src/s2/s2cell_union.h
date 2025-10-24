@@ -25,9 +25,9 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags_declare.h"
 #include "absl/algorithm/container.h"
 #include "absl/base/macros.h"
+#include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
@@ -45,8 +45,8 @@ class S2Cap;
 class S2Cell;
 class S2LatLngRect;
 
-DECLARE_bool(s2debug);
-DECLARE_int32(s2cell_union_decode_max_num_cells);
+ABSL_DECLARE_FLAG(bool, s2debug);
+ABSL_DECLARE_FLAG(int32_t, s2cell_union_decode_max_num_cells);
 
 // An S2CellUnion is a region consisting of cells of various sizes.  Typically
 // a cell union is used to approximate some other shape.  There is a tradeoff

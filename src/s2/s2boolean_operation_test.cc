@@ -18,15 +18,16 @@
 #include "s2/s2boolean_operation.h"
 
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags_declare.h"
 #include <gtest/gtest.h>
-#include "absl/flags/reflection.h"
+#include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
+#include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/log_streamer.h"
@@ -67,7 +68,7 @@
 #include "s2/s2text_format.h"
 #include "s2/util/math/matrix3x3.h"
 
-DECLARE_int64(s2shape_index_tmp_memory_budget);
+ABSL_DECLARE_FLAG(int64_t, s2shape_index_tmp_memory_budget);
 
 namespace {
 

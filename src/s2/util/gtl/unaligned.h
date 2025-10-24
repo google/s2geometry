@@ -13,22 +13,27 @@
 // limitations under the License.
 //
 
-#ifndef S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
-#define S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
+#ifndef S2_UTIL_GTL_UNALIGNED_H_
+#define S2_UTIL_GTL_UNALIGNED_H_
 
-#include <cstdint>
-#include <string>
+#include <type_traits>
 
-#include "absl/flags/declare.h"
+namespace gtl {
 
-#define DECLARE_bool(name) ABSL_DECLARE_FLAG(bool, name)
+template <typename T>
+T UnalignedLoad(const char *p) {
+  static_assert(std::is_trivially_copyable_v<T>);
+  T v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
 
-#define DECLARE_double(name) ABSL_DECLARE_FLAG(double, name)
+template <typename T>
+void UnalignedStore(T v, char *p) {
+  static_assert(std::is_trivially_copyable_v<T>);
+  memcpy(p, &v, sizeof(v));
+}
 
-#define DECLARE_int32(name) ABSL_DECLARE_FLAG(int32_t, name)
+}  // namespace gtl
 
-#define DECLARE_int64(name) ABSL_DECLARE_FLAG(int64_t, name)
-
-#define DECLARE_string(name) ABSL_DECLARE_FLAG(std::string, name)
-
-#endif  // S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
+#endif  // S2_UTIL_GTL_UNALIGNED_H_

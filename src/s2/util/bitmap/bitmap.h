@@ -28,13 +28,13 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
+#include <new>
 #include <numeric>
 #include <ostream>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "s2/base/port.h"
 #include "absl/base/prefetch.h"
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
@@ -714,9 +714,8 @@ class BasicBitmap {
   static void DeleteMap(W* map, size_t size) {
     static_assert(std::is_trivially_destructible<W>::value,
                   "W must be trivial");
-    base::sized_delete_array(
-        const_cast<typename std::remove_const<W>::type*>(map),
-        sizeof(W) * size);
+    ::operator delete[](const_cast<std::remove_const_t<W>*>(map),
+                        sizeof(W) * size);
   }
 
   // NOTE: we make assumptions throughout the code that kIntBits is a power of

@@ -16,10 +16,10 @@
 
 #include "s2/s2point_compression.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include <gtest/gtest.h>
 #include "absl/container/fixed_array.h"
 #include "absl/flags/flag.h"
@@ -33,10 +33,10 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-DEFINE_int32(s2point_compression_bm_level, 30,
-             "Level to encode at for benchmarks.");
-DEFINE_double(s2point_compression_bm_radius_km, 1000.0,
-              "Radius to use for loop for benchmarks.");
+ABSL_FLAG(int32_t, s2point_compression_bm_level, 30,
+          "Level to encode at for benchmarks.");
+ABSL_FLAG(double, s2point_compression_bm_radius_km, 1000.0,
+          "Radius to use for loop for benchmarks.");
 
 namespace {
 

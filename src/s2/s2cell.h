@@ -238,6 +238,26 @@ class S2Cell final : public S2Region {
   // given target cell.
   S1ChordAngle GetMaxDistance(const S2Cell& target) const;
 
+  // Returns true if the minimum distance between this cell and the target cell
+  // is less than the given limit. This is a generally more efficient
+  // alternative to `GetDistance(target) < limit`.
+  bool IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const;
+
+  // Returns true if the minimum distance between this cell and the target cell
+  // is less than or equal to the given limit. This is a generally more
+  // efficient alternative to `GetDistance(target) <= limit`.
+  bool IsDistanceLessOrEqual(const S2Cell& target, S1ChordAngle limit) const;
+
+  // Returns true if the maximum distance between this cell and the target cell
+  // is less than the given limit. This is generally a more efficient
+  // alternative to `GetMaxDistance(target) < limit`.
+  bool IsMaxDistanceLess(const S2Cell& target, S1ChordAngle limit) const;
+
+  // Returns true if the maximum distance between this cell and the target cell
+  // is less than or equal to the given limit. This is a generally more
+  // efficient alternative to `GetMaxDistance(target) <= limit`.
+  bool IsMaxDistanceLessOrEqual(const S2Cell& target, S1ChordAngle limit) const;
+
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 

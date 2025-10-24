@@ -32,7 +32,6 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/commandlineflags.h"
 #include "absl/container/fixed_array.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
@@ -99,9 +98,9 @@ using std::vector;
 
 // The maximum number of loops we'll allow when decoding a polygon.
 // The default value of 10 million is 200x bigger than the number of
-DEFINE_int32(s2polygon_decode_max_num_loops, 10000000,
-             "The upper limit on the number of loops that are allowed by the "
-             "S2Polygon::Decode method.");
+ABSL_FLAG(int32_t, s2polygon_decode_max_num_loops, 10000000,
+          "The upper limit on the number of loops that are allowed by the "
+          "S2Polygon::Decode method.");
 
 // When adding a new encoding, be aware that old binaries will not
 // be able to decode it.
@@ -925,7 +924,7 @@ void S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
                                 const S2Polygon& a, const S2Polygon& b) {
   S2Error error;
   if (!InitToOperation(op_type, snap_function, a, b, &error)) {
-    ABSL_LOG(ERROR) << S2BooleanOperation::OpTypeToString(op_type)
+    ABSL_LOG(DFATAL) << S2BooleanOperation::OpTypeToString(op_type)
                      << " operation failed: " << error;
   }
 }
@@ -1013,7 +1012,7 @@ void S2Polygon::InitFromBuilder(const S2Polygon& a, S2Builder* builder) {
   builder->AddPolygon(a);
   S2Error error;
   if (!builder->Build(&error)) {
-    ABSL_LOG(ERROR) << "Could not build polygon: " << error;
+    ABSL_LOG(DFATAL) << "Could not build polygon: " << error;
   }
   // If there are no loops, check whether the result should be the full polygon
   // rather than the empty one.
@@ -1127,7 +1126,7 @@ void S2Polygon::InitToSimplifiedInCell(const S2Polygon& a, const S2Cell& cell,
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    ABSL_LOG(ERROR) << "Could not build polygon: " << error;
+    ABSL_LOG(DFATAL) << "Could not build polygon: " << error;
     return;
   }
   // If there are no loops, check whether the result should be the full
@@ -1188,7 +1187,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    ABSL_LOG(ERROR) << "InitToSimplifiedInCell failed: " << error;
+    ABSL_LOG(DFATAL) << "InitToSimplifiedInCell failed: " << error;
   }
   return polylines;
 }
@@ -1209,7 +1208,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
   a_index.Add(make_unique<S2Polyline::Shape>(&a));
   S2Error error;
   if (!op.Build(a_index, index_, &error)) {
-    ABSL_LOG(ERROR) << "Polyline "
+    ABSL_LOG(DFATAL) << "Polyline "
                      << S2BooleanOperation::OpTypeToString(op_type)
                      << " operation failed: " << error;
   }
@@ -1343,7 +1342,7 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    ABSL_LOG(ERROR) << "InitToCellUnionBorder failed: " << error;
+    ABSL_LOG(DFATAL) << "InitToCellUnionBorder failed: " << error;
   }
   // If there are no loops, check whether the result should be the full
   // polygon rather than the empty one.  There are only two ways that this can

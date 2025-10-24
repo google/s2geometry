@@ -17,11 +17,11 @@
 
 #include "s2/s2region_term_indexer.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -45,7 +45,7 @@ using absl::string_view;
 using std::string;
 using std::vector;
 
-DEFINE_int32(iters, 400, "number of iterations for testing");
+ABSL_FLAG(int32_t, iters, 400, "number of iterations for testing");
 
 namespace {
 

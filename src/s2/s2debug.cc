@@ -17,8 +17,8 @@
 
 #include "s2/s2debug.h"
 
-#include "s2/base/commandlineflags.h"
 #include "s2/base/log_severity.h"
+#include "absl/flags/flag.h"
 
-DEFINE_bool(s2debug, S2_DEBUG_MODE,
-            "Enable automatic validity checking in S2 code");
+ABSL_FLAG(bool, s2debug, S2_DEBUG_MODE,
+          "Enable automatic validity checking in S2 code");

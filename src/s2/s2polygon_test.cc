@@ -31,7 +31,6 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/commandlineflags.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/algorithm/container.h"

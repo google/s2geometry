@@ -26,9 +26,10 @@
 #include <utility>
 #include <vector>
 
+#include "absl/algorithm/container.h"
 #include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
-#include "absl/container/flat_hash_set.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
@@ -446,9 +447,27 @@ class S2DensityTree {
     FeatureCellWeightFunction(const S2ShapeIndex* index,
                               const FeatureLookupFunction<T>& feature_lookup_fn,
                               const FeatureWeightFunction<T>& feature_weight_fn)
-        : index_region_(index),
-          feature_lookup_fn_(feature_lookup_fn),
-          feature_weight_fn_(feature_weight_fn) {}
+        : index_region_(index) {
+      // Assign consecutive integer ids to features in shape ID order.
+      absl::flat_hash_map<const T*, int> feature_to_id;
+
+      shape_id_to_feature_id_.resize(index->num_shape_ids());
+      for (int i = 0; i < index->num_shape_ids(); ++i) {
+        const S2Shape* shape = index->shape(i);
+        if (!shape) continue;
+        const T* feature = feature_lookup_fn(*shape);
+        if (!feature) continue;
+
+        auto [it, _] = feature_to_id.emplace(feature, feature_to_id.size());
+        shape_id_to_feature_id_[i] = it->second;
+      }
+
+      last_call_.resize(feature_to_id.size(), 0);
+      feature_weights_.resize(last_call_.size());
+      for (auto& [feature, feature_id] : feature_to_id) {
+        feature_weights_[feature_id] = feature_weight_fn(*feature);
+      }
+    }
 
     // Returns the weight of the given 'cell_id', calculated by summing the
     // weight of the features intersecting with the cell.  This function can
@@ -458,8 +477,11 @@ class S2DensityTree {
 
    private:
     S2ShapeIndexRegion<S2ShapeIndex> index_region_;
-    const FeatureLookupFunction<T>& feature_lookup_fn_;
-    const FeatureWeightFunction<T>& feature_weight_fn_;
+
+    std::vector<int> shape_id_to_feature_id_;
+    std::vector<int64_t> feature_weights_;
+    std::vector<int> last_call_;
+    int next_call_ = 0;
   };
 
   friend class S2DensityClusterQueryTest;
@@ -518,13 +540,17 @@ int64_t S2DensityTree::FeatureCellWeightFunction<T>::WeighCell(
   int64_t sum = 0;
   bool all_contained = true;
 
-  absl::flat_hash_set<const T*> found;
-  index_region_.VisitIntersectingShapes(
-      S2Cell(cell_id), [&](const S2Shape* shape, bool contains_target) {
-        const T* feature = feature_lookup_fn_(*shape);
+  if (++next_call_ == std::numeric_limits<int>::max()) {
+    next_call_ = 1;
+    absl::c_fill(last_call_, 0);
+  }
 
-        if (feature && found.insert(feature).second) {
-          const int64_t weight = feature_weight_fn_(*feature);
+  index_region_.VisitIntersectingShapeIds(
+      S2Cell(cell_id), [&](int shape_id, bool contains_target) {
+        int feature_id = shape_id_to_feature_id_[shape_id];
+        // If the feature was already visited in this cell, skip it.
+        if (std::exchange(last_call_[feature_id], next_call_) != next_call_) {
+          const int64_t weight = feature_weights_[feature_id];
           ABSL_DCHECK_GE(weight, 0);
           ABSL_DCHECK_LE(weight, kMaxWeight);
           sum += weight;

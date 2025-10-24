@@ -20,13 +20,13 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdint>
 #include <iterator>
 #include <limits>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/base/casts.h"
@@ -50,8 +50,8 @@
 #include "s2/s2random.h"
 #include "s2/s2testing.h"
 
-DEFINE_int32(consistency_iters, 5000,
-             "Number of iterations for precision consistency tests");
+ABSL_FLAG(int32_t, consistency_iters, 5000,
+          "Number of iterations for precision consistency tests");
 
 using absl::string_view;
 using std::back_inserter;

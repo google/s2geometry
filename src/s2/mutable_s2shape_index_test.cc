@@ -28,12 +28,11 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
-#include "s2/base/commandlineflags_declare.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
-#include "absl/flags/reflection.h"
+#include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
+#include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/log_streamer.h"
@@ -82,7 +81,7 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-DECLARE_double(s2shape_index_min_short_edge_fraction);
+ABSL_DECLARE_FLAG(double, s2shape_index_min_short_edge_fraction);
 
 class MutableS2ShapeIndexTest : public ::testing::Test {
  protected:

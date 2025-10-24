@@ -53,7 +53,6 @@
 #include "absl/base/macros.h"
 #include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/absl_log.h"
 #include "absl/meta/type_traits.h"
 #include "absl/numeric/bits.h"
 #include "s2/base/malloc_extension.h"
@@ -65,12 +64,12 @@ template <typename T, typename A = std::allocator<T> >
 class compact_array_base {
  private:
   // The number of bits for the variable size_ and capacity_
-  static const int kSizeNumBits = 24;
-  static const int kCapacityNumBits = 6;
+  static constexpr int kSizeNumBits = 24;
+  static constexpr int kCapacityNumBits = 6;
   // Where capacity_ becomes an exponent (of 2) instead of the exact value
-  static const int kExponentStart = (1 << kCapacityNumBits);
+  static constexpr int kExponentStart = (1 << kCapacityNumBits);
   // kMaxSize is the maximum size this array can grow.
-  static const int kMaxSize = (1 << kSizeNumBits) - 1;
+  static constexpr int kMaxSize = (1 << kSizeNumBits) - 1;
 
   uint32_t size_ : kSizeNumBits;          // number of valid items in the array
   uint32_t capacity_ : kCapacityNumBits;  // allocated array size
@@ -131,7 +130,7 @@ class compact_array_base {
   enum { kInlined = 0, is_inlined_ = false };
   T* Array() { return first_; }
   void SetArray(T* p) { first_ = p; }
-  void SetInlined() { ABSL_LOG(FATAL); }
+  void SetInlined();  // Never defined.
   T* InlinedSpace() { return nullptr; }
 
   // The pointer to the actual data array.
@@ -222,9 +221,9 @@ class compact_array_base {
   bool empty() const { return size() == 0; }
 
   // Maximum size that this data structure can hold.
-  static size_type max_size() { return kMaxSize; }
+  static constexpr size_type max_size() { return kMaxSize; }
 
-  static bool MayBeInlined() { return kInlined > 0; }
+  static constexpr bool MayBeInlined() { return kInlined > 0; }
 
  public:  // Container interface (tables 65,66).
   iterator begin() { return Array(); }
@@ -392,7 +391,7 @@ class compact_array_base {
       new_n = nallocx(n * sizeof(T), 0) / sizeof(T);
     }
     set_capacity(new_n);
-    if (MayBeInlined()) {
+    if constexpr (MayBeInlined()) {
       if (!IsInlined() && n <= kInlined) {
         SetInlined();
         return;

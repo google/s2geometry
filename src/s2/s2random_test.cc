@@ -18,7 +18,6 @@
 #include <cmath>
 #include <cstdint>
 
-#include "s2/base/commandlineflags.h"
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
 #include "absl/log/log_streamer.h"
@@ -32,7 +31,8 @@
 #include "s2/util/math/matrix3x3.h"
 
 // The default value should be chosen so the test runs in a few seconds.
-DEFINE_int32(num_samples, 100'000, "Number of random samples to use in tests.");
+ABSL_FLAG(int32_t, num_samples, 100'000,
+          "Number of random samples to use in tests.");
 
 namespace {
 
