@@ -60,18 +60,12 @@ add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 if (NOT TARGET absl::base)
     find_package(absl REQUIRED)
 endif()
-find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 
 if (NOT TARGET absl::vlog_is_on)
     message(FATAL_ERROR "Could not find absl vlog module. Are you using an older version?")
 endif()
-
-# If OpenSSL is installed in a non-standard location, configure with
-# something like:
-# OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
-include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
     # Should be easy to make it work with swig3, but some args to %pythonprepend
@@ -104,6 +98,10 @@ else()
     add_compile_options(-fsized-deallocation)
 endif()
 
+# If OpenSSL is installed in a non-standard location, configure with
+# something like:
+# OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
+include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
     include_directories(${Python3_INCLUDE_DIRS})
@@ -492,6 +490,8 @@ if(S2_ENABLE_INSTALL)
 endif() # S2_ENABLE_INSTALL
 
 if (BUILD_TESTS)
+  find_package(OpenSSL REQUIRED)
+
   if (NOT GOOGLETEST_ROOT)
     message(FATAL_ERROR "BUILD_TESTS requires GOOGLETEST_ROOT")
   endif()
