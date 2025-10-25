@@ -278,7 +278,22 @@ Bignum Bignum::Pow(int32_t pow) const {
 
 // Computes a + b + carry and updates the carry.
 inline Bigit AddBigit(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
+// Compilers such as GCC and Clang are known to be terrible at generating good
+// code for long carry chains on Intel. Using the _addcarry_u64 intrinsic (which
+// maps to the add/adc instructions produces a tight series of add/adc/adc/adc
+// instructions, whereas writing the loop manually often generates many add/adc
+// pairs with spurious bit twiddling.
+//
+// Using the intrinsic here improves benchmarks by ~30% when summing larger
+// Bignums together.
+//
+// See this SO discussion for more information:
+//   https://stackoverflow.com/questions/33690791
+//
+// Godbolt link for comparison:
+//   https://godbolt.org/z/cGnnfMbMn
 #ifdef __x86_64__
+  static_assert(sizeof(Bigit) == sizeof(unsigned long long));
   Bigit out;
   *carry =
       _addcarry_u64(*carry, a, b, reinterpret_cast<unsigned long long*>(&out));
@@ -295,6 +310,7 @@ inline Bigit AddBigit(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 // NOTE: Borrow must be one or zero.
 inline Bigit SubBigit(Bigit a, Bigit b, Bigit* absl_nonnull borrow) {
   ABSL_DCHECK_LE(*borrow, Bigit(1));
+  // See notes in AddBigit on why using an intrinsic is the right choice here.
 #ifdef __x86_64__
   Bigit out;
   *borrow = _subborrow_u64(*borrow, a, b,
@@ -319,6 +335,18 @@ inline Bigit MulBigit(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 // NOTE: Will not overflow even if a, b, and c are their maximum values.
 inline void MulAddBigit(Bigit* absl_nonnull sum, Bigit a, Bigit b,
                         Bigit* absl_nonnull carry) {
+  // Similar to the comment in AddBigit, and just for completeness, it's worth
+  // noting that the "best" way to implement this is with the Intel MULX, ADCQ,
+  // and ADOQ instructions (i.e. the _mulx_u64, _addcarry_u64, and
+  // _addcarryx_u64 intrinsics), but GCC and Clang do not support _addcarryx_u64
+  // properly (and have no plans to do so). The issue is that gcc doesn't
+  // support reasoning about separate dependency chains for the carry and
+  // overflow flags, because all the flags are considered to be one
+  // register. (The ADOX instructions were added specifically for this use case,
+  // i.e. high-precision integer multiplies. They propagate carries using the
+  // overflow flag rather than the carry flag, which lets you do two
+  // extended-precision add operations in parallel without having them stomp on
+  // each other's carry flags. )
   auto term = absl::uint128(a) * b + *carry + *sum;
   *carry = absl::Uint128High64(term);
   *sum = static_cast<Bigit>(term);
@@ -338,7 +366,8 @@ inline void MulAddBigit(Bigit* absl_nonnull sum, Bigit a, Bigit b,
 //
 // Rather than having to expand A to B.bigits_.size() + 1, and popping off the
 // top bigit if it's unused (which is the most common case).
-inline Bigit AddInPlace(absl::Span<Bigit> a, absl::Span<const Bigit> b) {
+ABSL_ATTRIBUTE_NOINLINE inline Bigit AddInPlace(absl::Span<Bigit> a,
+                                                absl::Span<const Bigit> b) {
   ABSL_DCHECK_GE(a.size(), b.size());
 
   Bigit carry = 0;
