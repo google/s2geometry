@@ -228,7 +228,6 @@ if (GOOGLETEST_ROOT)
               src/s2/thread_testing.cc)
 endif()
 
-
 target_link_libraries(
     s2
     absl::absl_vlog_is_on
