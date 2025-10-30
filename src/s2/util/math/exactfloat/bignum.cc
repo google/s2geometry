@@ -149,8 +149,7 @@ int bit_width(const Bignum& a) {
 
   // Bit width is the bits in the least significant bigits + bit width of
   // the most significant word.
-  const int msw_width =
-      (Bignum::kBigitBits - absl::countl_zero(a.bigits_.back()));
+  const int msw_width = absl::bit_width(a.bigits_.back());
   const int lsw_width = (a.bigits_.size() - 1) * Bignum::kBigitBits;
   return msw_width + lsw_width;
 }
@@ -291,7 +290,8 @@ inline Bigit AddBigit(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 //   https://stackoverflow.com/questions/33690791
 //
 // Godbolt link for comparison:
-//   https://godbolt.org/z/cGnnfMbMn
+//   https://godbolt.org/z/cGnnfMbMn  (no intrinsics)
+//   https://godbolt.org/z/jnM1Y3Tjs  (intrinsics)
 #ifdef __x86_64__
   static_assert(sizeof(Bigit) == sizeof(unsigned long long));
   Bigit out;
