@@ -19,6 +19,7 @@
 #define S2_S2COORDS_INTERNAL_H_
 
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
+
 namespace S2 {
 namespace internal {
 
@@ -34,15 +35,23 @@ namespace internal {
 // 'kInvertMask' is true, then the traversal order is rotated by 180
 // degrees (i.e. the bits of i and j are inverted, or equivalently,
 // the axis directions are reversed).
-int constexpr kSwapMask = 0x01;
-int constexpr kInvertMask = 0x02;
+inline constexpr int kSwapMask = 0x01;
+inline constexpr int kInvertMask = 0x02;
 
 // kIJtoPos[orientation][ij] -> pos
 //
 // Given a cell orientation and the (i,j)-index of a subcell (0=(0,0),
 // 1=(0,1), 2=(1,0), 3=(1,1)), return the order in which this subcell is
 // visited by the Hilbert curve (a position in the range [0..3]).
-extern const int kIJtoPos[4][4];
+inline constexpr int kIJtoPos[4][4] = {
+    // clang-format off
+    // (0,0) (0,1) (1,0) (1,1)
+    {     0,    1,    3,    2  },  // canonical order
+    {     0,    3,    1,    2  },  // axes swapped
+    {     2,    3,    1,    0  },  // bits inverted
+    {     2,    1,    3,    0  },  // swapped & inverted
+    // clang-format on
+};
 
 // kPosToIJ[orientation][pos] -> ij
 //
@@ -51,7 +60,15 @@ extern const int kIJtoPos[4][4];
 // inverse of the previous table:
 //
 //   kPosToIJ[r][kIJtoPos[r][ij]] == ij
-extern const int kPosToIJ[4][4];
+inline constexpr int kPosToIJ[4][4] = {
+    // clang-format off
+    // 0  1  2  3
+    {  0, 1, 3, 2 },    // canonical order:    (0,0), (0,1), (1,1), (1,0)
+    {  0, 2, 3, 1 },    // axes swapped:       (0,0), (1,0), (1,1), (0,1)
+    {  3, 2, 0, 1 },    // bits inverted:      (1,1), (1,0), (0,0), (0,1)
+    {  3, 1, 0, 2 },    // swapped & inverted: (1,1), (0,1), (0,0), (1,0)
+    // clang-format on
+};
 
 // kPosToOrientation[pos] -> orientation_modifier
 //
@@ -59,13 +76,57 @@ extern const int kPosToIJ[4][4];
 // with the given traversal position [0..3] is related to the orientation
 // of the parent cell.  The modifier should be XOR-ed with the parent
 // orientation to obtain the curve orientation in the child.
-extern const int kPosToOrientation[4];
+inline constexpr int kPosToOrientation[4] = {
+    kSwapMask, 0, 0, kInvertMask + kSwapMask,
+};
 
 // The U,V,W axes for each face.
-extern const double kFaceUVWAxes[6][3][3];
+inline constexpr double kFaceUVWAxes[6][3][3] = {
+    // clang-format off
+    {
+      { 0,  1,  0 },
+      { 0,  0,  1 },
+      { 1,  0,  0 }
+    },
+    {
+      {-1,  0,  0 },
+      { 0,  0,  1 },
+      { 0,  1,  0 }
+    },
+    {
+      {-1,  0,  0 },
+      { 0, -1,  0 },
+      { 0,  0,  1 }
+    },
+    {
+      { 0,  0, -1 },
+      { 0, -1,  0 },
+      {-1,  0,  0 }
+    },
+    {
+      { 0,  0, -1 },
+      { 1,  0,  0 },
+      { 0, -1,  0 }
+    },
+    {
+      { 0,  1,  0 },
+      { 1,  0,  0 },
+      { 0,  0, -1 }
+    }
+    // clang-format on
+};
 
 // The precomputed neighbors of each face (see GetUVWFace).
-extern const int kFaceUVWFaces[6][3][2];
+inline constexpr int kFaceUVWFaces[6][3][2] = {
+    // clang-format off
+    { { 4, 1 }, { 5, 2 }, { 3, 0 } },
+    { { 0, 3 }, { 5, 2 }, { 4, 1 } },
+    { { 0, 3 }, { 1, 4 }, { 5, 2 } },
+    { { 2, 5 }, { 1, 4 }, { 0, 3 } },
+    { { 2, 5 }, { 3, 0 }, { 1, 4 } },
+    { { 4, 1 }, { 3, 0 }, { 2, 5 } }
+    // clang-format on
+};
 
 }  // namespace internal
 }  // namespace S2

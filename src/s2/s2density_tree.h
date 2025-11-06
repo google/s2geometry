@@ -280,6 +280,31 @@ class S2DensityTree {
   // is not necessarily normalized.
   S2CellUnion Leaves(S2Error* absl_nonnull error) const;
 
+  // Given an input S2DensityTree, returns a "dilated" tree, i.e. a new
+  // density tree that has weight in all areas within the given distance
+  // "radius" of the spatial boundary of the leaves of the tree.
+  //
+  // Dilation is required for creating density trees for clustering data for
+  // cases like a D-Within filter join, so that clusters created from the
+  // density tree will contain all pairs of features within distance "radius"
+  // of each other.
+  //
+  // Dilation is done by adding weights to neighbors of leaves of the tree. If
+  // the radius is small relative to the area covered by the density tree, the
+  // required size of the neighboring cells could also be small, resulting in
+  // an exponential blowup in the number of cells in the tree. The
+  // 'max_level_diff' parameter prevents this by limiting the level of
+  // neighboring added cells, relative to the size of the leaf being dilated.
+  // Therefore there is a tradeoff between dilation accuracy and tree size: a
+  // higher max_level_diff will add more, smaller cells.
+  //
+  // If the dilation radius is large compared to cells in the tree, then
+  // dilation discards nodes with a cell level higher than the cell level
+  // required for dilation, and instead adds neighbors to nodes in the tree
+  // that are at the dilation cell level.
+  static S2DensityTree Dilate(const S2DensityTree& tree, S1Angle radius,
+                              int max_level_diff, S2Error* absl_nonnull error);
+
   // The decoded weight and offsets of encoded cells.
   class Cell {
    public:

@@ -41,7 +41,6 @@
 namespace exactfloat {
 
 using std::max;
-using std::min;
 
 // To simplify the overflow/underflow logic, we limit the exponent and
 // precision range so that (2 * bn_exp_) does not overflow an "int".  We take
@@ -95,15 +94,25 @@ inline static void BN_ext_set_uint64(BIGNUM* bn, uint64_t v) {
 // Requires that BIGNUM fits into 64 bits.
 inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
   ABSL_DCHECK_LE(BN_num_bytes(bn), sizeof(uint64_t));
-#if BN_BITS2 == 64
-  return BN_get_word(bn);
-#else
-  static_assert(BN_BITS2 == 32, "at least 32 bit openssl build needed");
-  if (bn->top == 0) return 0;
-  if (bn->top == 1) return BN_get_word(bn);
-  ABSL_DCHECK_EQ(bn->top, 2);
-  return (static_cast<uint64_t>(bn->d[1]) << 32) + bn->d[0];
-#endif
+  // Use `BN_get_word` if its return type is large enough.
+  if constexpr (sizeof(decltype(BN_get_word(bn))) >= sizeof(uint64_t)) {
+    return BN_get_word(bn);
+  } else {
+    uint64_t v;
+    static_assert(absl::endian::native == absl::endian::little ||
+                      absl::endian::native == absl::endian::big,
+                  "Unsupported endianness.");
+    if constexpr (absl::endian::native == absl::endian::little) {
+      ABSL_CHECK_EQ(
+          BN_bn2lebinpad(bn, reinterpret_cast<unsigned char*>(&v), sizeof(v)),
+          sizeof(v));
+    } else {
+      ABSL_CHECK_EQ(
+          BN_bn2binpad(bn, reinterpret_cast<unsigned char*>(&v), sizeof(v)),
+          sizeof(v));
+    }
+    return v;
+  }
 }
 
 static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {

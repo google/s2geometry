@@ -318,7 +318,7 @@ bool S2CellIteratorJoin<A, B>::ProcessNearby(absl::Span<const S2Cell> cells_a,
   for (const S2Cell& cell_a : cells_a) {
     nearby_cells.clear();
     for (const S2Cell& cell_b : cells_b) {
-      if (cell_a.GetDistance(cell_b) <= tolerance_) {
+      if (cell_a.IsDistanceLessOrEqual(cell_b, tolerance_)) {
         nearby_cells.emplace_back(cell_b);
       }
     }
@@ -402,7 +402,8 @@ bool S2CellIteratorJoin<A, B>::ProcessCellPairs(
     for (int i = 0; i < cells_b.size() && success; ++i) {
       S2CellId id = cells_b[i].id();
       success &= ScanCellRange(iter_b_, id, [&](const auto& iter_b) {
-        if (sub_cell_a.GetDistance(matched_cells_[idx++]) <= tolerance_) {
+        if (sub_cell_a.IsDistanceLessOrEqual(matched_cells_[idx++],
+                                             tolerance_)) {
           if (!visitor(iter_a.iterator(), iter_b.iterator())) {
             return false;
           }

@@ -26,7 +26,6 @@
 #include <string>
 #include <vector>
 
-#include "absl/base/call_once.h"
 #include "absl/base/casts.h"
 #include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
@@ -45,6 +44,8 @@
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
 
+namespace {
+
 using absl::StrCat;
 using absl::string_view;
 using S2::internal::kInvertMask;
@@ -59,42 +60,32 @@ using std::vector;
 
 // The following lookup tables are used to convert efficiently between an
 // (i,j) cell index and the corresponding position along the Hilbert curve.
-// "lookup_pos" maps 4 bits of "i", 4 bits of "j", and 2 bits representing the
+// "kLookup.pos" maps 4 bits of "i", 4 bits of "j", and 2 bits representing the
 // orientation of the current cell into 8 bits representing the order in which
 // that subcell is visited by the Hilbert curve, plus 2 bits indicating the
 // new orientation of the Hilbert curve within that subcell.  (Cell
 // orientations are represented as combination of kSwapMask and kInvertMask.)
 //
-// "lookup_ij" is an inverted table used for mapping in the opposite
+// "kLookup.ij" is an inverted table used for mapping in the opposite
 // direction.
 //
 // We also experimented with looking up 16 bits at a time (14 bits of position
 // plus 2 of orientation) but found that smaller lookup tables gave better
 // performance.  (2KB fits easily in the primary cache.)
 
+constexpr int kLookupBits = 4;
 
-// Values for these constants are *declared* in the *.h file. Even though
-// the declaration specifies a value for the constant, that declaration
-// is not a *definition* of storage for the value. Because the values are
-// supplied in the declaration, we don't need the values here. Failing to
-// define storage causes link errors for any code that tries to take the
-// address of one of these values.
-const int S2CellId::kFaceBits;
-const int S2CellId::kNumFaces;
-const int S2CellId::kMaxLevel;
-const int S2CellId::kPosBits;
-const int S2CellId::kMaxSize;
+struct LookupTables {
+  uint16_t pos[1 << (2 * kLookupBits + 2)];
+  uint16_t ij[1 << (2 * kLookupBits + 2)];
+};
 
-static const int kLookupBits = 4;
-static uint16_t lookup_pos[1 << (2 * kLookupBits + 2)];
-static uint16_t lookup_ij[1 << (2 * kLookupBits + 2)];
-
-static void InitLookupCell(int level, int i, int j, int orig_orientation,
-                           int pos, int orientation) {
+constexpr void InitLookupCell(int level, int i, int j, int orig_orientation,
+                              int pos, int orientation, LookupTables& lookup) {
   if (level == kLookupBits) {
     int ij = (i << kLookupBits) + j;
-    lookup_pos[(ij << 2) + orig_orientation] = (pos << 2) + orientation;
-    lookup_ij[(pos << 2) + orig_orientation] = (ij << 2) + orientation;
+    lookup.pos[(ij << 2) + orig_orientation] = (pos << 2) + orientation;
+    lookup.ij[(pos << 2) + orig_orientation] = (ij << 2) + orientation;
   } else {
     level++;
     i <<= 1;
@@ -102,25 +93,29 @@ static void InitLookupCell(int level, int i, int j, int orig_orientation,
     pos <<= 2;
     const int* r = kPosToIJ[orientation];
     InitLookupCell(level, i + (r[0] >> 1), j + (r[0] & 1), orig_orientation,
-                   pos, orientation ^ kPosToOrientation[0]);
+                   pos, orientation ^ kPosToOrientation[0], lookup);
     InitLookupCell(level, i + (r[1] >> 1), j + (r[1] & 1), orig_orientation,
-                   pos + 1, orientation ^ kPosToOrientation[1]);
+                   pos + 1, orientation ^ kPosToOrientation[1], lookup);
     InitLookupCell(level, i + (r[2] >> 1), j + (r[2] & 1), orig_orientation,
-                   pos + 2, orientation ^ kPosToOrientation[2]);
+                   pos + 2, orientation ^ kPosToOrientation[2], lookup);
     InitLookupCell(level, i + (r[3] >> 1), j + (r[3] & 1), orig_orientation,
-                   pos + 3, orientation ^ kPosToOrientation[3]);
+                   pos + 3, orientation ^ kPosToOrientation[3], lookup);
   }
 }
 
-static absl::once_flag flag;
-inline static void MaybeInit() {
-  absl::call_once(flag, []{
-    InitLookupCell(0, 0, 0, 0, 0, 0);
-    InitLookupCell(0, 0, 0, kSwapMask, 0, kSwapMask);
-    InitLookupCell(0, 0, 0, kInvertMask, 0, kInvertMask);
-    InitLookupCell(0, 0, 0, kSwapMask|kInvertMask, 0, kSwapMask|kInvertMask);
-  });
+constexpr LookupTables MakeLookupTables() {
+  LookupTables lookup{};
+  InitLookupCell(0, 0, 0, 0, 0, 0, lookup);
+  InitLookupCell(0, 0, 0, kSwapMask, 0, kSwapMask, lookup);
+  InitLookupCell(0, 0, 0, kInvertMask, 0, kInvertMask, lookup);
+  InitLookupCell(0, 0, 0, kSwapMask | kInvertMask, 0, kSwapMask | kInvertMask,
+                 lookup);
+  return lookup;
 }
+
+constexpr LookupTables kLookup = MakeLookupTables();
+
+}  // namespace
 
 S2CellId S2CellId::advance(int64_t steps) const {
   if (steps == 0) return *this;
@@ -132,10 +127,10 @@ S2CellId S2CellId::advance(int64_t steps) const {
   int step_shift = 2 * (kMaxLevel - level()) + 1;
   if (steps < 0) {
     int64_t min_steps = -static_cast<int64_t>(id_ >> step_shift);
-    if (steps < min_steps) steps = min_steps;
+    steps = max(steps, min_steps);
   } else {
     int64_t max_steps = (kWrapOffset + lsb() - id_) >> step_shift;
-    if (steps > max_steps) steps = max_steps;
+    steps = min(steps, max_steps);
   }
   // If steps is negative, then shifting it left has undefined behavior.
   // Cast to uint64_t for a 2's complement answer.
@@ -181,7 +176,9 @@ S2CellId S2CellId::maximum_tile(const S2CellId limit) const {
     // of S2CellId ranges, this loop usually executes only once.  Also because
     // id.range_min() < limit.range_min(), we will always exit the loop by the
     // time we reach a leaf cell.
-    do { id = id.child(0); } while (id.range_max() >= limit);
+    do {
+      id = id.child(0);
+    } while (id.range_max() >= limit);
     return id;
   }
   // The cell may be too small.  Grow it if necessary.  Note that generally
@@ -269,9 +266,6 @@ bool S2CellId::Decode(Decoder* const decoder) {
 }
 
 S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
-  // Initialization if not done yet
-  MaybeInit();
-
   // Optimization notes:
   //  - Non-overlapping bit fields can be combined with either "+" or "|".
   //    Generally "+" seems to produce better code, but not always.
@@ -290,13 +284,14 @@ S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
   // "iiiijjjjoo" to a 10-bit value of the form "ppppppppoo", where the
   // letters [ijpo] denote bits of "i", "j", Hilbert curve position, and
   // Hilbert curve orientation respectively.
-#define GET_BITS(k) do { \
-    const int mask = (1 << kLookupBits) - 1; \
+#define GET_BITS(k)                                                 \
+  do {                                                              \
+    const int mask = (1 << kLookupBits) - 1;                        \
     bits += ((i >> (k * kLookupBits)) & mask) << (kLookupBits + 2); \
-    bits += ((j >> (k * kLookupBits)) & mask) << 2; \
-    bits = lookup_pos[bits]; \
-    n |= (bits >> 2) << (k * 2 * kLookupBits); \
-    bits &= (kSwapMask | kInvertMask); \
+    bits += ((j >> (k * kLookupBits)) & mask) << 2;                 \
+    bits = kLookup.pos[bits];                                       \
+    n |= (bits >> 2) << (k * 2 * kLookupBits);                      \
+    bits &= (kSwapMask | kInvertMask);                              \
   } while (0)
 
   GET_BITS(7);
@@ -320,14 +315,9 @@ S2CellId::S2CellId(const S2Point& p) {
   id_ = FromFaceIJ(face, i, j).id();
 }
 
-S2CellId::S2CellId(const S2LatLng& ll)
-  : S2CellId(ll.ToPoint()) {
-}
+S2CellId::S2CellId(const S2LatLng& ll) : S2CellId(ll.ToPoint()) {}
 
 int S2CellId::ToFaceIJOrientation(int* pi, int* pj, int* orientation) const {
-  // Initialization if not done yet
-  MaybeInit();
-
   int i = 0, j = 0;
   int face = this->face();
   int bits = (face & kSwapMask);
@@ -340,14 +330,16 @@ int S2CellId::ToFaceIJOrientation(int* pi, int* pj, int* orientation) const {
   //
   // On the first iteration we need to be careful to clear out the bits
   // representing the cube face.
-#define GET_BITS(k) do { \
+#define GET_BITS(k)                                                           \
+  do {                                                                        \
     const int nbits = (k == 7) ? (kMaxLevel - 7 * kLookupBits) : kLookupBits; \
-    bits += (static_cast<int>(id_ >> (k * 2 * kLookupBits + 1)) \
-             & ((1 << (2 * nbits)) - 1)) << 2; \
-    bits = lookup_ij[bits]; \
-    i += (bits >> (kLookupBits + 2)) << (k * kLookupBits); \
-    j += ((bits >> 2) & ((1 << kLookupBits) - 1)) << (k * kLookupBits); \
-    bits &= (kSwapMask | kInvertMask); \
+    bits += (static_cast<int>(id_ >> (k * 2 * kLookupBits + 1)) &             \
+             ((1 << (2 * nbits)) - 1))                                        \
+            << 2;                                                             \
+    bits = kLookup.ij[bits];                                                  \
+    i += (bits >> (kLookupBits + 2)) << (k * kLookupBits);                    \
+    j += ((bits >> 2) & ((1 << kLookupBits) - 1)) << (k * kLookupBits);       \
+    bits &= (kSwapMask | kInvertMask);                                        \
   } while (0)
 
   GET_BITS(7);
@@ -387,9 +379,7 @@ S2Point S2CellId::ToPointRaw() const {
   return S2::FaceSiTitoXYZ(face, si, ti);
 }
 
-S2LatLng S2CellId::ToLatLng() const {
-  return S2LatLng(ToPointRaw());
-}
+S2LatLng S2CellId::ToLatLng() const { return S2LatLng(ToPointRaw()); }
 
 R2Point S2CellId::GetCenterST() const {
   int si, ti;
@@ -400,8 +390,7 @@ R2Point S2CellId::GetCenterST() const {
 R2Point S2CellId::GetCenterUV() const {
   int si, ti;
   GetCenterSiTi(&si, &ti);
-  return R2Point(S2::STtoUV(S2::SiTitoST(si)),
-                 S2::STtoUV(S2::SiTitoST(ti)));
+  return R2Point(S2::STtoUV(S2::SiTitoST(si)), S2::STtoUV(S2::SiTitoST(ti)));
 }
 
 R2Rect S2CellId::IJLevelToBoundUV(int ij[2], int level) {
@@ -436,8 +425,8 @@ R2Rect S2CellId::GetBoundUV() const {
 static double ExpandEndpoint(double u, double max_v, double sin_dist) {
   // This is based on solving a spherical right triangle, similar to the
   // calculation in S2Cap::GetRectBound.
-  double sin_u_shift = sin_dist * sqrt((1 + u * u + max_v * max_v) /
-                                       (1 + u * u));
+  double sin_u_shift =
+      sin_dist * sqrt((1 + u * u + max_v * max_v) / (1 + u * u));
   double cos_u_shift = sqrt(1 - sin_u_shift * sin_u_shift);
   // The following is an expansion of tan(atan(u) + asin(sin_u_shift)).
   return (cos_u_shift * u + sin_u_shift) / (cos_u_shift - sin_u_shift * u);
@@ -497,7 +486,7 @@ S2CellId S2CellId::FromFaceIJWrap(int face, int i, int j) {
   // Find the leaf cell coordinates on the adjacent face, and convert
   // them to a cell id at the appropriate level.
   face = S2::XYZtoFaceUV(S2::FaceUVtoXYZ(face, u, v), &u, &v);
-  return FromFaceIJ(face, S2::STtoIJ(0.5*(u+1)), S2::STtoIJ(0.5*(v+1)));
+  return FromFaceIJ(face, S2::STtoIJ(0.5 * (u + 1)), S2::STtoIJ(0.5 * (v + 1)));
 }
 
 inline S2CellId S2CellId::FromFaceIJSame(int face, int i, int j,
@@ -515,14 +504,12 @@ void S2CellId::GetEdgeNeighbors(S2CellId neighbors[4]) const {
   int face = ToFaceIJOrientation(&i, &j, nullptr);
 
   // Edges 0, 1, 2, 3 are in the down, right, up, left directions.
-  neighbors[0] = FromFaceIJSame(face, i, j - size, j - size >= 0)
-                 .parent(level);
-  neighbors[1] = FromFaceIJSame(face, i + size, j, i + size < kMaxSize)
-                 .parent(level);
-  neighbors[2] = FromFaceIJSame(face, i, j + size, j + size < kMaxSize)
-                 .parent(level);
-  neighbors[3] = FromFaceIJSame(face, i - size, j, i - size >= 0)
-                 .parent(level);
+  neighbors[0] = FromFaceIJSame(face, i, j - size, j - size >= 0).parent(level);
+  neighbors[1] =
+      FromFaceIJSame(face, i + size, j, i + size < kMaxSize).parent(level);
+  neighbors[2] =
+      FromFaceIJSame(face, i, j + size, j + size < kMaxSize).parent(level);
+  neighbors[3] = FromFaceIJSame(face, i - size, j, i - size >= 0).parent(level);
 }
 
 void S2CellId::AppendVertexNeighbors(int level,
@@ -561,8 +548,9 @@ void S2CellId::AppendVertexNeighbors(int level,
   // If i- and j- edge neighbors are *both* on a different face, then this
   // vertex only has three neighbors (it is one of the 8 cube vertices).
   if (isame || jsame) {
-    output->push_back(FromFaceIJSame(face, i + ioffset, j + joffset,
-                                     isame && jsame).parent(level));
+    output->push_back(
+        FromFaceIJSame(face, i + ioffset, j + joffset, isame && jsame)
+            .parent(level));
   }
 }
 
@@ -584,7 +572,7 @@ void S2CellId::AppendAllNeighbors(int nbr_level,
 
   // We compute the top-bottom, left-right, and diagonal neighbors in one
   // pass.  The loop test is at the end of the loop to avoid 32-bit overflow.
-  for (int k = -nbr_size; ; k += nbr_size) {
+  for (int k = -nbr_size;; k += nbr_size) {
     bool same_face;
     if (k < 0) {
       same_face = (j + k >= 0);
@@ -593,18 +581,19 @@ void S2CellId::AppendAllNeighbors(int nbr_level,
     } else {
       same_face = true;
       // Top and bottom neighbors.
-      output->push_back(FromFaceIJSame(face, i + k, j - nbr_size,
-                                       j - size >= 0).parent(nbr_level));
-      output->push_back(FromFaceIJSame(face, i + k, j + size,
-                                       j + size < kMaxSize).parent(nbr_level));
+      output->push_back(FromFaceIJSame(face, i + k, j - nbr_size, j - size >= 0)
+                            .parent(nbr_level));
+      output->push_back(
+          FromFaceIJSame(face, i + k, j + size, j + size < kMaxSize)
+              .parent(nbr_level));
     }
     // Left, right, and diagonal neighbors.
-    output->push_back(FromFaceIJSame(face, i - nbr_size, j + k,
-                                     same_face && i - size >= 0)
-                      .parent(nbr_level));
-    output->push_back(FromFaceIJSame(face, i + size, j + k,
-                                     same_face && i + size < kMaxSize)
-                      .parent(nbr_level));
+    output->push_back(
+        FromFaceIJSame(face, i - nbr_size, j + k, same_face && i - size >= 0)
+            .parent(nbr_level));
+    output->push_back(
+        FromFaceIJSame(face, i + size, j + k, same_face && i + size < kMaxSize)
+            .parent(nbr_level));
     if (k >= size) break;
   }
 }
