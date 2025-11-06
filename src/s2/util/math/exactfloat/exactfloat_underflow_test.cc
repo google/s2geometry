@@ -13,8 +13,6 @@
 // limitations under the License.
 //
 
-#include <cmath>
-
 #include <gtest/gtest.h>
 #include "s2/util/math/exactfloat/exactfloat.h"
 
@@ -24,9 +22,9 @@ using ::exactfloat::ExactFloat;
 
 TEST(ExactFloatTest, Overflow) {
   // Construct an ExactFloat whose exponent is kMaxExp.
-  const int kMaxExp = exactfloat::ExactFloat::kMaxExp;
+  const int kMaxExp = ExactFloat::kMaxExp;
 
-  exactfloat::ExactFloat v = ldexp(exactfloat::ExactFloat(0.5), kMaxExp);
+  ExactFloat v = ldexp(ExactFloat(0.5), kMaxExp);
   EXPECT_FALSE(isinf(v));
   EXPECT_EQ(kMaxExp, v.exp());
 
@@ -41,16 +39,16 @@ TEST(ExactFloatTest, Overflow) {
 }
 
 TEST(ExactFloatTest, OverflowMaxExpAndPrecision) {
-  const int kMaxExp = exactfloat::ExactFloat::kMaxExp;
-  const int kMaxPrec = exactfloat::ExactFloat::kMaxPrec;
-  const int kMinExp = exactfloat::ExactFloat::kMinExp;
+  const int kMaxExp = ExactFloat::kMaxExp;
+  const int kMaxPrec = ExactFloat::kMaxPrec;
+  const int kMinExp = ExactFloat::kMinExp;
 
   // Now build an ExactFloat whose exponent and precision are both maximal (!)
-  const exactfloat::ExactFloat v =
-      ldexp(1.0 - ldexp(exactfloat::ExactFloat(1.0), -kMaxPrec), kMaxExp);
+  const ExactFloat v =
+      ldexp(1.0 - ldexp(ExactFloat(1.0), -kMaxPrec), kMaxExp);
   EXPECT_FALSE(isinf(v));
-  EXPECT_EQ(exactfloat::ExactFloat::kMaxExp, v.exp());
-  EXPECT_EQ(exactfloat::ExactFloat::kMaxPrec, v.prec());
+  EXPECT_EQ(ExactFloat::kMaxExp, v.exp());
+  EXPECT_EQ(ExactFloat::kMaxPrec, v.prec());
 
   // Try overflowing it in various ways.
   EXPECT_TRUE(
@@ -68,25 +66,25 @@ TEST(ExactFloatTest, OverflowMaxExpAndPrecision) {
 
   // Check that if kMaxExp and kMaxPrec are exceeded simultaneously, the
   // result is infinity rather than NaN.
-  exactfloat::ExactFloat a =
-      ldexp(1.0 - ldexp(exactfloat::ExactFloat(1.0), -kMaxPrec), kMaxExp);
-  exactfloat::ExactFloat b =
-      ldexp(1.0 - ldexp(exactfloat::ExactFloat(1.0), -kMaxPrec), kMaxExp - 1);
+  ExactFloat a =
+      ldexp(1.0 - ldexp(ExactFloat(1.0), -kMaxPrec), kMaxExp);
+  ExactFloat b =
+      ldexp(1.0 - ldexp(ExactFloat(1.0), -kMaxPrec), kMaxExp - 1);
   EXPECT_TRUE(isinf(a + b));
 }
 
 TEST(ExactFloatTest, Underflow) {
   // Construct an ExactFloat whose exponent is kMinExp.
-  const int kMinExp = exactfloat::ExactFloat::kMinExp;
-  const exactfloat::ExactFloat v = ldexp(exactfloat::ExactFloat(0.5), kMinExp);
+  const int kMinExp = ExactFloat::kMinExp;
+  const ExactFloat v = ldexp(ExactFloat(0.5), kMinExp);
   EXPECT_FALSE(v.is_zero());
   EXPECT_EQ(kMinExp, v.exp());
 
   // Now check that if the exponent is made smaller, it underflows.
   EXPECT_TRUE((0.5 * v).is_zero());
-  EXPECT_FALSE(exactfloat::signbit(0.5 * v));
+  EXPECT_FALSE(signbit(0.5 * v));
   EXPECT_TRUE((-0.5 * v).is_zero());
-  EXPECT_TRUE(exactfloat::signbit(-0.5 * v));
+  EXPECT_TRUE(signbit(-0.5 * v));
 
   // Check that underflowing the exponent a lot does not cause problems.
   EXPECT_TRUE((v * v).is_zero());
@@ -95,22 +93,22 @@ TEST(ExactFloatTest, Underflow) {
 // Skip this test for iOS* and Android because it times out constantly.
 #if !defined(__ANDROID__) && !defined(__APPLE__)
 TEST(ExactFloatTest, UnderflowMaxExpAndMinPrecision) {
-  const int kMinExp = exactfloat::ExactFloat::kMinExp;
-  const int kMaxPrec = exactfloat::ExactFloat::kMaxPrec;
+  const int kMinExp = ExactFloat::kMinExp;
+  const int kMaxPrec = ExactFloat::kMaxPrec;
 
   // Now build an ExactFloat whose exponent is minimal and whose precision is
   // maximal.
-  const exactfloat::ExactFloat v =
-      ldexp(1.0 - ldexp(exactfloat::ExactFloat(1.0), -kMaxPrec), kMinExp);
+  const ExactFloat v =
+      ldexp(1.0 - ldexp(ExactFloat(1.0), -kMaxPrec), kMinExp);
   EXPECT_FALSE(v.is_zero());
-  EXPECT_EQ(exactfloat::ExactFloat::kMinExp, v.exp());
-  EXPECT_EQ(exactfloat::ExactFloat::kMaxPrec, v.prec());
+  EXPECT_EQ(ExactFloat::kMinExp, v.exp());
+  EXPECT_EQ(ExactFloat::kMaxPrec, v.prec());
 
   // Try underflowing it in various ways.
-  exactfloat::ExactFloat underflow = 0.5 * v;
-  EXPECT_TRUE(underflow.is_zero() && !exactfloat::signbit(underflow));
+  ExactFloat underflow = 0.5 * v;
+  EXPECT_TRUE(underflow.is_zero() && !signbit(underflow));
   underflow = -0.5 * v;
-  EXPECT_TRUE(underflow.is_zero() && exactfloat::signbit(underflow));
+  EXPECT_TRUE(underflow.is_zero() && signbit(underflow));
 
   // Check that if kMaxPrec is exceeded, the result is NaN.
   EXPECT_TRUE(isnan(v + ldexp(ExactFloat(1.0), kMinExp + 1)));
@@ -118,9 +116,9 @@ TEST(ExactFloatTest, UnderflowMaxExpAndMinPrecision) {
   // Check that if kMinExp and kMaxPrec are exceeded simultaneously, the
   // result is zero rather than NaN.
   underflow = ldexp(v, -1);
-  EXPECT_TRUE(underflow.is_zero() && !exactfloat::signbit(underflow));
+  EXPECT_TRUE(underflow.is_zero() && !signbit(underflow));
   underflow = ldexp(-v, -1);
-  EXPECT_TRUE(underflow.is_zero() && exactfloat::signbit(underflow));
+  EXPECT_TRUE(underflow.is_zero() && signbit(underflow));
 }
 #endif
 

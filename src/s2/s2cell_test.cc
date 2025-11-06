@@ -70,12 +70,6 @@ using std::pow;
 using std::vector;
 using ::testing::Eq;
 
-// Reflects the center point of a cell across the given boundary.
-S2Point ReflectCenter(const S2Cell& cell, int k) {
-  Vector3_d normal = cell.GetEdgeRaw(k);
-  return Matrix3x3_d::Householder(normal) * cell.GetCenter();
-}
-
 TEST(S2Cell, TestFaces) {
   flat_hash_map<S2Point, int> edge_counts;
   flat_hash_map<S2Point, int> vertex_counts;
@@ -469,6 +463,9 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
 TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
   // Construct many points that are nearly on an S2Cell edge, and verify that
   // S2Cell(S2CellId(p)).Contains(p) is always true.
+  //
+  // Note this is not actually the case and this test fails 3.5% of the time.
+  // TODO(b/416457492): Fix (S2Cell(S2CellId(point)) does not contain point).
   absl::BitGen bitgen(
       S2Testing::MakeTaggedSeedSeq("CONSISTENT_WITH_S2CELL_ID_FROM_POINT",
                               absl::LogInfoStreamer(__FILE__, __LINE__).stream()));

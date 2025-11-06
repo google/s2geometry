@@ -58,6 +58,12 @@ class LittleEndian {
   }
 
   // Functions to do unaligned loads and stores in little-endian order.
+  template <typename T>
+  static T Load(const void* p) {
+    const char* pc = reinterpret_cast<const char*>(p);
+    return byteswap_if_big_endian(gtl::UnalignedLoad<T>(pc));
+  }
+
   static uint16_t Load16(const void* p) {
     const char* pc = reinterpret_cast<const char*>(p);
     return ToHost16(gtl::UnalignedLoad<uint16_t>(pc));

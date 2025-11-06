@@ -18,6 +18,7 @@
 #include "s2/util/math/exactfloat/exactfloat.h"
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -26,9 +27,9 @@
 #include <gtest/gtest.h>
 #include "absl/base/casts.h"
 #include "absl/base/macros.h"
+#include "absl/base/no_destructor.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-#include "absl/random/random.h"
 #include "s2/util/math/vector.h"
 
 namespace {
@@ -149,7 +150,7 @@ FIX_INT_ROUNDING(long long, llround)
 // math intrinsics.  The negated values of these constants are used as well,
 // so only one constant with a given absolute value needs to be listed.
 
-const double kSpecialUnsignedDoubleValues[] = {
+constexpr double kSpecialUnsignedDoubleValues[] = {
     std::numeric_limits<double>::quiet_NaN(),
 
     // Minimum and maximum values of various relevant C++ types.
@@ -206,18 +207,18 @@ class ExactFloatTest : public ::testing::Test {
  public:
   // Initialize the list of constants to be used for testing intrinsics.
   static void SetUpTestSuite() {
-    for (int i = 0; i < ABSL_ARRAYSIZE(kSpecialUnsignedDoubleValues); ++i) {
-      double d = kSpecialUnsignedDoubleValues[i];
-      kSpecialDoubleValues.push_back(d);
+    ABSL_CHECK(special_double_values_->empty());
+    for (double d : kSpecialUnsignedDoubleValues) {
+      special_double_values_->push_back(d);
       // Glibc and MPFloat handle negative NaN values differently.  To avoid
       // discrepancies, we only test positively-signed NaN values.
       if (!std::isnan(d)) {
-        kSpecialDoubleValues.push_back(-d);
+        special_double_values_->push_back(-d);
       }
     }
   }
 
-  static void TearDownTestSuite() { kSpecialDoubleValues.clear(); }
+  static void TearDownTestSuite() { special_double_values_->clear(); }
 
   // Return the difference measured in ulps (units in the last place) between
   // two floating-point values.  Return 0 if the values are equal or both are
@@ -295,8 +296,7 @@ class ExactFloatTest : public ::testing::Test {
   // range of test arguments.
   void TestMathcall1(const char *fname, double f(double),
                      ExactFloat mp_f(const ExactFloat &), uint64_t ulps) {
-    for (int i = 0; i < kSpecialDoubleValues.size(); ++i) {
-      double a = kSpecialDoubleValues[i];
+    for (double a : *special_double_values_) {
       double expected = f(a);
       double actual = static_cast<double>(mp_f(ExactFloat(a)));
       if (!IsExpected(expected, actual, ulps)) {
@@ -313,10 +313,8 @@ class ExactFloatTest : public ::testing::Test {
   void TestMathcall2(const char *fname, double f(double, double),
                      ExactFloat mp_f(const ExactFloat &, const ExactFloat &),
                      uint64_t ulps) {
-    for (int i = 0; i < kSpecialDoubleValues.size(); ++i) {
-      double a = kSpecialDoubleValues[i];
-      for (int j = 0; j < kSpecialDoubleValues.size(); ++j) {
-        double b = kSpecialDoubleValues[j];
+    for (double a : *special_double_values_) {
+      for (double b : *special_double_values_) {
         double expected = f(a, b);
         double actual = static_cast<double>(mp_f(ExactFloat(a), ExactFloat(b)));
         if (!IsExpected(expected, actual, ulps)) {
@@ -334,8 +332,7 @@ class ExactFloatTest : public ::testing::Test {
   template <typename ResultType>
   void TestFn(const char *fname, ResultType f_dbl(double),
               ResultType f_xf(const ExactFloat&)) {
-    for (int i = 0; i < kSpecialDoubleValues.size(); ++i) {
-      double a = kSpecialDoubleValues[i];
+    for (double a : *special_double_values_) {
       ResultType expected = f_dbl(a);
       ResultType actual = f_xf(ExactFloat(a));
       if (expected != actual) {
@@ -352,8 +349,7 @@ class ExactFloatTest : public ::testing::Test {
   template <typename ResultType>
   void TestIntMathcall1(const char *fname, ResultType f(double),
                         ResultType mp_f(const ExactFloat &)) {
-    for (int i = 0; i < kSpecialDoubleValues.size(); ++i) {
-      double a = kSpecialDoubleValues[i];
+    for (double a : *special_double_values_) {
       ResultType expected = f(a);
       ResultType actual = mp_f(ExactFloat(a));
       if (actual != expected) {
@@ -371,7 +367,7 @@ class ExactFloatTest : public ::testing::Test {
   template <typename ExpType>
   void TestLdexpCall(const char *fname, double f(double, ExpType),
                      ExactFloat mp_f(const ExactFloat &, ExpType)) {
-    static const ExpType kUnsignedExpValues[] = {
+    static constexpr ExpType kUnsignedExpValues[] = {
         // Doesn't test with numeric_limits<ExpType>::min() because it's
         // undefined
         // to negate the min value of a signed number.
@@ -398,11 +394,10 @@ class ExactFloatTest : public ::testing::Test {
         4096,
         1000000,
     };
-    for (int i = 0; i < kSpecialDoubleValues.size(); ++i) {
-      double a = kSpecialDoubleValues[i];
-      for (int j = 0; j < ABSL_ARRAYSIZE(kUnsignedExpValues); ++j) {
-        for (int sign = -1; sign <= +1; sign += 2) {
-          ExpType exp = sign * kUnsignedExpValues[j];
+    for (double a : *special_double_values_) {
+      for (ExpType unsigned_exp : kUnsignedExpValues) {
+        for (int sign : {-1, +1}) {
+          ExpType exp = sign * unsigned_exp;
           double expected = f(a, exp);
           double actual = static_cast<double>(mp_f(ExactFloat(a), exp));
           if (!IsExpected(expected, actual, 0)) {
@@ -417,10 +412,12 @@ class ExactFloatTest : public ::testing::Test {
   }
 
  private:
-  static std::vector<double> kSpecialDoubleValues;
+  // Uses `isnan` in initialization; this can be `constexpr` when we support
+  // C++23; `isnan` is not `constexpr` until then.
+  static absl::NoDestructor<std::vector<double>> special_double_values_;
 };
 
-std::vector<double> ExactFloatTest::kSpecialDoubleValues;
+absl::NoDestructor<std::vector<double>> ExactFloatTest::special_double_values_;
 
 TEST_F(ExactFloatTest, GetErrorUlps) {
   // Verify some of the assertions made by GetErrorUlps().

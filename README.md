@@ -34,9 +34,9 @@ complete functionality.
 *   A C++ compiler with C++17 support, such as
     [g++ >= 7.5](https://gcc.gnu.org/) or
     [clang >= 14.0.0](https://clang.llvm.org/)
-*   [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
+*   [Abseil](https://github.com/abseil/abseil-cpp) LTS
     [`20250814`](https://github.com/abseil/abseil-cpp/releases/tag/20250814.1)
-    (standard library extensions)
+    (standard library extensions). This exact version must be used.
 *   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 *   [googletest testing framework >= 1.10](https://github.com/google/googletest)
     (to build tests and example programs, optional)

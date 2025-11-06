@@ -34,6 +34,7 @@
 #include "absl/meta/type_traits.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
@@ -1164,3 +1165,193 @@ TEST_F(CoveringsTest, ShapeIndexMultiple) {
 
   CheckCoverings(std::move(weights));
 }
+
+TEST(S2DensityTreeTest, SmallDilationConstrainedToLeafLevel) {
+  // A density tree with two leaves at level 2.
+  S2DensityTree tree;
+  S2DensityTree::TreeEncoder encoder;
+  encoder.Put(S2CellId::FromDebugString("1/"), 4);
+  encoder.Put(S2CellId::FromDebugString("1/1"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/11"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/3"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/33"), 2);
+  encoder.Build(&tree);
+
+  // Dilate the tree by 1 km, which is very small relative to the cell size. Use
+  // maxLevelDiff 0, so the dilated tree will have weight in the level 2 cells
+  // neighboring each of the two level 2 leaves. They are in face corners and
+  // have 7 neighbors each, so the resulting dilated tree has 14 added level 2
+  // leaf cells as well as the original two.
+  S2Error error;
+  S2DensityTree dilated_tree =
+      S2DensityTree::Dilate(tree, S2Testing::MetersToAngle(1000), 0, &error);
+  ASSERT_TRUE(error.ok()) << error;
+
+  std::vector<std::string> actual_nodes;
+  for (S2CellId cell_id : TreeCells(dilated_tree)) {
+    actual_nodes.push_back(cell_id.ToString());
+  }
+
+  EXPECT_THAT(
+      actual_nodes,
+      testing::UnorderedElementsAre(
+          "0/", "0/2", "0/22", "0/23", "1/", "1/1", "1/10", "1/11", "1/12",
+          "1/13", "1/3", "1/30", "1/31", "1/32", "1/33", "2/", "2/0", "2/00",
+          "2/01", "3/", "3/1", "3/10", "3/11", "5/", "5/1", "5/11", "5/12"));
+}
+
+TEST(S2DensityTreeTest, SmallDilationRelativeToLeafSize) {
+  // A density tree with two leaves at level 2.
+  S2DensityTree tree;
+  S2DensityTree::TreeEncoder encoder;
+  encoder.Put(S2CellId::FromDebugString("1/"), 4);
+  encoder.Put(S2CellId::FromDebugString("1/1"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/11"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/3"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/33"), 2);
+  encoder.Build(&tree);
+
+  // Dilate the tree by 1 km, which is very small relative to the cell size. Use
+  // max_level_diff 1, so the dilated tree will have weight in the two level 3
+  // cells neighboring each of the four sides of the two level 2 leaves and
+  // three (these are at the cube corners) level 3 diagonal corners. The
+  // dilated tree ends up with 11 additional level 3 cells around each of the
+  // two original level 2 leaf cells.
+  S2Error error;
+  S2DensityTree dilated_tree =
+      S2DensityTree::Dilate(tree, S2Testing::MetersToAngle(1000), 1, &error);
+  ASSERT_TRUE(error.ok()) << error;
+  EXPECT_EQ(24, TreeCells(dilated_tree, true).size());
+}
+
+TEST(S2DensityTreeTest, DilationUsesMaximum) {
+  // Two density trees with two leaves at level 2 with a common neighbor "3b"
+  // not in the tree. The only difference is the distribution of weight.
+  //
+  // The following layout is used:
+  // go/s2viewer?q=3%25203c%25203d%252034%252031%25203b
+  //
+  //  +-------------+--------------+
+  //  |         3c  |         34   |
+  //  +------+------+------+       |
+  //  |  3d  |  3b  |  31  |       |
+  //  +------+------+------+-------+
+  //  |                            |
+  //  |             3              |
+  //  |                            |
+  //  +----------------------------+
+
+  S2DensityTree tree1;
+  S2DensityTree::TreeEncoder encoder1;
+  encoder1.Put(S2CellId::FromToken("3"), 10);  // Face
+  encoder1.Put(S2CellId::FromToken("3c"), 2);  // Level 1
+  encoder1.Put(S2CellId::FromToken("3d"), 2);  // Level 2 child of 3c
+  encoder1.Put(S2CellId::FromToken("34"), 8);  // Level 1
+  encoder1.Put(S2CellId::FromToken("31"), 8);  // Level 2 child of 34
+  encoder1.Build(&tree1);
+
+  S2DensityTree tree2;
+  S2DensityTree::TreeEncoder encoder2;
+  encoder2.Put(S2CellId::FromToken("3"), 10);  // Face
+  encoder2.Put(S2CellId::FromToken("3c"), 8);  // Level 1
+  encoder2.Put(S2CellId::FromToken("3d"), 8);  // Level 2 child of 3c
+  encoder2.Put(S2CellId::FromToken("34"), 2);  // Level 1
+  encoder2.Put(S2CellId::FromToken("31"), 2);  // Level 2 child of 34
+  encoder2.Build(&tree2);
+
+  // Dilate both with max_level_diff 0, so cell "3b" is added.
+  S2Error error;
+  S2DensityTree dilated_tree1 =
+      S2DensityTree::Dilate(tree1, S2Testing::MetersToAngle(1000), 0, &error);
+  ASSERT_TRUE(error.ok()) << error;
+  S2DensityTree dilated_tree2 =
+      S2DensityTree::Dilate(tree2, S2Testing::MetersToAngle(1000), 0, &error);
+  ASSERT_TRUE(error.ok()) << error;
+
+  // Check that the common neighbor "3b" gets the maximum weight 8 in both
+  // trees.
+  absl::btree_map<S2CellId, int64_t> weights1 = dilated_tree1.Decode(&error);
+  ASSERT_TRUE(error.ok()) << error;
+  absl::btree_map<S2CellId, int64_t> weights2 = dilated_tree2.Decode(&error);
+  ASSERT_TRUE(error.ok()) << error;
+
+  EXPECT_THAT(weights1, testing::IsSupersetOf(
+                            {testing::Pair(S2CellId::FromToken("3b"), 8)}));
+  EXPECT_THAT(weights2, testing::IsSupersetOf(
+                            {testing::Pair(S2CellId::FromToken("3b"), 8)}));
+}
+
+TEST(S2DensityTreeTest, DilationLargerThanLeafSize) {
+  // A density tree with two leaves at level 5.
+  S2DensityTree tree;
+  S2DensityTree::TreeEncoder encoder;
+  encoder.Put(S2CellId::FromDebugString("1/"), 4);
+  encoder.Put(S2CellId::FromDebugString("1/1"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/11"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/111"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/1111"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/11111"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/13"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/133"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/1333"), 2);
+  encoder.Put(S2CellId::FromDebugString("1/13333"), 2);
+  encoder.Build(&tree);
+
+  // max_level_diff is set to 4, but the dilation level is limited by the
+  // dilation radius and will actually be 2. The result is that the two level 2
+  // nodes in the tree have all their level 2 neighbors added, and the nodes at
+  // higher levels are dropped. It is helpful to visualize the results in
+  // supermario/s2viewer.
+  S2Error error;
+  S2DensityTree dilated_tree = S2DensityTree::Dilate(
+      tree, S2Testing::MetersToAngle(1000 * 1000), 4, &error);
+  ASSERT_TRUE(error.ok()) << error;
+
+  std::vector<std::string> actual_nodes;
+  for (S2CellId cell_id : TreeCells(dilated_tree)) {
+    actual_nodes.push_back(cell_id.ToString());
+  }
+
+  EXPECT_THAT(actual_nodes,
+              testing::UnorderedElementsAre(
+                  "1/", "1/0", "1/02", "1/03", "1/1", "1/10", "1/11", "1/12",
+                  "1/13", "1/2", "1/20", "1/21", "1/3", "1/31", "3/", "3/1",
+                  "3/10", "3/11", "5/", "5/1", "5/11", "5/12"));
+}
+
+TEST(S2DensityTreeTest, DilationAtFaceCenter) {
+  // Turn the tokens into an S2DensityTree, using them as leaves with weight 1.
+  absl::btree_map<S2CellId, int64_t> cell_weights;
+
+  // Two Level 16 cells near the center of face 0, in different level 1 cells.
+  for (const absl::string_view token : {"0ffffffd5", "10000002b"}) {
+    cell_weights.try_emplace(S2CellId::FromToken(token), 1);
+  }
+
+  S2DensityTree::TreeEncoder encoder;
+  for (const auto& [cell, weight] : SumToRoot(cell_weights)) {
+    encoder.Put(cell, weight);
+  }
+  S2DensityTree tree;
+  encoder.Build(&tree);
+
+  // Dilate the tree by 300 meters, which requires using cells at level 14.
+  S2Error error;
+  S2DensityTree dilated =
+      S2DensityTree::Dilate(tree, S2Testing::MetersToAngle(300), 0, &error);
+  ASSERT_TRUE(error.ok()) << error;
+
+  std::vector<std::string> actual_nodes;
+  for (S2CellId cell_id : TreeCells(dilated, true)) {
+    actual_nodes.push_back(cell_id.ToToken());
+  }
+  // The level 14 parents of the two leaves are 0ffffffd and 10000003. They
+  // are adjacent, and surrounded by 10 more level 14 cells, forming a 4 by 3
+  // grid of cells which should be the leaves of the dilated tree.
+  EXPECT_THAT(actual_nodes,
+              testing::UnorderedElementsAre(
+                  "0fffffe5", "0fffffe3", "1000001d", "1000001b", "0ffffffb",
+                  "0ffffffd", "10000003", "10000005", "0ffffff9", "0fffffff",
+                  "10000001", "10000007"));
+}
+

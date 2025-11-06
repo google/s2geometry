@@ -166,7 +166,8 @@ extern const double kMaxDiagAspect;
 
 template <int dim>
 int S2::Metric<dim>::GetLevelForMaxValue(double value) const {
-  if (value <= 0) return S2::kMaxCellLevel;
+  // Catches non-positive values, including NaN.
+  if (!(value > 0)) return S2::kMaxCellLevel;
 
   // This code is equivalent to computing a floating-point "level" value and
   // rounding up.  ilogb() returns the exponent corresponding to a fraction in
@@ -180,7 +181,8 @@ int S2::Metric<dim>::GetLevelForMaxValue(double value) const {
 
 template <int dim>
 int S2::Metric<dim>::GetLevelForMinValue(double value) const {
-  if (value <= 0) return S2::kMaxCellLevel;
+  // Catches non-positive values, including NaN.
+  if (!(value > 0)) return S2::kMaxCellLevel;
 
   // This code is equivalent to computing a floating-point "level" value and
   // rounding down.

@@ -15,11 +15,13 @@
 
 #include "s2/s2text_format.h"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
@@ -72,7 +74,8 @@ vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
 bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
   for (const string_view lat_lng_str :
        absl::StrSplit(str, ',', absl::SkipEmpty())) {
-    const vector<string_view> lat_lng = absl::StrSplit(lat_lng_str, ':');
+    const absl::InlinedVector<string_view, 2> lat_lng =
+        absl::StrSplit(lat_lng_str, ':');
     if (lat_lng.size() != 2) return false;
     double lat, lng;
     if (!absl::SimpleAtod(lat_lng[0], &lat)) return false;
@@ -293,9 +296,8 @@ unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(string_view str) {
 }
 
 bool MakeIndex(string_view str, unique_ptr<MutableS2ShapeIndex>* index) {
-  vector<string_view> strs = absl::StrSplit(str, '#');
+  absl::InlinedVector<string_view, 3> strs = absl::StrSplit(str, '#');
   ABSL_DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
-
   vector<S2Point> points;
   for (const auto& point_str : SplitString(strs[0], '|')) {
     S2Point point;
