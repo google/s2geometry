@@ -19,99 +19,22 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
-#include "s2/s2coords_internal.h"
 #include "s2/s2point.h"
 
 namespace S2 {
-
-namespace internal {
-
-// Define the "extern" constants in s2coords_internal.h.
-
-static_assert(kSwapMask == 0x01 && kInvertMask == 0x02, "masks changed");
-
-// kIJtoPos[orientation][ij] -> pos
-const int kIJtoPos[4][4] = {
-  // (0,0) (0,1) (1,0) (1,1)
-  {     0,    1,    3,    2  },  // canonical order
-  {     0,    3,    1,    2  },  // axes swapped
-  {     2,    3,    1,    0  },  // bits inverted
-  {     2,    1,    3,    0  },  // swapped & inverted
-};
-
-// kPosToIJ[orientation][pos] -> ij
-const int kPosToIJ[4][4] = {
-  // 0  1  2  3
-  {  0, 1, 3, 2 },    // canonical order:    (0,0), (0,1), (1,1), (1,0)
-  {  0, 2, 3, 1 },    // axes swapped:       (0,0), (1,0), (1,1), (0,1)
-  {  3, 2, 0, 1 },    // bits inverted:      (1,1), (1,0), (0,0), (0,1)
-  {  3, 1, 0, 2 },    // swapped & inverted: (1,1), (0,1), (0,0), (1,0)
-};
-
-// kPosToOrientation[pos] -> orientation_modifier
-const int kPosToOrientation[4] = {
-  kSwapMask,
-  0,
-  0,
-  kInvertMask + kSwapMask,
-};
-
-const int kFaceUVWFaces[6][3][2] = {
-  { { 4, 1 }, { 5, 2 }, { 3, 0 } },
-  { { 0, 3 }, { 5, 2 }, { 4, 1 } },
-  { { 0, 3 }, { 1, 4 }, { 5, 2 } },
-  { { 2, 5 }, { 1, 4 }, { 0, 3 } },
-  { { 2, 5 }, { 3, 0 }, { 1, 4 } },
-  { { 4, 1 }, { 3, 0 }, { 2, 5 } }
-};
-
-const double kFaceUVWAxes[6][3][3] = {
-  {
-    { 0,  1,  0 },
-    { 0,  0,  1 },
-    { 1,  0,  0 }
-  },
-  {
-    {-1,  0,  0 },
-    { 0,  0,  1 },
-    { 0,  1,  0 }
-  },
-  {
-    {-1,  0,  0 },
-    { 0, -1,  0 },
-    { 0,  0,  1 }
-  },
-  {
-    { 0,  0, -1 },
-    { 0, -1,  0 },
-    {-1,  0,  0 }
-  },
-  {
-    { 0,  0, -1 },
-    { 1,  0,  0 },
-    { 0, -1,  0 }
-  },
-  {
-    { 0,  1,  0 },
-    { 1,  0,  0 },
-    { 0,  0, -1 }
-  }
-};
-
-} // namespace internal
-
-
 
 S2Point FaceXYZtoUVW(int face, const S2Point& p) {
   // The result coordinates are simply the dot products of P with the (u,v,w)
   // axes for the given face (see kFaceUVWAxes).
   switch (face) {
+    // clang-format off
     case 0:  return S2Point( p.y(),  p.z(),  p.x());
     case 1:  return S2Point(-p.x(),  p.z(),  p.y());
     case 2:  return S2Point(-p.x(), -p.y(),  p.z());
     case 3:  return S2Point(-p.z(), -p.y(), -p.x());
     case 4:  return S2Point(-p.z(),  p.x(), -p.y());
     default: return S2Point( p.y(),  p.x(), -p.z());
+    // clang-format on
   }
 }
 

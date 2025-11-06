@@ -44,6 +44,7 @@
 #include "s2/s2cell_union.h"
 #include "s2/s2density_tree_internal.h"
 #include "s2/s2error.h"
+#include "s2/s2metrics.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
@@ -964,4 +965,106 @@ S2CellUnion S2DensityTree::Leaves(S2Error* absl_nonnull error) const {
       error);
 
   return S2CellUnion::FromVerbatim(std::move(leaves));
+}
+
+S2DensityTree S2DensityTree::Dilate(const S2DensityTree& tree, S1Angle radius,
+                                    int max_level_diff,
+                                    S2Error* absl_nonnull error) {
+  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+  *error = S2Error::Ok();
+
+  // Get the leaves of the density tree as an S2CellUnion.
+  S2CellUnion leaves = tree.Leaves(error);
+  if (!error->ok()) {
+    return S2DensityTree();
+  }
+
+  // Weights in which the new density tree will be computed.
+  absl::flat_hash_map<S2CellId, int64_t> weights;
+
+  // 'radius_level' is the highest cell level (smallest possible cells) that
+  // could be used for dilation that will cover all areas within 'radius' of
+  // the tree. Existing cells in the tree at higher levels will be dropped.
+  const int radius_level = S2::kMinWidth.GetLevelForMinValue(radius.radians());
+
+  // Compute an S2CellUnion 'dilationCells' of the 'halo' around the existing
+  // leaves that will contain the cells added by dilation, and does not
+  // contain the existing leaves. Note that expansion may use a level lower
+  // than 'radius_level'.
+  S2CellUnion expanded_leaves = leaves;
+  expanded_leaves.Expand(radius, max_level_diff);
+  S2CellUnion dilation_cells = expanded_leaves.Difference(leaves);
+
+  // Visit all the cells in the current tree, copying them to the dilated tree,
+  // and where required also adding neighboring cells for dilation.
+  tree.VisitCells(
+      [&](S2CellId cell_id, const Cell& node) {
+        // Add this existing node to the output tree. If it is already present
+        // in the tree (as a neighbor of a previously visited and dilated
+        // cell), update its dilated weight to the maximum of the current
+        // dilated weight and the pre-dilation weight.
+        auto [it, _] = weights.try_emplace(cell_id);
+        const int64_t dilated_weight =
+            (it->second = std::max(it->second, node.weight()));
+
+        // If this node has children, and has a level less than radius_level, it
+        // will become an internal node of the dilated tree, so dilation will
+        // occur at its children.
+        if (node.has_children() && cell_id.level() < radius_level) {
+          return VisitAction::ENTER_CELL;
+        }
+
+        // Otherwise, this cell is either a leaf of the input tree, or has level
+        // 'radius_level'. Either way, it will be a leaf of the dilated tree. It
+        // may need to be dilated. (Determining precisely which leaves must be
+        // dilated could be done better at the cost of some additional
+        // complexity: the current implementation does more dilation than
+        // needed.)
+
+        // To dilate this output leaf, we want to use the highest level possible
+        // for accuracy, which is radius_level, but the cell level to use for
+        // dilating may not be more than the current cell level plus
+        // max_level_diff.
+        const int dilate_level =
+            std::min(radius_level, max_level_diff + cell_id.level());
+
+        // For each neighbor that intersects the dilation area, and is not
+        // already present with sufficient weight, insert it or increase the
+        // weight to 'dilated_weight'. Also ensure that all its ancestors also
+        // have weight at least 'dilated_weight' so the tree is valid.
+        std::vector<S2CellId> neighbors;
+        cell_id.AppendAllNeighbors(dilate_level, &neighbors);
+        for (S2CellId neighbor : neighbors) {
+          if (!dilation_cells.Intersects(neighbor)) {
+            // This neighbor isn't in the area of dilation, ignore it but keep
+            // going.
+            continue;
+          }
+          for (auto it = weights.try_emplace(neighbor).first;
+               it->second < dilated_weight;
+               it = weights.try_emplace(neighbor).first) {
+            it->second = dilated_weight;
+            if (neighbor.level() == 0) {
+              break;
+            }
+            neighbor = neighbor.parent();
+          }
+        }
+
+        return VisitAction::SKIP_CELL;
+      },
+      error);
+  if (!error->ok()) {
+    return S2DensityTree();
+  }
+
+  // Convert the map into a density tree.
+  TreeEncoder encoder;
+  for (const auto& [cell_id, weight] : weights) {
+    encoder.Put(cell_id, weight);
+  }
+
+  S2DensityTree dilated_tree;
+  encoder.Build(&dilated_tree);
+  return dilated_tree;
 }

@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include <gtest/gtest.h>
 #include "s2/s2coords.h"
@@ -138,4 +139,21 @@ TEST(S2, Metrics) {
     EXPECT_EQ(S2::kMinArea.GetClosestLevel(1.2 * area), expected_level);
     EXPECT_EQ(S2::kMinArea.GetClosestLevel(0.8 * area), expected_level);
   }
+}
+
+TEST(S2, NaNInput) {
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+  S2::LengthMetric metric_1d(1);
+  S2::AreaMetric metric_2d(1);
+
+  // The exact result is not specified and is not really important.
+  // The essential property is that we don't hit undefined behavior, so this
+  // test needs to be run with the `ubsan` enabled.
+  EXPECT_GE(metric_1d.GetLevelForMaxValue(kNaN), 0);
+  EXPECT_GE(metric_1d.GetLevelForMinValue(kNaN), 0);
+  EXPECT_GE(metric_1d.GetClosestLevel(kNaN), 0);
+
+  EXPECT_GE(metric_2d.GetLevelForMaxValue(kNaN), 0);
+  EXPECT_GE(metric_2d.GetLevelForMinValue(kNaN), 0);
+  EXPECT_GE(metric_2d.GetClosestLevel(kNaN), 0);
 }
