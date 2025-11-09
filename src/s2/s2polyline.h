@@ -50,9 +50,10 @@ class S2LatLng;
 class S2PolylineCoder;
 struct S2XYZFaceSiTi;
 
-// An S2Polyline represents a sequence of zero or more vertices connected by
-// straight edges (geodesics).  Edges of length 0 and 180 degrees are not
-// allowed, i.e. adjacent vertices should not be identical or antipodal.
+// Obsolete, see S2LaxPolylineShape. An S2Polyline represents a sequence 
+// of zero or more vertices connected by straight edges (geodesics).  
+// Edges of length 0 and 180 degrees are not allowed, i.e. adjacent 
+// vertices should not be identical or antipodal.
 class S2Polyline final : public S2Region {
  public:
   typedef s2coding::internal::S2LegacyHintCoder<S2Polyline> Coder;
