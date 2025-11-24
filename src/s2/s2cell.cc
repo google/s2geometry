@@ -498,26 +498,87 @@ S1ChordAngle S2Cell::GetMaxDistance(const S2Point& a, const S2Point& b) const {
 }
 
 S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {
-  // If the cells intersect, the distance is zero.  We use the (u,v) ranges
-  // rather S2CellId::intersects() so that cells that share a partial edge or
-  // corner are considered to intersect.
-  if (face_ == target.face_ && uv_.Intersects(target.uv_)) {
-    return S1ChordAngle::Zero();
-  }
-
-  // Otherwise, the minimum distance always occurs between a vertex of one
-  // cell and an edge of the other cell (including the edge endpoints).  This
-  // represents a total of 32 possible (vertex, edge) pairs.
-  //
-  // TODO(ericv): This could be optimized to be at least 5x faster by pruning
-  // the set of possible closest vertex/edge pairs using the faces and (u,v)
-  // ranges of both cells.
   S2Point va[4], vb[4];
   for (int i = 0; i < 4; ++i) {
     va[i] = GetVertex(i);
     vb[i] = target.GetVertex(i);
   }
   S1ChordAngle min_dist = S1ChordAngle::Infinity();
+
+  // If cells are on the same face, we can speed up computation by pruning
+  // edge pairs whose cells are not adjacent in UV space.  Instead of 32
+  // vertex-edge pairs, we only need to check at most 8.  A TODO by ericv@
+  // indicated that a 5x speedup should be possible, but this only yielded a
+  // 2x speedup (and only on the same face).
+  if (face_ == target.face_) {
+    // TODO: b/284470618 - We don't need all the vertices.  See if it's better
+    // to compute only those we need.
+
+    // TODO: b/284470618 - It's always ok to check do extra checks.  See if
+    // making this branchless is better.
+    if (uv_.x().hi() < target.uv_.x().lo()) {
+      // This cell is left of target.
+      S2::UpdateMinDistance(va[kRightEdge], vb[kLeftEdge], vb[kBottomEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(va[kTopEdge], vb[kLeftEdge], vb[kBottomEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kBottomEdge], va[kRightEdge], va[kTopEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kLeftEdge], va[kRightEdge], va[kTopEdge],
+                            &min_dist);
+    } else if (target.uv_.x().hi() < uv_.x().lo()) {
+      // This cell is right of target.
+      S2::UpdateMinDistance(va[kBottomEdge], vb[kRightEdge], vb[kTopEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(va[kLeftEdge], vb[kRightEdge], vb[kTopEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kRightEdge], va[kLeftEdge], va[kBottomEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kTopEdge], va[kLeftEdge], va[kBottomEdge],
+                            &min_dist);
+    }
+    // Note even if cell A is to the right of and below cell B, the minimum
+    // distance does not necessarily occur between the top left vertex
+    // of A and the bottom right vertex of B.  See the
+    // `GetDistanceToCellProjectionExample` test case.
+    if (uv_.y().hi() < target.uv_.y().lo()) {
+      // This cell is below target.
+      S2::UpdateMinDistance(va[kTopEdge], vb[kBottomEdge], vb[kRightEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(va[kLeftEdge], vb[kBottomEdge], vb[kRightEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kBottomEdge], va[kTopEdge], va[kLeftEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kRightEdge], va[kTopEdge], va[kLeftEdge],
+                            &min_dist);
+    } else if (target.uv_.y().hi() < uv_.y().lo()) {
+      // This cell is above target.
+      S2::UpdateMinDistance(va[kBottomEdge], vb[kTopEdge], vb[kLeftEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(va[kRightEdge], vb[kTopEdge], vb[kLeftEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kTopEdge], va[kBottomEdge], va[kRightEdge],
+                            &min_dist);
+      S2::UpdateMinDistance(vb[kLeftEdge], va[kBottomEdge], va[kRightEdge],
+                            &min_dist);
+    }
+
+    if (min_dist < S1ChordAngle::Infinity()) {
+      return min_dist;
+    } else {
+      // If we're not above/below/right/left, then the cells intersect, and the
+      // distance is zero.  We use the (u,v) ranges rather than
+      // `S2CellId::intersects()` so that cells that share a partial edge
+      // or corner are considered to intersect.  This is consistent with the
+      // `<` checks above.
+      ABSL_DCHECK(uv_.Intersects(target.uv_));
+      return S1ChordAngle::Zero();
+    }
+  }
+
+  // Otherwise, the minimum distance always occurs between a vertex of one
+  // cell and an edge of the other cell (including the edge endpoints).  This
+  // represents a total of 32 possible (vertex, edge) pairs.
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
       S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &min_dist);
@@ -549,8 +610,8 @@ S1ChordAngle S2Cell::GetMaxDistance(const S2Cell& target) const {
   // cell and an edge of the other cell (including the edge endpoints).  This
   // represents a total of 32 possible (vertex, edge) pairs.
   //
-  // TODO(user): When the maximum distance is at most Pi/2, the maximum is
-  // always attained between a pair of vertices, and this could be made much
+  // TODO: b/284470618 - When the maximum distance is at most Pi/2, the maximum
+  // is always attained between a pair of vertices, and this could be made much
   // faster by testing each vertex pair once rather than the current 4 times.
   S2Point va[4], vb[4];
   for (int i = 0; i < 4; ++i) {
