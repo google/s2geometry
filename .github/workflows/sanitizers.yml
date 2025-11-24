@@ -1,0 +1,107 @@
+name: sanitizers
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+env:
+  GOOGLETEST_VERSION: "1.15.2"
+
+jobs:
+  sanitize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: asan
+            sanitizer: address
+            compile_flags: "-fsanitize=address -fno-omit-frame-pointer"
+            link_flags: "-fsanitize=address -fno-omit-frame-pointer"
+            extra_packages: ""
+          - name: msan
+            sanitizer: memory
+            compile_flags: "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -stdlib=libc++"
+            link_flags: "-fsanitize=memory -fsanitize-memory-track-origins -stdlib=libc++"
+            extra_packages: "libc++-dev libc++abi-dev libunwind-dev"
+          - name: tsan
+            sanitizer: thread
+            compile_flags: "-fsanitize=thread -fno-omit-frame-pointer"
+            link_flags: "-fsanitize=thread -fno-omit-frame-pointer"
+            extra_packages: ""
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+      - name: Install additional packages
+        if: ${{ matrix.extra_packages != '' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.extra_packages }}
+
+      - uses: zacharyburnett/setup-abseil-cpp@713a4383f10b05948a6d9d4906056063c8da1168 # Not a release, but has #423 fix.
+        env:
+          CC: clang
+          CXX: clang++
+        with:
+          cmake-build-args: >-
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            -DCMAKE_CXX_STANDARD=17
+            -DABSL_PROPAGATE_CXX_STD=ON
+            -DABSL_ENABLE_INSTALL=ON
+            -DBUILD_TESTING=off
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+            -DCMAKE_C_FLAGS=${{ matrix.compile_flags }}
+            -DCMAKE_CXX_FLAGS=${{ matrix.compile_flags }}
+            -DCMAKE_EXE_LINKER_FLAGS=${{ matrix.link_flags }}
+            -DCMAKE_SHARED_LINKER_FLAGS=${{ matrix.link_flags }}
+
+      - name: Retrieve googletest v${{ env.GOOGLETEST_VERSION }}
+        run: |
+          wget https://github.com/google/googletest/releases/download/v${{ env.GOOGLETEST_VERSION }}/googletest-${{ env.GOOGLETEST_VERSION }}.tar.gz
+          tar -xzvf googletest-${{ env.GOOGLETEST_VERSION }}.tar.gz
+          echo GOOGLETEST_ROOT=${{ runner.temp }}/googletest-${{ env.GOOGLETEST_VERSION }} >> $GITHUB_ENV
+        working-directory: ${{ runner.temp }}
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Configure sanitizer environment
+        run: |
+          if command -v llvm-symbolizer >/dev/null 2>&1; then
+            echo LLVM_SYMBOLIZER_PATH=$(command -v llvm-symbolizer) >> $GITHUB_ENV
+          fi
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_PREFIX_PATH=/usr/local/ \
+            -DGOOGLETEST_ROOT=${{ env.GOOGLETEST_ROOT }} \
+            -DGOOGLETEST_VERSION=${{ env.GOOGLETEST_VERSION }} \
+            -DCMAKE_C_FLAGS="${{ matrix.compile_flags }}" \
+            -DCMAKE_CXX_FLAGS="${{ matrix.compile_flags }}" \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.link_flags }}" \
+            -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.link_flags }}"
+
+      - name: Build
+        run: cmake --build build --parallel 45
+
+      - name: Test
+        run: cmake --build build --parallel 45 --target test
+        env:
+          CTEST_OUTPUT_ON_FAILURE: ON
+          CTEST_PARALLEL_LEVEL: 45
+          ASAN_OPTIONS: ${{ matrix.sanitizer == 'address' && 'detect_leaks=1' || '' }}
+          TSAN_OPTIONS: ${{ matrix.sanitizer == 'thread' && 'halt_on_error=1' || '' }}
+          MSAN_OPTIONS: ${{ matrix.sanitizer == 'memory' && 'exitcode=1' || '' }}
