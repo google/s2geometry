@@ -24,7 +24,7 @@ description: The s2geometry.io website
 url: "http://s2geometry.io"
 
 # the subpath of your site. The main Abseil website is not on a subpath
-baseurl: ""
+baseurl: "/s2geometry"
 
 # host: 0.0.0.0 is required for local development.
 host: 0.0.0.0
