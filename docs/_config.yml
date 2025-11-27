@@ -1,0 +1,57 @@
+# Welcome to Jekyll!
+#
+# This config file is meant for settings that affect your whole blog, values
+# which you are expected to set up once and rarely edit after that. If you find
+# yourself editing this file very often, consider using Jekyll's data files
+# feature for the data you need to update frequently.
+#
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'bundle exec jekyll serve'. If you change this file, please restart the server process.
+
+# Site settings
+# These are used to personalize your new site. If you look in the HTML files,
+# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
+# You can create any custom variable you would like, and they will be accessible
+# in the templates via {{ site.myvariable }}.
+
+# Not currently used
+title: S2Geometry
+email: s2geometry-io@googlegroups.com
+description: The s2geometry.io website
+
+# The base hostname & protocol for your site, e.g. http://example.com
+# This site.url path is required by the RSS feed.xml
+url: "http://s2geometry.io"
+
+# the subpath of your site. The main Abseil website is not on a subpath
+baseurl: ""
+
+# host: 0.0.0.0 is required for local development.
+host: 0.0.0.0
+
+# Build settings
+markdown: kramdown
+theme: minima
+
+# Minima Navigation Config
+header_pages:
+  - getS2.md
+  - about/index.md
+  - devguide/index.md
+  - community/index.md
+  - resources/index.md
+
+# RSS / Blog configuration settings
+gems:
+  - jekyll-feed
+timezone: "America/New_York"
+
+# Set these false for production, true for staging server
+future: false
+unpublished: false
+show_drafts: false
+  
+# Exclusions
+exclude:
+  - Gemfile
+  - Gemfile.lock
