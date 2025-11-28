@@ -602,17 +602,35 @@ TEST(S2Cell, GetDistanceToCellHighErrorExample) {
   EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
 }
 
-TEST(S2Cell, GetDistanceToCellProjectionExample) {
+TEST(S2Cell, GetDistanceToCellProjectionExample1) {
   // In uv space, `cell1` is to the slightly to the right right of `cell2` and
   // significantly below it.  The minimum distance is achieved with the lower
   // *left* vertex of `cell2`, even though `cell1` is to the right of `cell2`.
-  // `cell1`'s shape is:
+  // This demonstrates we need to use the direction with the max uv distance.
+  // After projection onto the sphere, `cell1`'s shape is:
   //    ╱│
   //   ╱ │
   //  │ ╱
   //  │╱
   S2Cell cell1(S2CellId::FromDebugString("1/00100000113012032112132121101"));
   S2Cell cell2(S2CellId::FromDebugString("1/333"));
+  S1ChordAngle expected = GetDistanceToCellBruteForce(cell1, cell2);
+  S1ChordAngle actual = cell1.GetDistance(cell2);
+  EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
+}
+
+TEST(S2Cell, GetDistanceToCellProjectionExample2) {
+  // In uv space, `cell1` is far to the left of `cell2` and slightly below it.
+  // The minimum distance is achieved with the *upper* left vertex of `cell2`,
+  // even though `cell1` is below `cell2`.  This demonstrates we need to take
+  // the direction with the max uv distance.  After projection onto the sphere,
+  // both cells are shaped like:
+  //    ╱╲
+  //   ╱  ╲
+  //   ╲  ╱
+  //    ╲╱
+  S2Cell cell1(S2CellId::FromDebugString("2/11033230030133"));
+  S2Cell cell2(S2CellId::FromDebugString("2/222"));
   S1ChordAngle expected = GetDistanceToCellBruteForce(cell1, cell2);
   S1ChordAngle actual = cell1.GetDistance(cell2);
   EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
