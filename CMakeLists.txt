@@ -451,6 +451,7 @@ if(S2_ENABLE_INSTALL)
                 src/s2/util/gtl/densehashtable.h
                 src/s2/util/gtl/hashtable_common.h
                 src/s2/util/gtl/requires.h
+                src/s2/util/gtl/unaligned.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/gtl")
   install(FILES src/s2/util/hash/mix.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/hash")
