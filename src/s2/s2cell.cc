@@ -499,13 +499,13 @@ S1ChordAngle S2Cell::GetMaxDistance(const S2Point& a, const S2Point& b) const {
 
 namespace {
 // Finds the index `ai` of the edge of A that is furthest away from the
-// opposite edge of B in (u,v)-space and B is in that direction from A.
+// opposite edge of B in (u,v)-space such that B is in that direction from A.
 // For example, if A is to the left of B, but not above or below it, then the
 // right edge of A is the furthest edge from the opposite edge of B.  If A is
 // both above and to the left of B, then furthest edge will either be the right
 // or bottom edge of A, depending on which has greater uv distance.  Returns -1
 // if A and B intersect (including edge and vertex intersections).  Used by
-// `GetDistance(const S2Cell&)` below.
+// `GetDistance(const S2Cell&)` and `IsDistanceLess(const S2Cell&)` below.
 ABSL_ATTRIBUTE_ALWAYS_INLINE int FindFurthestEdge(const S2Cell& a,
                                                   const S2Cell& b) {
   int ai = -1;
@@ -551,8 +551,10 @@ S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {
     const S2Point vb2 = target.GetVertex(bi + 1);
     S2::UpdateMinDistance(va1, vb1, vb2, &min_dist);
     S2::UpdateMinDistance(va2, vb1, vb2, &min_dist);
-    S2::UpdateMinDistance(vb1, va1, va2, &min_dist);
-    S2::UpdateMinDistance(vb2, va1, va2, &min_dist);
+    // The endpoints of `[va1, va2]` have been checked by `UpdateMinDistance`,
+    // so we can use `UpdateMinInteriorDistance`, which is faster.
+    S2::UpdateMinInteriorDistance(vb1, va1, va2, &min_dist);
+    S2::UpdateMinInteriorDistance(vb2, va1, va2, &min_dist);
     return min_dist;
   }
 
@@ -567,7 +569,7 @@ S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
       S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &min_dist);
-      S2::UpdateMinDistance(vb[i], va[j], va[(j + 1) & 3], &min_dist);
+      S2::UpdateMinInteriorDistance(vb[i], va[j], va[(j + 1) & 3], &min_dist);
     }
   }
   return min_dist;
@@ -614,8 +616,68 @@ S1ChordAngle S2Cell::GetMaxDistance(const S2Cell& target) const {
 }
 
 bool S2Cell::IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
-  // TODO: b/284470618 - Use more efficient implementation
-  return GetDistance(target) < limit;
+  // Implementation of this function is similar to `GetDistance(target)`, but
+  // instead of returning the distance, we return true if the distance is less
+  // than the limit, and we can exit early if the limit or distance is zero.
+
+  // It's silly to call this with a zero limit, and in practice, no one does.
+  // One comparison and a well-predicted branch avoids some complexity below.
+  if (ABSL_PREDICT_FALSE(limit <= S1ChordAngle::Zero())) {
+    return false;
+  }
+
+  S1ChordAngle min_dist = S1ChordAngle::Infinity();
+
+  if (face_ == target.face_) {
+    // See `GetDistance(const S2Cell&)` for comments on the implementation.
+    int ai = FindFurthestEdge(*this, target);
+    if (ai < 0) {
+      return true;
+    }
+    int bi = ai ^ 2;
+    const S2Point va1 = GetVertex(ai);
+    const S2Point va2 = GetVertex(ai + 1);
+    const S2Point vb1 = target.GetVertex(bi);
+    const S2Point vb2 = target.GetVertex(bi + 1);
+    if (S2::UpdateMinDistance(va1, vb1, vb2, &min_dist) && min_dist < limit) {
+      return true;
+    }
+    if (S2::UpdateMinDistance(va2, vb1, vb2, &min_dist) && min_dist < limit) {
+      return true;
+    }
+    if (S2::UpdateMinInteriorDistance(vb1, va1, va2, &min_dist) &&
+        min_dist < limit) {
+      return true;
+    }
+    if (S2::UpdateMinInteriorDistance(vb2, va1, va2, &min_dist) &&
+        min_dist < limit) {
+      return true;
+    }
+    return false;
+  }
+
+  // Otherwise, the minimum distance always occurs between a vertex of one
+  // cell and an edge of the other cell (including the edge endpoints).  This
+  // represents a total of 32 possible (vertex, edge) pairs.
+  S2Point va[4], vb[4];
+  for (int i = 0; i < 4; ++i) {
+    va[i] = GetVertex(i);
+    vb[i] = target.GetVertex(i);
+  }
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      if (S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &min_dist) &&
+          min_dist < limit) {
+        return true;
+      }
+      if (S2::UpdateMinInteriorDistance(vb[i], va[j], va[(j + 1) & 3],
+                                        &min_dist) &&
+          min_dist < limit) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 bool S2Cell::IsDistanceLessOrEqual(const S2Cell& target,

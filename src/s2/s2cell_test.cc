@@ -541,13 +541,12 @@ static S1ChordAngle GetMaxDistanceToPointBruteForce(const S2Cell& cell,
 }
 
 // Previous implementation of `S2Cell::GetDistance(const S2Cell&)`.
-static S1ChordAngle GetDistanceToCellBruteForce(const S2Cell& cell1,
-                                                const S2Cell& cell2) {
+static S1ChordAngle GetDistanceToCellBruteForce(const S2Cell& a,
+                                                const S2Cell& b) {
   // If the cells intersect, the distance is zero.  We use the (u,v) ranges
   // rather S2CellId::intersects() so that cells that share a partial edge or
   // corner are considered to intersect.
-  if (cell1.face() == cell2.face() &&
-      cell1.GetBoundUV().Intersects(cell2.GetBoundUV())) {
+  if (a.face() == b.face() && a.GetBoundUV().Intersects(b.GetBoundUV())) {
     return S1ChordAngle::Zero();
   }
 
@@ -556,8 +555,8 @@ static S1ChordAngle GetDistanceToCellBruteForce(const S2Cell& cell1,
   // represents a total of 32 possible (vertex, edge) pairs.
   S2Point va[4], vb[4];
   for (int i = 0; i < 4; ++i) {
-    va[i] = cell1.GetVertex(i);
-    vb[i] = cell2.GetVertex(i);
+    va[i] = a.GetVertex(i);
+    vb[i] = b.GetVertex(i);
   }
   S1ChordAngle min_dist = S1ChordAngle::Infinity();
   for (int i = 0; i < 4; ++i) {
@@ -591,10 +590,10 @@ TEST(S2Cell, GetDistanceToCell) {
   }
 }
 
-TEST(S2Cell, GetDistanceToCellHighErrorExample) {
+TEST(S2Cell, GetDistanceToCellHighDifferenceExample) {
   // This is a test case extracted from `GetDistanceToCell`; it achieved
-  // the maximum error over 100M iterations, so is useful to understand
-  // the errors and as a shortcut for testing.
+  // the maximum difference to the brute-force implementation over 100M
+  // iterations, so is useful as a shortcut for testing.
   S2Cell cell1(S2CellId::FromDebugString("4/0112122"));
   S2Cell cell2(S2CellId::FromDebugString("4/2110333"));
   S1ChordAngle expected = GetDistanceToCellBruteForce(cell1, cell2);
