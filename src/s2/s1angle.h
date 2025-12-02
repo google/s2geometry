@@ -42,7 +42,7 @@ class S2LatLng;
 // The internal representation is a double-precision value in radians, so
 // conversion to and from radians is exact.  Conversions between E5, E6, E7,
 // and Degrees are not always exact; for example, Degrees(3.1) is different
-// from E6(3100000) or E7(310000000).  However, the following properties are
+// from E6(3100000) or E7(31000000).  However, the following properties are
 // guaranteed for any integer "n", provided that "n" is in the input range of
 // both functions:
 //
