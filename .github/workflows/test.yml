@@ -43,7 +43,7 @@ jobs:
           tar -xzvf googletest-${{ env.GOOGLETEST_VERSION }}.tar.gz
           echo GOOGLETEST_ROOT=${{ runner.temp }}/googletest-${{ env.GOOGLETEST_VERSION }} >> $GITHUB_ENV
         working-directory: ${{ runner.temp }}
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - run: mkdir build
       - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DGOOGLETEST_ROOT=${{ env.GOOGLETEST_ROOT }} -DGOOGLETEST_VERSION=${{ env.GOOGLETEST_VERSION }} ..
         working-directory: build/
