@@ -67,12 +67,12 @@ ExactFloat::ExactFloat(double v) {
 // Calculates abs(v) without UB.  SafeAbs(INT_MIN) == INT_MIN.
 // Generates the same code as std::abs().
 // https://godbolt.org/z/eT6KW1zGb
-int SafeAbs(int v) { return v < 0 ? -static_cast<unsigned>(v) : v; }
+unsigned SafeAbs(int v) { return v < 0 ? -static_cast<unsigned>(v) : v; }
 
 ExactFloat::ExactFloat(int v) {
   sign_ = (v >= 0) ? 1 : -1;
   bn_exp_ = 0;
-  bn_ = Bignum(static_cast<unsigned>(SafeAbs(v)));
+  bn_ = Bignum(SafeAbs(v));
   Canonicalize();
 }
 
