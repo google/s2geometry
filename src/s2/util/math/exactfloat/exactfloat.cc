@@ -67,9 +67,7 @@ ExactFloat::ExactFloat(double v) {
 // Calculates abs(v) without UB.  SafeAbs(INT_MIN) == INT_MIN.
 // Generates the same code as std::abs().
 // https://godbolt.org/z/eT6KW1zGb
-int SafeAbs(int v) {
-  return v < 0 ? -static_cast<unsigned>(v) : v;
-}
+int SafeAbs(int v) { return v < 0 ? -static_cast<unsigned>(v) : v; }
 
 ExactFloat::ExactFloat(int v) {
   sign_ = (v >= 0) ? 1 : -1;
@@ -99,7 +97,7 @@ ExactFloat ExactFloat::NaN() {
 int ExactFloat::prec() const { return bit_width(bn_); }
 
 int ExactFloat::exp() const {
-  ABSL_DCHECK(is_normal());
+  ABSL_DCHECK(isnormal(*this));
   return bn_exp_ + bit_width(bn_);
 }
 
@@ -123,11 +121,15 @@ void ExactFloat::set_nan() {
 
 int fpclassify(ExactFloat const& x) {
   switch (x.bn_exp_) {
-    case ExactFloat::kExpNaN:      return FP_NAN;
-    case ExactFloat::kExpInfinity: return FP_INFINITE;
-    case ExactFloat::kExpZero:     return FP_ZERO;
+    case ExactFloat::kExpNaN:
+      return FP_NAN;
+    case ExactFloat::kExpInfinity:
+      return FP_INFINITE;
+    case ExactFloat::kExpZero:
+      return FP_ZERO;
     // There are no subnormal `ExactFloat`s.
-    default:                       return FP_NORMAL;
+    default:
+      return FP_NORMAL;
   }
 }
 
@@ -143,7 +145,7 @@ ExactFloat::operator double() const {
 
 double ExactFloat::ToDoubleHelper() const {
   ABSL_DCHECK_LE(bit_width(bn_), kDoubleMantissaBits);
-  if (!is_normal()) {
+  if (!isnormal(*this)) {
     if (is_zero()) return copysign(0, sign_);
     if (isinf(*this)) {
       return std::copysign(std::numeric_limits<double>::infinity(), sign_);
