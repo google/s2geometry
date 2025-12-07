@@ -639,21 +639,14 @@ bool S2Cell::IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
     const S2Point va2 = GetVertex(ai + 1);
     const S2Point vb1 = target.GetVertex(bi);
     const S2Point vb2 = target.GetVertex(bi + 1);
-    if (S2::UpdateMinDistance(va1, vb1, vb2, &min_dist) && min_dist < limit) {
-      return true;
-    }
-    if (S2::UpdateMinDistance(va2, vb1, vb2, &min_dist) && min_dist < limit) {
-      return true;
-    }
-    if (S2::UpdateMinInteriorDistance(vb1, va1, va2, &min_dist) &&
-        min_dist < limit) {
-      return true;
-    }
-    if (S2::UpdateMinInteriorDistance(vb2, va1, va2, &min_dist) &&
-        min_dist < limit) {
-      return true;
-    }
-    return false;
+    return (S2::UpdateMinDistance(va1, vb1, vb2, &min_dist) &&
+            min_dist < limit) ||
+           (S2::UpdateMinDistance(va2, vb1, vb2, &min_dist) &&
+            min_dist < limit) ||
+           (S2::UpdateMinInteriorDistance(vb1, va1, va2, &min_dist) &&
+            min_dist < limit) ||
+           (S2::UpdateMinInteriorDistance(vb2, va1, va2, &min_dist) &&
+            min_dist < limit);
   }
 
   // Otherwise, the minimum distance always occurs between a vertex of one
