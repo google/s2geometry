@@ -929,7 +929,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitCovering() {
   if (next.id() != last.id()) {
     // The index has at least two cells.  Choose a level such that the entire
     // index can be spanned with at most 6 cells (if the index spans multiple
-    // faces) or 4 cells (it the index spans a single face).
+    // faces) or 4 cells (if the index spans a single face).
     int level = next.id().GetCommonAncestorLevel(last.id()) + 1;
 
     // Visit each potential top-level cell except the last (handled below).
