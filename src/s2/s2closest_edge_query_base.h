@@ -305,8 +305,6 @@ class S2ClosestEdgeQueryBase {
   void FindClosestEdgesOptimized(std::optional<ResultVisitor> visitor = {});
   void InitQueue();
   void InitCovering();
-  void AddInitialRange(const S2ShapeIndex::Iterator& first,
-                       const S2ShapeIndex::Iterator& last);
   void MaybeAddResult(const S2Shape& shape, int shape_id, int edge_id);
   void AddResult(const Result& result);
   void ProcessEdges(const QueueEntry& entry);
@@ -921,53 +919,55 @@ void S2ClosestEdgeQueryBase<Distance>::InitCovering() {
   // Don't need to reserve index_cells_ since it is an InlinedVector.
   index_covering_.reserve(6);
 
-  // TODO(ericv): Use a single iterator (iter_) below and save position
-  // information using pair<S2CellId, const S2ShapeIndexCell*> type.
-  S2ShapeIndex::Iterator next(index_, S2ShapeIndex::BEGIN);
-  S2ShapeIndex::Iterator last(index_, S2ShapeIndex::END);
-  last.Prev();
-  if (next.id() != last.id()) {
-    // The index has at least two cells.  Choose a level such that the entire
-    // index can be spanned with at most 6 cells (if the index spans multiple
-    // faces) or 4 cells (it the index spans a single face).
-    int level = next.id().GetCommonAncestorLevel(last.id()) + 1;
+  S2ShapeIndex::Iterator iter(index_, S2ShapeIndex::BEGIN);
 
-    // Visit each potential top-level cell except the last (handled below).
-    S2CellId last_id = last.id().parent(level);
-    for (S2CellId id = next.id().parent(level); id != last_id; id = id.next()) {
-      // Skip any top-level cells that don't contain any index cells.
-      if (id.range_max() < next.id()) continue;
+  using IndexPosition = std::pair<S2CellId, const S2ShapeIndexCell*>;
 
-      // Find the range of index cells contained by this top-level cell and
-      // then shrink the cell if necessary so that it just covers them.
-      S2ShapeIndex::Iterator cell_first = next;
-      next.Seek(id.range_max().next());
-      S2ShapeIndex::Iterator cell_last = next;
-      cell_last.Prev();
-      AddInitialRange(cell_first, cell_last);
-    }
+  IndexPosition first = {iter.id(), &iter.cell()};
+  iter.Finish();
+  iter.Prev();
+  IndexPosition last = {iter.id(), &iter.cell()};
+
+  if (first.first == last.first) {
+    index_covering_.push_back(first.first);
+    index_cells_.push_back(first.second);
+    return;
   }
-  AddInitialRange(next, last);
-}
 
-// Add an entry to index_covering_ and index_cells_ that covers the given
-// inclusive range of cells.
-//
-// REQUIRES: "first" and "last" have a common ancestor.
-template <class Distance>
-void S2ClosestEdgeQueryBase<Distance>::AddInitialRange(
-    const S2ShapeIndex::Iterator& first,
-    const S2ShapeIndex::Iterator& last) {
-  if (first.id() == last.id()) {
-    // The range consists of a single index cell.
-    index_covering_.push_back(first.id());
-    index_cells_.push_back(&first.cell());
-  } else {
-    // Add the lowest common ancestor of the given range.
-    int level = first.id().GetCommonAncestorLevel(last.id());
-    ABSL_DCHECK_GE(level, 0);
-    index_covering_.push_back(first.id().parent(level));
-    index_cells_.push_back(nullptr);
+  // The index has at least two cells.  Choose a level such that the entire
+  // index can be spanned with at most 6 cells (if the index spans multiple
+  // faces) or 4 cells (if the index spans a single face).
+  int level = first.first.GetCommonAncestorLevel(last.first) + 1;
+
+  // Visit each top-level cell.
+  iter.Begin();
+  S2CellId last_top_level = last.first.parent(level);
+  for (S2CellId id = first.first.parent(level); ; id = id.next()) {
+    // Skip any top-level cells that don't contain any index cells.
+    if (id.range_max() < iter.id()) {
+      if (id == last_top_level) break;
+      continue;
+    }
+
+    // Find the range of index cells contained by this top-level cell and
+    // then shrink the cell if necessary so that it just covers them.
+    IndexPosition cell_first = {iter.id(), &iter.cell()};
+    iter.Seek(id.range_max().next());
+    iter.Prev();
+    IndexPosition cell_last = {iter.id(), &iter.cell()};
+
+    if (cell_first.first == cell_last.first) {
+      index_covering_.push_back(cell_first.first);
+      index_cells_.push_back(cell_first.second);
+    } else {
+      int ancestor_level = cell_first.first.GetCommonAncestorLevel(cell_last.first);
+      ABSL_DCHECK_GE(ancestor_level, 0);
+      index_covering_.push_back(cell_first.first.parent(ancestor_level));
+      index_cells_.push_back(nullptr);
+    }
+
+    if (id == last_top_level) break;
+    iter.Next();
   }
 }
 
