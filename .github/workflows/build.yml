@@ -23,9 +23,10 @@ jobs:
         runs-on:
           - ubuntu-22.04
           - ubuntu-latest
-          - macos-13-large
-          # Can't add macos-13-xlarge due to
-          # https://github.com/zacharyburnett/setup-abseil-cpp/issues/4
+          # `large` is x86-64 and `xlarge` is AArch64.
+          # https://docs.github.com/en/actions/reference/runners/larger-runners#available-macos-larger-runners-and-labels
+          - macos-14-large
+          - macos-14-xlarge
           - macos-latest-large
           - macos-latest-xlarge
       fail-fast: false
