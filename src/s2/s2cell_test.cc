@@ -31,6 +31,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
@@ -537,6 +538,101 @@ static S1ChordAngle GetMaxDistanceToPointBruteForce(const S2Cell& cell,
                                   cell.GetVertex(i + 1), &max_distance);
   }
   return max_distance;
+}
+
+// Previous implementation of `S2Cell::GetDistance(const S2Cell&)`.
+static S1ChordAngle GetDistanceToCellBruteForce(const S2Cell& a,
+                                                const S2Cell& b) {
+  // If the cells intersect, the distance is zero.  We use the (u,v) ranges
+  // rather S2CellId::intersects() so that cells that share a partial edge or
+  // corner are considered to intersect.
+  if (a.face() == b.face() && a.GetBoundUV().Intersects(b.GetBoundUV())) {
+    return S1ChordAngle::Zero();
+  }
+
+  // Otherwise, the minimum distance always occurs between a vertex of one
+  // cell and an edge of the other cell (including the edge endpoints).  This
+  // represents a total of 32 possible (vertex, edge) pairs.
+  S2Point va[4], vb[4];
+  for (int i = 0; i < 4; ++i) {
+    va[i] = a.GetVertex(i);
+    vb[i] = b.GetVertex(i);
+  }
+  S1ChordAngle min_dist = S1ChordAngle::Infinity();
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      if (S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &min_dist)) {
+        ABSL_VLOG(3) << "from a vertex " << i << " to edge b " << j << " "
+                     << ((j + 1) & 3) << " min_dist: " << min_dist.degrees();
+      }
+      if (S2::UpdateMinDistance(vb[i], va[j], va[(j + 1) & 3], &min_dist)) {
+        ABSL_VLOG(3) << "from b vertex " << i << " to edge a " << j << " "
+                     << ((j + 1) & 3) << " min_dist: " << min_dist.degrees();
+      }
+    }
+  }
+  return min_dist;
+}
+
+TEST(S2Cell, GetDistanceToCell) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_DISTANCE_TO_CELL", absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  for (int iter = 0; iter < 10'000; ++iter) {
+    SCOPED_TRACE(StrCat("Iteration ", iter));
+    S2Cell cell1(s2random::CellId(bitgen));
+    S2Cell cell2(s2random::CellId(bitgen));
+    S1ChordAngle expected = GetDistanceToCellBruteForce(cell1, cell2);
+    S1ChordAngle actual = cell1.GetDistance(cell2);
+    EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15)
+        << "cell1: " << cell1.id() << " cell2: " << cell2.id()
+        << " cell1.uv: " << cell1.GetBoundUV()
+        << " cell2.uv: " << cell2.GetBoundUV();
+  }
+}
+
+TEST(S2Cell, GetDistanceToCellHighDifferenceExample) {
+  // This is a test case extracted from `GetDistanceToCell`; it achieved
+  // the maximum difference to the brute-force implementation over 100M
+  // iterations, so is useful as a shortcut for testing.
+  S2Cell cell1(S2CellId::FromDebugString("4/0112122"));
+  S2Cell cell2(S2CellId::FromDebugString("4/2110333"));
+  S1ChordAngle expected = GetDistanceToCellBruteForce(cell1, cell2);
+  S1ChordAngle actual = cell1.GetDistance(cell2);
+  EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
+}
+
+TEST(S2Cell, GetDistanceToCellProjectionExample1) {
+  // In uv space, `cell1` is to the slightly to the right right of `cell2` and
+  // significantly below it.  The minimum distance is achieved with the lower
+  // *left* vertex of `cell2`, even though `cell1` is to the right of `cell2`.
+  // This demonstrates we need to use the direction with the max uv distance.
+  // After projection onto the sphere, `cell1`'s shape is:
+  //    ╱│
+  //   ╱ │
+  //  │ ╱
+  //  │╱
+  S2Cell cell1(S2CellId::FromDebugString("1/00100000113012032112132121101"));
+  S2Cell cell2(S2CellId::FromDebugString("1/333"));
+  S1ChordAngle expected = GetDistanceToCellBruteForce(cell1, cell2);
+  S1ChordAngle actual = cell1.GetDistance(cell2);
+  EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
+}
+
+TEST(S2Cell, GetDistanceToCellProjectionExample2) {
+  // In uv space, `cell1` is far to the left of `cell2` and slightly below it.
+  // The minimum distance is achieved with the *upper* left vertex of `cell2`,
+  // even though `cell1` is below `cell2`.  This demonstrates we need to take
+  // the direction with the max uv distance.  After projection onto the sphere,
+  // both cells are shaped like:
+  //    ╱╲
+  //   ╱  ╲
+  //   ╲  ╱
+  //    ╲╱
+  S2Cell cell1(S2CellId::FromDebugString("2/11033230030133"));
+  S2Cell cell2(S2CellId::FromDebugString("2/222"));
+  S1ChordAngle expected = GetDistanceToCellBruteForce(cell1, cell2);
+  S1ChordAngle actual = cell1.GetDistance(cell2);
+  EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
 }
 
 TEST(S2Cell, GetDistanceToPoint) {
