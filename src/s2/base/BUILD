@@ -1,3 +1,5 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -14,8 +16,8 @@ cc_library(
 
 cc_library(
     name = "malloc_extension",
-    hdrs = ["malloc_extension.h"],
     srcs = ["malloc_extension.cc"],
+    hdrs = ["malloc_extension.h"],
     deps = [
         "@abseil-cpp//absl/base:core_headers",
     ],

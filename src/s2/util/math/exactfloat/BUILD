@@ -1,3 +1,5 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -6,10 +8,12 @@ cc_library(
     hdrs = ["exactfloat.h"],
     deps = [
         "//s2/base:logging",
-        "@abseil-cpp//absl/log:log",
         "@abseil-cpp//absl/log:absl_check",
-        "@boringssl//:crypto",
-    ],
+        "@abseil-cpp//absl/log:log",
+    ] + select({
+        "//:use_openssl_setting": ["@openssl//:crypto"],
+        "//conditions:default": ["@boringssl//:crypto"],
+    }),
 )
 
 cc_test(
