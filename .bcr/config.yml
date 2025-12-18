@@ -1,0 +1,4 @@
+# Configuration for publish-to-bcr
+# The s2geometry Bazel module (MODULE.bazel) is located in the src/ directory
+moduleRoots:
+  - "src"
