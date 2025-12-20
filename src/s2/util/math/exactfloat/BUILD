@@ -6,7 +6,7 @@ cc_library(
     name = "bignum",
     srcs = ["bignum.cc"],
     hdrs = ["bignum.h"],
-    visibility = "//visibility:private",
+    visibility = ["//visibility:private"],
     deps = [
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:inlined_vector",
@@ -31,9 +31,6 @@ cc_library(
         "@abseil-cpp//absl/numeric:bits",
         "@abseil-cpp//absl/numeric:int128",
         "@abseil-cpp//absl/random:random",
-        "@abseil-cpp//absl/strings:ascii",
-        "@abseil-cpp//absl/strings:str_cat",
-        "@abseil-cpp//absl/strings:str_format",
     ] + select({
         "//:use_openssl_setting": ["@openssl//:crypto"],
         "//conditions:default": ["@boringssl//:crypto"],
@@ -48,6 +45,8 @@ cc_test(
         "//:s2_testing_headers",
         "@abseil-cpp//absl/log:log_streamer",
         "@abseil-cpp//absl/random:bit_gen_ref",
+        "@abseil-cpp//absl/strings:str_format",
+        "@abseil-cpp//absl/strings:strings",
         "@boringssl//:crypto",
         "@googletest//:gtest_main",
     ],
