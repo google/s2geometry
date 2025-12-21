@@ -1,5 +1,10 @@
 version: 2
 updates:
+  - package-ecosystem: "bazel"
+    directory: "/src"
+    target-branch: "master"
+    schedule:
+      interval: "daily"
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "master"
