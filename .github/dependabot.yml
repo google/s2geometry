@@ -4,9 +4,9 @@ updates:
     directory: "/src"
     target-branch: "master"
     schedule:
-      interval: "daily"
+      interval: "weekly"
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "master"
     schedule:
-      interval: "daily"
+      interval: "weekly"
