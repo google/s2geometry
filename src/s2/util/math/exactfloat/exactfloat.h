@@ -15,7 +15,7 @@
 
 // Author: ericv@google.com (Eric Veach)
 //
-// ExactFloat is a multiple-precision floating point type that uses the OpenSSL
+// ExactFloat is a multiple-precision floating point type that uses a custom
 // Bignum library for numerical calculations.  It has the same interface as the
 // built-in "float" and "double" types, but only supports the subset of
 // operators and intrinsics where it is possible to compute the result exactly.
@@ -25,10 +25,8 @@
 // algorithms, especially for disambiguating cases where ordinary
 // double-precision arithmetic yields an uncertain result.
 //
-// ExactFloat is a subset of the now-retired MPFloat class, which used the GNU
-// MPFR library for numerical calculations.  The main reason for the switch to
-// ExactFloat is that OpenSSL has a BSD-style license whereas MPFR has a much
-// more restrictive LGPL license.
+// ExactFloat was originally based on OpenSSL's Bignum library, but has been
+// updated to use a custom implementation to remove external dependencies.
 //
 // ExactFloat has the following features:
 //
@@ -95,13 +93,14 @@
 #ifndef S2_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
 #define S2_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
 
+#include <algorithm>
 #include <climits>
 #include <cmath>
 #include <cstdint>
 #include <ostream>
 #include <string>
 
-#include <openssl/bn.h>
+#include "s2/util/math/exactfloat/bignum.h"
 
 namespace exactfloat {
 
@@ -167,13 +166,6 @@ class ExactFloat {
   // the value is exactly representable as a floating-point number (so for
   // example, "0.125" is allowed but "0.1" is not).
   explicit ExactFloat(const char* s) { Unimplemented(); }
-
-  // Copy constructor.
-  ExactFloat(const ExactFloat& b);
-
-  // The destructor is not virtual for efficiency reasons.  Therefore no
-  // subclass should declare additional fields that require destruction.
-  inline ~ExactFloat() = default;
 
   /////////////////////////////////////////////////////////////////////
   // Constants
@@ -313,9 +305,6 @@ class ExactFloat {
 
   /////////////////////////////////////////////////////////////////////////////
   // Operators
-
-  // Assignment operator.
-  ExactFloat& operator=(const ExactFloat& b);
 
   // Unary plus.
   ExactFloat operator+() const { return *this; }
@@ -487,39 +476,7 @@ class ExactFloat {
   friend ExactFloat logb(const ExactFloat& a);
 
  protected:
-  // OpenSSL >= 1.1 does not have BN_init, and does not support stack-
-  // allocated BIGNUMS.  We use BN_init when possible, but BN_new otherwise.
-  // If the performance penalty is too high, an object pool can be added
-  // in the future.
-#if defined(OPENSSL_IS_BORINGSSL)
-  // BoringSSL supports stack allocated BIGNUMs and BN_init.
-  class BigNum {
-   public:
-    BigNum() { BN_init(&bn_); }
-    // Prevent accidental, expensive, copying.
-    BigNum(const BigNum&) = delete;
-    BigNum& operator=(const BigNum&) = delete;
-    ~BigNum() { BN_free(&bn_); }
-    BIGNUM* get() { return &bn_; }
-    const BIGNUM* get() const { return &bn_; }
-
-   private:
-    BIGNUM bn_;
-  };
-#else
-  class BigNum {
-   public:
-    BigNum() : bn_(BN_new()) {}
-    BigNum(const BigNum&) = delete;
-    BigNum& operator=(const BigNum&) = delete;
-    ~BigNum() { BN_free(bn_); }
-    BIGNUM* get() { return bn_; }
-    const BIGNUM* get() const { return bn_; }
-
-   private:
-    BIGNUM* bn_;
-  };
-#endif
+  using Bignum = exactfloat_internal::Bignum;
 
   // Non-normal numbers are represented using special exponent values and a
   // mantissa of zero.  Do not change these values; methods such as
@@ -531,12 +488,16 @@ class ExactFloat {
 
   // Normal numbers are represented as (sign_ * bn_ * (2 ** bn_exp_)), where:
   //  - sign_ is either +1 or -1
-  //  - bn_ is a BIGNUM with a positive value
+  //  - bn_ is a Bignum with a positive value
   //  - bn_exp_ is the base-2 exponent applied to bn_.
-  // Default value is zero.
+  //
+  // bn_ stores the magnitude for the mantissa of the floating point value.  We
+  // store a sign bit here separately from bn_ so that functions like exp() are
+  // easier to reason about (as the sign would flip depending on whether the
+  // exponent were odd or even).
   int32_t sign_ = 1;
   int32_t bn_exp_ = kExpZero;
-  BigNum bn_;
+  Bignum bn_;
 
   // A standard IEEE "double" has a 53-bit mantissa consisting of a 52-bit
   // fraction plus an implicit leading "1" bit.

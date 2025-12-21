@@ -3,17 +3,53 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "exactfloat",
-    srcs = ["exactfloat.cc"],
-    hdrs = ["exactfloat.h"],
+    name = "bignum",
+    srcs = ["bignum.cc"],
+    hdrs = ["bignum.h"],
+    visibility = ["//visibility:private"],
     deps = [
-        "//s2/base:logging",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/container:inlined_vector",
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/log:log",
+    ],
+)
+
+cc_library(
+    name = "exactfloat",
+    srcs = [
+        "exactfloat.cc",
+    ],
+    hdrs = [
+        "exactfloat.h",
+    ],
+    deps = [
+        ":bignum",
+        "//s2/base:logging",
+        "@abseil-cpp//absl/container:inlined_vector",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/log:absl_log",
+        "@abseil-cpp//absl/numeric:bits",
+        "@abseil-cpp//absl/numeric:int128",
+        "@abseil-cpp//absl/random:random",
     ] + select({
         "//:use_openssl_setting": ["@openssl//:crypto"],
         "//conditions:default": ["@boringssl//:crypto"],
     }),
+)
+
+cc_test(
+    name = "bignum_test",
+    srcs = ["bignum_test.cc"],
+    deps = [
+        ":bignum",
+        "//:s2_testing_headers",
+        "@abseil-cpp//absl/log:log_streamer",
+        "@abseil-cpp//absl/random:bit_gen_ref",
+        "@abseil-cpp//absl/strings:str_format",
+        "@abseil-cpp//absl/strings:strings",
+        "@boringssl//:crypto",
+        "@googletest//:gtest_main",
+    ],
 )
 
 cc_test(
@@ -34,6 +70,7 @@ cc_test(
     srcs = ["exactfloat_underflow_test.cc"],
     deps = [
         ":exactfloat",
+        "@abseil-cpp//absl/random:random",
         "@googletest//:gtest_main",
     ],
 )

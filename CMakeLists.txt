@@ -60,7 +60,6 @@ add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 if (NOT TARGET absl::base)
     find_package(absl REQUIRED)
 endif()
-find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 
@@ -215,6 +214,7 @@ add_library(s2
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/coding/coder.cc
             src/s2/util/coding/varint.cc
+            src/s2/util/math/exactfloat/bignum.cc
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
@@ -230,7 +230,6 @@ endif()
 
 target_link_libraries(
     s2
-    ${OPENSSL_LIBRARIES}
     absl::absl_vlog_is_on
     absl::base
     absl::btree
@@ -459,7 +458,8 @@ if(S2_ENABLE_INSTALL)
                 src/s2/util/math/matrix3x3.h
                 src/s2/util/math/vector.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math")
-  install(FILES src/s2/util/math/exactfloat/exactfloat.h
+  install(FILES src/s2/util/math/exactfloat/bignum.h
+                src/s2/util/math/exactfloat/exactfloat.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math/exactfloat")
   install(FILES src/s2/util/units/length-units.h
                 src/s2/util/units/physical-units.h
@@ -489,6 +489,8 @@ if(S2_ENABLE_INSTALL)
 endif() # S2_ENABLE_INSTALL
 
 if (BUILD_TESTS)
+  find_package(OpenSSL REQUIRED)
+
   if (NOT GOOGLETEST_ROOT)
     message(FATAL_ERROR "BUILD_TESTS requires GOOGLETEST_ROOT")
   endif()
@@ -620,6 +622,7 @@ if (BUILD_TESTS)
       src/s2/s2wrapped_shape_test.cc
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc
+      src/s2/util/math/exactfloat/bignum_test.cc
       src/s2/util/math/exactfloat/exactfloat_test.cc
       src/s2/util/math/exactfloat/exactfloat_underflow_test.cc)
 
@@ -630,6 +633,7 @@ if (BUILD_TESTS)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
+        ${OPENSSL_CRYPTO_LIBRARIES}
         s2testing s2
         absl::base
         absl::btree
