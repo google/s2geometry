@@ -1,0 +1,21 @@
+matrix:
+  platform:
+    - ubuntu2404
+    - macos
+    - macos_arm64
+  bazel: [7.x, 8.x, 9.*]
+tasks:
+  verify_targets:
+    name: Verify build targets
+    platform: ${{ platform }}
+    bazel: ${{ bazel }}
+    build_flags:
+      - "--cxxopt=-std=c++17"
+      - "--host_cxxopt=-std=c++17"
+    build_targets:
+      - "@s2geometry//:s2"
+    test_targets:
+      - "@s2geometry//:all"
+    test_flags:
+      - "--cxxopt=-std=c++17"
+      - "--host_cxxopt=-std=c++17"

@@ -1,0 +1,33 @@
+# Automated publication to Bazel Central Registry (BCR)
+# See https://github.com/bazel-contrib/publish-to-bcr
+
+name: Publish to BCR
+
+on:
+  # Automatically publish when a release is created
+  release:
+    types: [released]
+  
+  # Allow manual triggering for testing or retry
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Git tag to publish (e.g., v0.13.0)'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.0.0
+    with:
+      tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
+      # Enable attestations for enhanced security
+      attest: true
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    secrets:
+      # This secret must be set in repository settings
+      # See .bcr/README.md for setup instructions
+      publish_token: ${{ secrets.BCR_PUBLISH_TOKEN }}
