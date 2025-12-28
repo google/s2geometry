@@ -28,15 +28,16 @@
 #include "benchmark/benchmark.h"
 #endif
 
+#include <gtest/gtest.h>
+#include <openssl/bn.h>
+#include <openssl/crypto.h>
+
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "gtest/gtest.h"
-#include "openssl/bn.h"
-#include "openssl/crypto.h"
 #include "s2/s2testing.h"
 
 namespace exactfloat_internal {

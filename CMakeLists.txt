@@ -633,7 +633,6 @@ if (BUILD_TESTS)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
-        ${OPENSSL_CRYPTO_LIBRARIES}
         s2testing s2
         absl::base
         absl::btree
@@ -651,6 +650,11 @@ if (BUILD_TESTS)
         gmock_main)
     add_test(${test} ${test})
   endforeach()
+
+  target_link_libraries(
+    bignum_test
+    ${OPENSSL_CRYPTO_LIBRARIES})
+
 endif()
 
 if (BUILD_EXAMPLES AND TARGET s2testing)
