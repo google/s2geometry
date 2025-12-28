@@ -10,11 +10,11 @@ module(
 # Production dependencies
 bazel_dep(name = "abseil-cpp", version = "20250814.1")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
-bazel_dep(name = "boringssl", version = "0.20251124.0")
-bazel_dep(name = "openssl", version = "3.5.4.bcr.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
 
 # Development dependencies (only needed for tests)
+bazel_dep(name = "boringssl", version = "0.20251124.0", dev_dependency = True)
+bazel_dep(name = "openssl", version = "3.5.4.bcr.0", dev_dependency = True)
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 
 # Extensions
