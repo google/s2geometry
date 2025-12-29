@@ -20,6 +20,7 @@
 
 #include <memory>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_log.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
@@ -215,7 +216,7 @@ class S2WindingOperation {
   //
   // REQUIRES: error->ok() [an existing error will not be overwritten]
   bool Build(const S2Point& ref_p, int ref_winding, WindingRule rule,
-             S2Error* error);
+             S2Error* absl_nonnull error);
 
  private:
   // Most of the implementation is in the WindingLayer class.

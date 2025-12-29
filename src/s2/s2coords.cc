@@ -17,6 +17,7 @@
 
 #include "s2/s2coords.h"
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
 #include "s2/s2point.h"
@@ -28,14 +29,15 @@ S2Point FaceXYZtoUVW(int face, const S2Point& p) {
   // axes for the given face (see kFaceUVWAxes).
   switch (face) {
     // clang-format off
-    case 0:  return S2Point( p.y(),  p.z(),  p.x());
-    case 1:  return S2Point(-p.x(),  p.z(),  p.y());
-    case 2:  return S2Point(-p.x(), -p.y(),  p.z());
-    case 3:  return S2Point(-p.z(), -p.y(), -p.x());
-    case 4:  return S2Point(-p.z(),  p.x(), -p.y());
-    default: return S2Point( p.y(),  p.x(), -p.z());
+    case 0: return S2Point( p.y(),  p.z(),  p.x());
+    case 1: return S2Point(-p.x(),  p.z(),  p.y());
+    case 2: return S2Point(-p.x(), -p.y(),  p.z());
+    case 3: return S2Point(-p.z(), -p.y(), -p.x());
+    case 4: return S2Point(-p.z(),  p.x(), -p.y());
+    case 5: return S2Point( p.y(),  p.x(), -p.z());
     // clang-format on
   }
+  ABSL_UNREACHABLE();
 }
 
 int XYZtoFaceSiTi(const S2Point& p, int* face, unsigned int* si,

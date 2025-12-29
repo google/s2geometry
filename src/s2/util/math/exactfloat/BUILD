@@ -21,11 +21,11 @@ cc_test(
     srcs = ["exactfloat_test.cc"],
     deps = [
         ":exactfloat",
+        "//s2/testing:test_main",
         "//s2/util/math:vector",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/log:absl_log",
         "@abseil-cpp//absl/random",
-        "@googletest//:gtest_main",
     ],
 )
 
@@ -34,6 +34,6 @@ cc_test(
     srcs = ["exactfloat_underflow_test.cc"],
     deps = [
         ":exactfloat",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )

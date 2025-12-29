@@ -21,7 +21,6 @@
 #define S2_UTIL_HASH_MIX_H_
 
 #include <cstddef>
-
 #include <limits>
 
 

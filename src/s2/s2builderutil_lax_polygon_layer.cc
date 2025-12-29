@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
@@ -138,13 +139,13 @@ static void DiscardEdges(const Graph& g,
   ABSL_DCHECK(it == edges_to_discard.end());
 }
 
-static void MaybeAddFullLoop(
-    const Graph& g, vector<vector<S2Point>>* loops, S2Error* error) {
+static void MaybeAddFullLoop(const Graph& g, vector<vector<S2Point>>* loops,
+                             S2Error* absl_nonnull error) {
   if (g.IsFullPolygon(error)) {
     loops->push_back({});  // Full loop.
   }
 }
-void LaxPolygonLayer::BuildDirected(Graph g, S2Error* error) {
+void LaxPolygonLayer::BuildDirected(Graph g, S2Error* absl_nonnull error) {
   // Some cases are implemented by constructing a new graph with certain
   // degenerate edges removed (overwriting "g").  "new_edges" is where the
   // edges for the new graph are stored.
@@ -206,7 +207,7 @@ void LaxPolygonLayer::BuildDirected(Graph g, S2Error* error) {
   polygon_->Init(loops);
 }
 
-void LaxPolygonLayer::Build(const Graph& g, S2Error* error) {
+void LaxPolygonLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   if (label_set_ids_) label_set_ids_->clear();
   if (g.options().edge_type() == EdgeType::DIRECTED) {
     BuildDirected(g, error);

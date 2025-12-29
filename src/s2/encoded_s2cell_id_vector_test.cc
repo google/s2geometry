@@ -269,5 +269,28 @@ TEST(EncodedS2CellIdVector, LowerBoundLimits) {
   EXPECT_EQ(2, cell_ids.lower_bound(S2CellId::Sentinel()));
 }
 
+void EncodedS2CellIdVectorInitNeverCrashes(const vector<uint8_t>& bytes,
+                                           const uint64_t lower_bound) {
+  Decoder decoder(bytes.data(), bytes.size());
+  EncodedS2CellIdVector cell_ids;
+  if (!cell_ids.Init(&decoder)) {
+    return;
+  }
+
+  const S2CellId cell_id(lower_bound);
+  if (!cell_id.is_valid()) {
+    return;
+  }
+  cell_ids.lower_bound(cell_id);
+}
+
+TEST(EncodedS2CellIdVector, EncodedS2CellIdVectorInitNeverCrashesRegression) {
+  // This would overflow the size_ * len_ check in EncodedUintVector and let it
+  // erroneously proceed to decoding, causing a segfault.
+  EncodedS2CellIdVectorInitNeverCrashes(
+    {32, 135, 128, 128, 128, 48, 39, 132, 143, 84},
+    7059594055645134713
+  );
+}
 }  // namespace
 }  // namespace s2coding

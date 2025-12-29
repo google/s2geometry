@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -55,25 +56,29 @@ void StringVectorEncoder::Encode(Span<const string> v, Encoder* encoder) {
 
 bool EncodedStringVector::Init(Decoder* decoder) {
   if (!offsets_.Init(decoder)) return false;
-  data_ = decoder->skip(0);
-  uint64_t length = 0;
-  for (int i = 0, n = offsets_.size(); i < n; ++i) {
-    // Strings are packed sequentially, offsets_[i] representing end of item i.
-    // String length is diff of two sequential offsets, thus the offsets should
-    // not decrease, otherwise we might read memory beyond the end of data.
-    if (offsets_[i] < length) return false;
-    length = offsets_[i];
+  if (offsets_.size() > 0) {
+    uint64_t length = offsets_[offsets_.size() - 1];
+    if (decoder->avail() < length) return false;
+    data_ = absl::string_view(decoder->skip(0), length);
+    decoder->skip(length);
+  } else {
+    data_ = absl::string_view();
   }
-  if (decoder->avail() < length) return false;
-  decoder->skip(length);
   return true;
 }
 
 vector<string_view> EncodedStringVector::Decode() const {
   size_t n = size();
   vector<string_view> result(n);
+  uint64_t start = 0;
   for (size_t i = 0; i < n; ++i) {
-    result[i] = (*this)[i];
+    uint64_t limit = offsets_[i];
+    // Check bounds, skip invalid values, but continue decoding to provide
+    // consistency between Decode() and operator[].
+    if (start <= limit && limit <= data_.size()) {
+      result[i] = data_.substr(start, limit - start);
+    }
+    start = limit;
   }
   return result;
 }
@@ -83,9 +88,9 @@ void EncodedStringVector::Encode(Encoder* encoder) const {
   offsets_.Encode(encoder);
 
   if (offsets_.size() > 0) {
-    const uint64_t length = offsets_[offsets_.size() - 1];
-    encoder->Ensure(length);
-    encoder->putn(data_, length);
+    ABSL_DCHECK_EQ(data_.size(), offsets_[offsets_.size() - 1]);
+    encoder->Ensure(data_.size());
+    encoder->putn(data_.data(), data_.size());
   }
 }
 

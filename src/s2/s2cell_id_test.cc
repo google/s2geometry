@@ -21,15 +21,18 @@
 #include <cmath>
 #include <cstdint>
 #include <ios>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "absl/base/macros.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/flags/flag.h"
 #include "absl/flags/marshalling.h"
 #include "absl/hash/hash_testing.h"
 #include "absl/log/absl_check.h"
@@ -689,7 +692,7 @@ static R2Point ProjectToBoundary(const R2Point& uv, const R2Rect& rect) {
   double du1 = fabs(uv[0] - rect[0][1]);
   double dv0 = fabs(uv[1] - rect[1][0]);
   double dv1 = fabs(uv[1] - rect[1][1]);
-  double dmin = min(min(du0, du1), min(dv0, dv1));
+  double dmin = min({du0, du1, dv0, dv1});
   if (du0 == dmin) return R2Point(rect[0][0], rect[1].Project(uv[1]));
   if (du1 == dmin) return R2Point(rect[0][1], rect[1].Project(uv[1]));
   if (dv0 == dmin) return R2Point(rect[0].Project(uv[0]), rect[1][0]);
@@ -818,3 +821,171 @@ TEST(S2CellId, SupportsAbslHash) {
     S2CellId::FromFacePosLevel(0, 0, 1),
   }));
 }
+
+static void BM_ToPointControl(benchmark::State& state) {
+  // Test speed of conversions from points to leaf cells.
+  S2CellId begin = S2CellId::Begin(S2CellId::kMaxLevel);
+  S2CellId end = S2CellId::End(S2CellId::kMaxLevel);
+  uint64_t delta = (end.id() - begin.id()) / state.max_iterations;
+  delta &= ~1ULL;  // Make sure all ids are leaf cells.
+
+  S2CellId id = begin;
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(id);
+    id = S2CellId(id.id() + delta);
+  }
+}
+BENCHMARK(BM_ToPointControl);
+
+static void BM_ToPointRaw(benchmark::State& state) {
+  S2CellId begin = S2CellId::Begin(S2CellId::kMaxLevel);
+  S2CellId end = S2CellId::End(S2CellId::kMaxLevel);
+  uint64_t delta = (end.id() - begin.id()) / state.max_iterations;
+  delta &= ~1ULL;  // Make sure all ids are leaf cells.
+
+  S2CellId id = begin;
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(id.ToPointRaw());
+    id = S2CellId(id.id() + delta);
+  }
+}
+BENCHMARK(BM_ToPointRaw);
+
+static void BM_ToPoint(benchmark::State& state) {
+  S2CellId begin = S2CellId::Begin(S2CellId::kMaxLevel);
+  S2CellId end = S2CellId::End(S2CellId::kMaxLevel);
+  uint64_t delta = (end.id() - begin.id()) / state.max_iterations;
+  delta &= ~1ULL;  // Make sure all ids are leaf cells.
+
+  S2CellId id = begin;
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(id.ToPoint());
+    id = S2CellId(id.id() + delta);
+  }
+}
+BENCHMARK(BM_ToPoint);
+
+static void BM_FromPointControl(benchmark::State& state) {
+  // The sample points follow a spiral curve that completes one revolution
+  // around the z-axis every 1/dt samples.  The z-coordinate increases
+  // from -4 to +4 over iters samples.
+
+  S2Point start(1, 0, -4);
+  double dz = (-2 * start.z()) / state.max_iterations;
+  double dt = 1.37482937133e-4;
+
+  // Test speed of conversions from leaf cells to points.
+  S2Point p = start;
+  for (auto _ : state) {
+    // Cheap rotation around the z-axis (spirals inward slightly
+    // each revolution).
+    p += S2Point(-dt * p.y(), dt * p.x(), dz);
+    benchmark::DoNotOptimize(p);
+  }
+}
+BENCHMARK(BM_FromPointControl);
+
+static void BM_FromPoint(benchmark::State& state) {
+  S2Point start(1, 0, -4);
+  double dz = (-2 * start.z()) / state.max_iterations;
+  double dt = 1.37482937133e-4;
+
+  S2Point p = start;
+  for (auto _ : state) {
+    p += S2Point(-dt * p.y(), dt * p.x(), dz);
+    benchmark::DoNotOptimize(S2CellId(p));
+  }
+}
+BENCHMARK(BM_FromPoint);
+
+static void BM_FromFaceIJ(benchmark::State& state) {
+  const string seed_str =
+      absl::StrCat("BM_FROM_FACE_IJ", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  // Performance of FromFaceIJ isn't input dependent.  Adding more
+  // random number generation calls doesn't change the timings.
+  int face = absl::Uniform(bitgen, 0, S2CellId::kNumFaces);
+  // (i, j) are in [0, 2**30 - 1].
+  int i = absl::Uniform(bitgen, 0, 1 << 30);
+  int j = absl::Uniform(bitgen, 0, 1 << 30);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(face);
+    benchmark::DoNotOptimize(S2CellId::FromFaceIJ(face, i, j));
+  }
+}
+BENCHMARK(BM_FromFaceIJ);
+
+static void BM_level(benchmark::State& state) {
+  const string seed_str =
+      absl::StrCat("LEVEL", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int level = state.range(0);
+  // Because level() is very fast (about 1 cycle), we benchmark 1000
+  // iterations at a time to get more accuracy.
+  constexpr int kBatchSize = 1000;
+  S2CellId ids[kBatchSize];
+  for (S2CellId& id : ids) {
+    id = s2random::CellId(bitgen, level);
+  }
+  while (state.KeepRunningBatch(kBatchSize)) {
+    for (S2CellId id : ids) {
+      benchmark::DoNotOptimize(id.level());
+    }
+  }
+}
+BENCHMARK(BM_level)->Arg(10)->Arg(S2CellId::kMaxLevel);
+
+static void BM_child_position(benchmark::State& state) {
+  const string seed_str =
+      absl::StrCat("CHILD_POSITION", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int level = state.range(0);
+  // Because child_position() is very fast (about 1 cycle), we benchmark 1000
+  // iterations at a time to get more accuracy.
+  constexpr int kBatchSize = 1000;
+  S2CellId ids[kBatchSize];
+  for (S2CellId& id : ids) {
+    id = s2random::CellId(bitgen, level);
+  }
+  while (state.KeepRunningBatch(kBatchSize)) {
+    for (S2CellId id : ids)
+      benchmark::DoNotOptimize(id.child_position());
+  }
+}
+BENCHMARK(BM_child_position)->Arg(10)->Arg(S2CellId::kMaxLevel);
+
+static void BM_ToToken(benchmark::State& state) {
+  const string seed_str =
+      absl::StrCat("TO_TOKEN", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int level = state.range(0);
+  S2CellId id = s2random::CellId(bitgen, level);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(id);
+    benchmark::DoNotOptimize(id.ToToken());
+  }
+}
+BENCHMARK(BM_ToToken)->Arg(10)->Arg(20)->Arg(S2CellId::kMaxLevel);
+
+static void BM_FromToken(benchmark::State& state) {
+  const string seed_str =
+      absl::StrCat("FROM_TOKEN", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int level = state.range(0);
+  string token = s2random::CellId(bitgen, level).ToToken();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(token);
+    benchmark::DoNotOptimize(S2CellId::FromToken(token));
+  }
+}
+BENCHMARK(BM_FromToken)->Arg(10)->Arg(20)->Arg(S2CellId::kMaxLevel);

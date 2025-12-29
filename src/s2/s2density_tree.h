@@ -150,13 +150,13 @@ class S2DensityTree {
   bool InitToShapeDensity(const S2ShapeIndex& index,
                           const ShapeWeightFunction& weight_fn,
                           int64_t approximate_size_bytes, int max_level,
-                          S2Error* error);
+                          S2Error* absl_nonnull error);
 
   // A wrapper around InitToShapeDensity which uses the number of vertices in
   // each shape to calculate weights.
   bool InitToVertexDensity(const S2ShapeIndex& index,
                            int64_t approximate_size_bytes, int max_level,
-                           S2Error* error);
+                           S2Error* absl_nonnull error);
 
   // Type definition for a function that returns a pointer to the associated T
   // for a given S2Shape. This function is allowed to return nullptr if the user
@@ -185,7 +185,7 @@ class S2DensityTree {
                             const FeatureLookupFunction<T>& feature_lookup_fn,
                             const FeatureWeightFunction<T>& feature_weight_fn,
                             int64_t approximate_size_bytes, int max_level,
-                            S2Error* error);
+                            S2Error* absl_nonnull error);
 
   // Returns a new S2DensityTree that contains the combined weights across the
   // cells the given input trees.  The new tree will be held to the constraints
@@ -194,12 +194,12 @@ class S2DensityTree {
   // operation allows.
   bool InitToSumDensity(std::vector<const S2DensityTree*>& trees,
                         int64_t approximate_size_bytes, int max_level,
-                        S2Error* error);
+                        S2Error* absl_nonnull error);
 
   // Same as above, but sums trees without regard for a maximum encoded size.
   // This enables the use of a substantially faster summing algorithm.
   bool InitToSumDensity(std::vector<const S2DensityTree*>& trees, int max_level,
-                        S2Error* error);
+                        S2Error* absl_nonnull error);
 
   // Initialize the S2DensityTree from the given decoder.
   bool Init(Decoder* decoder, S2Error& error);
@@ -223,7 +223,8 @@ class S2DensityTree {
   // returning STOP, this function will return false, and the 'error' object
   // will describe the reason.
   using CellVisitor = std::function<VisitAction(S2CellId, const Cell&)>;
-  bool VisitCells(const CellVisitor& visitor_fn, S2Error* error) const;
+  bool VisitCells(const CellVisitor& visitor_fn,
+                  S2Error* absl_nonnull error) const;
 
   // Returns a partitioning of the sphere into S2CellUnions such that the total
   // weight of the cells in each union is no more than 'max_weight'.  Cells in
@@ -240,14 +241,14 @@ class S2DensityTree {
   // sufficient detail (e.g. because it was truncated due to a size or cell
   // level limit).
   std::vector<S2CellUnion> GetPartitioning(int64_t max_weight,
-                                           S2Error* error) const;
+                                           S2Error* absl_nonnull error) const;
 
   // Returns a fully-decoded map of this tree.  This is only useful if far more
   // lookups will be done than there are entries in the map, and the lookups are
   // sufficiently random that a DecodedPath is not sufficient.  In that case
   // fully decoding all the cells may be faster than lazily-decoding cells on
   // each lookup.
-  absl::btree_map<S2CellId, int64_t> Decode(S2Error* error) const;
+  absl::btree_map<S2CellId, int64_t> Decode(S2Error* absl_nonnull error) const;
 
   class DecodedPath;
 
@@ -257,13 +258,13 @@ class S2DensityTree {
   // not an error).  Error will be set if the requested cell_id could not be
   // decoded.
   int64_t GetNormalCellWeight(S2CellId cell_id, DecodedPath* cell_path,
-                              S2Error* error) const;
+                              S2Error* absl_nonnull error) const;
 
   // Returns the weight of the given cell_id.  If a given cell is not present in
   // the density tree, a weight of zero is returned (this is not an error).
   // Error will be set if the requested cell_id could not be decoded.
   int64_t GetCellWeight(S2CellId cell_id, DecodedPath* cell_path,
-                        S2Error* error) const;
+                        S2Error* absl_nonnull error) const;
 
   // Density trees map cells to weights that intersect that cell, but larger
   // features may intersect many density cells, so the deeper into the tree we
@@ -328,11 +329,12 @@ class S2DensityTree {
 
     // Loads this cell with the weight and child offsets at the given Decoder
     // position.
-    bool Decode(Decoder& decoder, S2Error* error);
+    bool Decode(Decoder& decoder, S2Error* absl_nonnull error);
 
     // A convenience method for decoding cells when the bookkeeping of the
     // decoder state isn't necessary.
-    bool DecodeAt(const S2DensityTree* tree, uint64_t pos, S2Error* error);
+    bool DecodeAt(const S2DensityTree* tree, uint64_t pos,
+                  S2Error* absl_nonnull error);
 
     // Return the offset of the given child index.  May return -1, indicating
     // that there is no such child.  No bounds checking is done, and the index
@@ -355,7 +357,8 @@ class S2DensityTree {
     // be used if error->ok() == true.  If a given cell_id is not present in the
     // density tree, a Cell object with a weight of zero is returned (this is
     // not an error).
-    const S2DensityTree::Cell* GetCell(S2CellId cell_id, S2Error* error);
+    const S2DensityTree::Cell* GetCell(S2CellId cell_id,
+                                       S2Error* absl_nonnull error);
 
     // Returns the tree passed during construction.
     const S2DensityTree& tree() const { return *tree_; }
@@ -363,14 +366,15 @@ class S2DensityTree {
    private:
     // Decodes a face cell and sets it as the first cell in the stack.  Error
     // will be set if the requested face cell could not be loaded.
-    void LoadFace(int face, S2Error* error);
+    void LoadFace(int face, S2Error* absl_nonnull error);
 
     // Decodes all parents of the given cell_id and the cell_id itself.  This
     // method assumes that the correct face cell has already been loaded via a
     // call to LoadFace.  Error will be set if the requested cell could not be
     // loaded. If the requested cell is not present in the tree, a Cell object
     // with a weight of zero is returned.
-    const S2DensityTree::Cell* LoadCell(S2CellId cell_id, S2Error* error);
+    const S2DensityTree::Cell* LoadCell(S2CellId cell_id,
+                                        S2Error* absl_nonnull error);
 
     const S2DensityTree* const tree_;
     // Valid cell levels range from {0 ... kMaxLevel}.
@@ -415,13 +419,12 @@ class S2DensityTree {
   // to be at least the given approximate size.
   class BreadthFirstTreeBuilder {
    public:
-    BreadthFirstTreeBuilder(int64_t approx_size_bytes, int max_level,
-                            TreeEncoder& encoder)
+    BreadthFirstTreeBuilder(int64_t approx_size_bytes, int max_level)
         : approximate_size_bytes_(approx_size_bytes),
-          max_level_(max_level),
-          encoder_(encoder) {}
+          max_level_(max_level) {}
 
-    using CellWeightFunction = std::function<int64_t(S2CellId, S2Error*)>;
+    using CellWeightFunction =
+        std::function<int64_t(S2CellId, S2Error* absl_nonnull)>;
 
     // Builds the density tree that forms from a breadth-first visitation of the
     // given weight_fn.  The behavior of the builder is steered by the weight
@@ -435,12 +438,13 @@ class S2DensityTree {
     //
     //   Zero - The builder will skip the cell and its children.
     bool Build(const CellWeightFunction& weight_fn, S2DensityTree* tree,
-               S2Error* error) const;
+               S2Error* absl_nonnull error);
 
    private:
+    // TODO(b/456560327): Move Build's temp structures to instance fields.
     const int64_t approximate_size_bytes_;
     const int max_level_;
-    TreeEncoder& encoder_;
+    TreeEncoder encoder_;
   };
 
  private:
@@ -457,7 +461,7 @@ class S2DensityTree {
     // weight of the shapes intersecting with the cell.  This function can
     // return negative weights, which indicates that the cell is fully contained
     // by the index.
-    int64_t WeighCell(S2CellId cell_id, S2Error* error);
+    int64_t WeighCell(S2CellId cell_id, S2Error* absl_nonnull error);
 
    private:
     S2ShapeIndexRegion<S2ShapeIndex> index_region_;
@@ -498,7 +502,7 @@ class S2DensityTree {
     // weight of the features intersecting with the cell.  This function can
     // return negative weights, which indicates that the cell is fully contained
     // by the index.
-    int64_t WeighCell(S2CellId cell_id, S2Error* error);
+    int64_t WeighCell(S2CellId cell_id, S2Error* absl_nonnull error);
 
    private:
     S2ShapeIndexRegion<S2ShapeIndex> index_region_;
@@ -523,16 +527,17 @@ class S2DensityTree {
   // Loads face positions.  The cursor must be positioned at the start of the
   // version string.
   static bool DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
-                           S2Error* error);
+                           S2Error* absl_nonnull error);
 
   // The recursive portion of the public Visit method.
   bool VisitRecursive(const CellVisitor& visitor_fn, S2CellId cell_id,
-                      int64_t position, S2Error* error) const;
+                      int64_t position, S2Error* absl_nonnull error) const;
 
   // An overload of the public GetNormalWeight that provides its own decoded
   // Cell. It's assumed that the cell corresponds to the passed cell_id.
   int64_t GetNormalCellWeight(S2CellId cell_id, const Cell& cell,
-                              DecodedPath* cell_path, S2Error* error) const;
+                              DecodedPath* cell_path,
+                              S2Error* absl_nonnull error) const;
 
   std::string encoded_;
   DecodedFaces decoded_faces_{-1, -1, -1, -1, -1, -1};
@@ -543,17 +548,16 @@ bool S2DensityTree::InitToFeatureDensity(
     const S2ShapeIndex& index,
     const FeatureLookupFunction<T>& feature_lookup_fn,
     const FeatureWeightFunction<T>& feature_weight_fn,
-    int64_t approximate_size_bytes, int max_level, S2Error* error) {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+    int64_t approximate_size_bytes, int max_level,
+    S2Error* absl_nonnull error) {
   *error = S2Error::Ok();
 
   FeatureCellWeightFunction<T> index_cell_weight_fn(&index, feature_lookup_fn,
                                                     feature_weight_fn);
 
-  TreeEncoder encoder;
-  BreadthFirstTreeBuilder builder(approximate_size_bytes, max_level, encoder);
+  BreadthFirstTreeBuilder builder(approximate_size_bytes, max_level);
   return builder.Build(
-      [&](const S2CellId cell_id, S2Error* error) {
+      [&](const S2CellId cell_id, S2Error* absl_nonnull error) {
         return index_cell_weight_fn.WeighCell(cell_id, error);
       },
       this, error);
@@ -561,7 +565,7 @@ bool S2DensityTree::InitToFeatureDensity(
 
 template <typename T>
 int64_t S2DensityTree::FeatureCellWeightFunction<T>::WeighCell(
-    const S2CellId cell_id, S2Error* error) {
+    const S2CellId cell_id, S2Error* absl_nonnull error) {
   int64_t sum = 0;
   bool all_contained = true;
 

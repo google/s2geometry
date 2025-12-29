@@ -15,9 +15,8 @@
 
 #include "s2/s2earth.h"
 
-#include <cmath>
-
 #include <algorithm>
+#include <cmath>
 
 #include "s2/s1angle.h"
 #include "s2/s2latlng.h"

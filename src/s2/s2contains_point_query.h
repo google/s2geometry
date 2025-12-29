@@ -21,6 +21,8 @@
 #include <functional>
 #include <vector>
 
+#include "absl/base/attributes.h"
+#include "absl/base/macros.h"
 #include "absl/functional/function_ref.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell_id.h"
@@ -77,7 +79,7 @@ class S2ContainsPointQueryOptions {
 // whether or not shapes are considered to contain their vertices).
 //
 // Example usage:
-//   auto query = MakeS2ContainsPointQuery(
+//   S2ContainsPointQuery query(
 //       &index, S2ContainsPointQueryOptions(S2VertexModel::CLOSED));
 //   return query.Contains(point);
 //
@@ -96,17 +98,16 @@ class S2ContainsPointQuery {
   // Default constructor; requires Init() to be called.
   S2ContainsPointQuery();
 
-  // Rather than calling this constructor, which requires specifying the
-  // IndexType template argument explicitly, the preferred idiom is to call
-  // MakeS2ContainsPointQuery() instead.  For example:
-  //
-  //   return MakeS2ContainsPointQuery(&index).Contains(p);
+  // This constructor may be called without specifying the template argument.
+  // For example: `return S2ContainsPointQuery(&index).Contains(p);`
   using Options = S2ContainsPointQueryOptions;
-  explicit S2ContainsPointQuery(const IndexType* index,
+  explicit S2ContainsPointQuery(const IndexType* index
+                                    ABSL_ATTRIBUTE_LIFETIME_BOUND,
                                 const Options& options = Options());
 
   // Convenience constructor that accepts the S2VertexModel directly.
-  S2ContainsPointQuery(const IndexType* index, S2VertexModel vertex_model);
+  S2ContainsPointQuery(const IndexType* index ABSL_ATTRIBUTE_LIFETIME_BOUND,
+                       S2VertexModel vertex_model);
 
   const IndexType& index() const { return *index_; }
   const Options& options() const { return options_; }
@@ -184,16 +185,33 @@ class S2ContainsPointQuery {
   Iterator it_;
 };
 
-// Returns an S2ContainsPointQuery for the given S2ShapeIndex.  Note that
-// it is efficient to return S2ContainsPointQuery objects by value.
+// Deduction guides so that clients can write:
+//   S2ContainsPointQuery query(&index);
+// rather than:
+//   S2ContainsPointQuery<IndexType> query(&index);
 template <class IndexType>
-inline S2ContainsPointQuery<IndexType> MakeS2ContainsPointQuery(
-    const IndexType* index,
-    const S2ContainsPointQueryOptions& options =
-    S2ContainsPointQueryOptions()) {
-  return S2ContainsPointQuery<IndexType>(index, options);
-}
+S2ContainsPointQuery(const IndexType* index) -> S2ContainsPointQuery<IndexType>;
+template <class IndexType>
+S2ContainsPointQuery(const IndexType* index,
+                     const S2ContainsPointQueryOptions& options)
+    -> S2ContainsPointQuery<IndexType>;
+template <class IndexType>
+S2ContainsPointQuery(const IndexType* index, S2VertexModel vertex_model)
+    -> S2ContainsPointQuery<IndexType>;
 
+template <class IndexType>
+ABSL_DEPRECATE_AND_INLINE()
+inline S2ContainsPointQuery<IndexType> MakeS2ContainsPointQuery(
+    const IndexType* index ABSL_ATTRIBUTE_LIFETIME_BOUND) {
+  return S2ContainsPointQuery(index);
+}
+template <class IndexType>
+ABSL_DEPRECATE_AND_INLINE()
+inline S2ContainsPointQuery<IndexType> MakeS2ContainsPointQuery(
+    const IndexType* index ABSL_ATTRIBUTE_LIFETIME_BOUND,
+    const S2ContainsPointQueryOptions& options) {
+  return S2ContainsPointQuery(index, options);
+}
 
 //////////////////   Implementation details follow   ////////////////////
 

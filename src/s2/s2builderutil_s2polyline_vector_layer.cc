@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
@@ -74,7 +75,7 @@ GraphOptions S2PolylineVectorLayer::graph_options() const {
                       options_.duplicate_edges(), options_.sibling_pairs());
 }
 
-void S2PolylineVectorLayer::Build(const Graph& g, S2Error* error) {
+void S2PolylineVectorLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   vector<Graph::EdgePolyline> edge_polylines = g.GetPolylines(
       options_.polyline_type());
   polylines_->reserve(edge_polylines.size());

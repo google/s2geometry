@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
@@ -234,7 +235,7 @@ static void AddVertexEdges(Graph::EdgeId out_begin, Graph::EdgeId out_end,
 
 bool Graph::GetLeftTurnMap(absl::Span<const EdgeId> in_edge_ids,
                            vector<EdgeId>* left_turn_map,
-                           S2Error* error) const {
+                           S2Error* absl_nonnull error) const {
   left_turn_map->assign(num_edges(), -1);
   if (num_edges() == 0) return true;
 
@@ -364,7 +365,7 @@ void Graph::CanonicalizeVectorOrder(absl::Span<const InputEdgeId> min_input_ids,
 }
 
 bool Graph::GetDirectedLoops(LoopType loop_type, vector<EdgeLoop>* loops,
-                             S2Error* error) const {
+                             S2Error* absl_nonnull error) const {
   ABSL_DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
               options_.degenerate_edges() == DegenerateEdges::DISCARD_EXCESS);
   ABSL_DCHECK(options_.edge_type() == EdgeType::DIRECTED);
@@ -417,9 +418,9 @@ bool Graph::GetDirectedLoops(LoopType loop_type, vector<EdgeLoop>* loops,
   return true;
 }
 
-bool Graph::GetDirectedComponents(
-    DegenerateBoundaries degenerate_boundaries,
-    vector<DirectedComponent>* components, S2Error* error) const {
+bool Graph::GetDirectedComponents(DegenerateBoundaries degenerate_boundaries,
+                                  vector<DirectedComponent>* components,
+                                  S2Error* absl_nonnull error) const {
   ABSL_DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
               (options_.degenerate_edges() == DegenerateEdges::DISCARD_EXCESS &&
                degenerate_boundaries == DegenerateBoundaries::KEEP));
@@ -512,7 +513,7 @@ inline static Graph::EdgeId MarkEdgeUsed(int slot) { return -1 - slot; }
 
 bool Graph::GetUndirectedComponents(LoopType loop_type,
                                     vector<UndirectedComponent>* components,
-                                    S2Error* error) const {
+                                    S2Error* absl_nonnull error) const {
   ABSL_DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
               options_.degenerate_edges() == DegenerateEdges::DISCARD_EXCESS);
   ABSL_DCHECK(options_.edge_type() == EdgeType::UNDIRECTED);
@@ -854,7 +855,7 @@ class Graph::EdgeProcessor {
                 vector<Edge>* edges,
                 vector<InputEdgeIdSetId>* input_ids,
                 IdSetLexicon* id_set_lexicon);
-  void Run(S2Error* error);
+  void Run(S2Error* absl_nonnull error);
 
  private:
   void AddEdge(const Edge& edge, InputEdgeIdSetId input_edge_id_set_id);
@@ -878,7 +879,8 @@ class Graph::EdgeProcessor {
 
 void Graph::ProcessEdges(GraphOptions* options, vector<Edge>* edges,
                          vector<InputEdgeIdSetId>* input_ids,
-                         IdSetLexicon* id_set_lexicon, S2Error* error,
+                         IdSetLexicon* id_set_lexicon,
+                         S2Error* absl_nonnull error,
                          S2MemoryTracker::Client* tracker) {
   // Graph::EdgeProcessor uses 8 bytes per input edge (out_edges_ and
   // in_edges_) plus 12 bytes per output edge (new_edges_, new_input_ids_).
@@ -970,7 +972,7 @@ S2Builder::InputEdgeIdSetId Graph::EdgeProcessor::MergeInputIds(
   return id_set_lexicon_->Add(tmp_ids_);
 }
 
-void Graph::EdgeProcessor::Run(S2Error* error) {
+void Graph::EdgeProcessor::Run(S2Error* absl_nonnull error) {
   int num_edges = edges_.size();
   if (num_edges == 0) return;
 
@@ -1127,12 +1129,12 @@ vector<S2Point> Graph::FilterVertices(absl::Span<const S2Point> vertices,
 }
 // LINT.ThenChange(s2builder.cc:TallyFilterVertices)
 
-Graph Graph::MakeSubgraph(
-    GraphOptions new_options, vector<Edge>* new_edges,
-    vector<InputEdgeIdSetId>* new_input_edge_id_set_ids,
-    IdSetLexicon* new_input_edge_id_set_lexicon,
-    IsFullPolygonPredicate is_full_polygon_predicate,
-    S2Error* error, S2MemoryTracker::Client* tracker) const {
+Graph Graph::MakeSubgraph(GraphOptions new_options, vector<Edge>* new_edges,
+                          vector<InputEdgeIdSetId>* new_input_edge_id_set_ids,
+                          IdSetLexicon* new_input_edge_id_set_lexicon,
+                          IsFullPolygonPredicate is_full_polygon_predicate,
+                          S2Error* absl_nonnull error,
+                          S2MemoryTracker::Client* tracker) const {
   if (options().edge_type() == EdgeType::DIRECTED &&
       new_options.edge_type() == EdgeType::UNDIRECTED) {
     // Create a reversed edge for every edge.

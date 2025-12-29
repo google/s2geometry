@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
 #include "absl/log/absl_check.h"
@@ -458,6 +459,100 @@ TEST(EncodedS2PointVectorTest, RoundtripEncodingFast) {
 
 TEST(EncodedS2PointVectorTest, RoundtripEncodingCompact) {
   TestRoundtripEncoding(s2coding::CodingHint::COMPACT);
+}
+
+static void EncodePoints(int num_points, CodingHint hint, Encoder* encoder) {
+  vector<S2Point> points = S2Testing::MakeRegularPoints(
+      MakePointOrDie("23:16"), S2Testing::KmToAngle(10), num_points);
+  for (S2Point& point : points) {
+    point = S2CellId(point).ToPoint();
+  }
+  EncodeS2PointVector(points, hint, encoder);
+}
+
+// Measures accessing points sequentially.  This corresponds to the use case
+// where the vector is decoded upon initialization (e.g., S2LaxPolygonShape).
+static void BM_DecodePointSequentially(benchmark::State& state) {
+  CodingHint hint = state.range(0) ? CodingHint::COMPACT : CodingHint::FAST;
+  int num_points = state.range(1);
+  Encoder encoder;
+  EncodePoints(num_points, hint, &encoder);
+  EncodedS2PointVector encoded_points;
+  Decoder decoder(encoder.base(), encoder.length());
+  ABSL_CHECK(encoded_points.Init(&decoder));
+
+  std::vector<S2Point> points(num_points);
+  while (state.KeepRunningBatch(num_points)) {
+    for (int i = 0; i < num_points; ++i) {
+      points[i] = encoded_points[i];
+    }
+  }
+  benchmark::DoNotOptimize(points);
+  state.SetItemsProcessed(state.iterations());
+}
+BENCHMARK(BM_DecodePointSequentially)
+->ArgPair(0, 10)->ArgPair(0, 10000)
+->ArgPair(1, 10)->ArgPair(1, 10000);
+
+// Measures accessing edges (adjacent point pairs) sequentially.  This
+// corresponds to the common situation where the edges in an S2ShapeIndex cell
+// span a contiguous range of edge ids.  The big difference compared to the
+// benchmark above is that each point is accessed twice in a row, since the
+// last vertex of one edge is typically the same as the first vertex of the
+// next edge.
+static void BM_GetEdgeSequentially(benchmark::State& state) {
+  CodingHint hint = state.range(0) ? CodingHint::COMPACT : CodingHint::FAST;
+  int num_points = state.range(1);
+  Encoder encoder;
+  EncodePoints(num_points, hint, &encoder);
+  EncodedS2PointVector encoded_points;
+  Decoder decoder(encoder.base(), encoder.length());
+  ABSL_CHECK(encoded_points.Init(&decoder));
+
+  std::vector<S2Point> points(num_points);
+  while (state.KeepRunningBatch(num_points - 1)) {
+    for (int i = 0; i < num_points - 1; ++i) {
+      points[i] = encoded_points[i];
+      points[i + 1] = encoded_points[i + 1];
+    }
+  }
+  benchmark::DoNotOptimize(points);
+  state.SetItemsProcessed(state.iterations() * 2);
+}
+BENCHMARK(BM_GetEdgeSequentially)
+->ArgPair(0, 10)->ArgPair(0, 10000)
+->ArgPair(1, 10)->ArgPair(1, 10000);
+
+// Fuzz testing of the decoder.
+void DecodePointVector(std::string data) {
+  EncodedS2PointVector v;
+  Decoder decoder(data.data(), data.size());
+  S2Error error;
+  if (v.Init(&decoder, error)) {
+    v.Decode(error);
+  }
+}
+
+TEST(EncodedS2PointVectorTest, DecodeNeverCrashesRegression1) {
+  DecodePointVector("i\370\305\201");
+}
+
+TEST(EncodedS2PointVectorTest, DecodeNeverCrashesRegression2) {
+  DecodePointVector(
+      "\201\252\305+\010\023\304\n\274\3271^7\261\261iiY\261\261\261\261\261"
+      "\253\313\220\254DDDDV\320");
+}
+
+TEST(EncodedS2PointVectorTest, DecodeNeverCrashesRegression3) {
+  DecodePointVector(
+      "\351\010\010\010\010\010\0107\274\361\030fo[\210O\363\214]\010\021n"
+      "\265W=(\014\014\014\014\203\034");
+}
+
+TEST(EncodedS2PointVectorTest, DecodeNeverCrashesRegression4) {
+  DecodePointVector(
+      "\331\010\010\014\363+\214O\230\200\230{$$\314$\210b\222\034\210\210\232"
+      "\210\210\212\214\034");
 }
 
 }  // namespace s2coding

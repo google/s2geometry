@@ -116,9 +116,8 @@
 #ifndef S2_UTIL_GTL_DENSE_HASH_SET_H_
 #define S2_UTIL_GTL_DENSE_HASH_SET_H_
 
-#include <cstdio>
-
 #include <algorithm>
+#include <cstdio>
 #include <functional>
 #include <memory>
 #include <utility>

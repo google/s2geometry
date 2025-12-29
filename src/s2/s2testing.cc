@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <ios>
+#include <iostream>
 #include <memory>
 #include <random>
 #include <string>
@@ -153,7 +154,6 @@ void S2Testing::CheckCovering(const S2Region& region,
     }
   }
 }
-
 std::seed_seq S2Testing::MakeTaggedSeedSeq(string_view name,
                                            std::ostream& strm) {
   const int32_t seed = absl::GetFlag(FLAGS_s2_random_seed);
@@ -161,6 +161,4 @@ std::seed_seq S2Testing::MakeTaggedSeedSeq(string_view name,
   strm << "Seeding " << name << " with " << seed;
   return std::seed_seq(seed_str.begin(), seed_str.end());
 }
-
-
 

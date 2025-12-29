@@ -14,7 +14,6 @@
 //
 
 // Author: ericv@google.com (Eric Veach)
-//
 
 #include "s2/s2polygon.h"
 
@@ -30,6 +29,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -48,6 +48,7 @@
 
 #include "s2/base/casts.h"
 #include "s2/base/log_severity.h"
+#include "s2/gmock_matchers.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
@@ -89,6 +90,7 @@
 using absl::flat_hash_set;
 using absl::StrCat;
 using absl::string_view;
+using ::S2::PolygonIdenticalTo;
 using s2builderutil::IntLatLngSnapFunction;
 using s2builderutil::S2PolygonLayer;
 using std::make_unique;
@@ -101,6 +103,26 @@ using std::unique_ptr;
 using std::vector;
 
 using ::testing::Contains;
+using ::testing::UnorderedElementsAreArray;
+
+// These flags are only needed for benchmarks.
+ABSL_FLAG(int32_t, bm_num_polygon_samples, 10,
+          "Benchmarks: number of random polygons or polygon pairs to use "
+          "when averaging over various positions on the sphere");
+ABSL_FLAG(int32_t, bm_default_num_vertices, 4096,
+          "Benchmarks: default number of vertices for loops");
+ABSL_FLAG(double, bm_loop_radius_km, 10.0,
+          "Benchmarks: default radius for loops");
+ABSL_FLAG(double, bm_loop_fractal_dimension, 1.2,
+          "Benchmarks: default dimension for fractal loops");
+ABSL_FLAG(double, bm_loop_separation_fraction, 1.0,
+          "Benchmarks: spacing between adjacent loops (e.g., in a grid) "
+          " as a fraction of the loop radius");
+ABSL_FLAG(double, bm_default_nested_gap_multiple, 30.0,
+          "Benchmarks: desired distance between nested loops, expressed "
+          "as a multiple of the edge length");
+ABSL_FLAG(double, bm_default_crossing_radius_ratio, 10.0,
+          "Benchmarks: desired ratio between the radii of crossing loops");
 
 // A set of nested loops around the point 0:0 (lat:lng).
 // Every vertex of kNear0 is a vertex of kNear1.
@@ -648,8 +670,8 @@ static void TestDestructiveUnion(const S2Polygon& a, const S2Polygon& b) {
   S2Polygon c;
   c.InitToUnion(a, b);
   vector<unique_ptr<S2Polygon>> polygons;
-  polygons.emplace_back(a.Clone());
-  polygons.emplace_back(b.Clone());
+  polygons.push_back(std::make_unique<S2Polygon>(a));
+  polygons.push_back(std::make_unique<S2Polygon>(b));
   unique_ptr<S2Polygon> c_destructive =
       S2Polygon::DestructiveUnion(std::move(polygons));
   CheckEqual(c, *c_destructive);
@@ -763,52 +785,67 @@ TEST_F(S2PolygonTestBase, EmptyAndFull) {
   TestNestedPair(*full_, *full_);
 }
 
-TEST_F(S2PolygonTestBase, PointersCorrectAfterMove) {
-  S2Polygon p0;
-  p0.Copy(*near_10_);
-  ABSL_CHECK(p0.IsValid());
-
-  EXPECT_EQ(down_cast<const S2Polygon::Shape*>(p0.index().shape(0))->polygon(),
-            &p0);
-
-  S2Polygon p1 = std::move(p0);
-  EXPECT_EQ(down_cast<const S2Polygon::Shape*>(p1.index().shape(0))->polygon(),
-            &p1);
+static unique_ptr<S2Polygon> MakePolygonWithNonDefaultFields() {
+  unique_ptr<S2Polygon> polygon = MakePolygon(kNear0);
+  polygon->set_s2debug_override(S2Debug::DISABLE);
+  polygon->ForceBuildIndex();
+  return polygon;
 }
 
-TEST_F(S2PolygonTestBase, ValidAfterMove) {
-  {
-    S2Polygon polygon;
-    polygon.Copy(*near_10_);
-    ABSL_CHECK(polygon.IsValid());
+TEST_F(S2PolygonTestBase, CloneResultIdenticalToSource) {
+  unique_ptr<S2Polygon> polygon = MakePolygonWithNonDefaultFields();
+  unique_ptr<S2Polygon> cloned(polygon->Clone());
+  EXPECT_THAT(*cloned, PolygonIdenticalTo(*polygon));
+}
 
-    S2Polygon moved(std::move(polygon));
-    ABSL_CHECK(!moved.is_empty());
-    EXPECT_TRUE(moved.IsValid());
-  }
+TEST_F(S2PolygonTestBase, CopyConstructionResultIdenticalToSource) {
+  unique_ptr<S2Polygon> polygon = MakePolygonWithNonDefaultFields();
+  S2Polygon copied(*polygon);
+  EXPECT_THAT(copied, PolygonIdenticalTo(*polygon));
+}
 
-  {
-    S2Polygon polygon;
-    polygon.Copy(*near_10_);
-    ABSL_CHECK(polygon.IsValid());
+TEST_F(S2PolygonTestBase, CopyAssignmentResultIdenticalToSource) {
+  unique_ptr<S2Polygon> polygon = MakePolygonWithNonDefaultFields();
+  S2Polygon copied;
+  copied = *polygon;
+  EXPECT_THAT(copied, PolygonIdenticalTo(*polygon));
+}
 
-    S2Polygon moved;
-    moved = std::move(polygon);
-    ABSL_CHECK(!moved.is_empty());
-    EXPECT_TRUE(moved.IsValid());
-  }
+TEST_F(S2PolygonTestBase, CopyAssignmentToSelfIsNoOp) {
+  unique_ptr<S2Polygon> polygon_orig = MakePolygonWithNonDefaultFields();
+  S2Polygon polygon(*polygon_orig);
+  polygon = polygon;
+  EXPECT_THAT(polygon, PolygonIdenticalTo(*polygon_orig));
+}
 
-  {
-    S2Polygon polygon;
-    S2Polygon moved(std::move(polygon));
-    EXPECT_TRUE(moved.is_empty());
-  }
+TEST(S2Polygon, CopyConstructionFromEmptyIsIdenticalToSource) {
+  S2Polygon empty;
+  S2Polygon copy_constructed(empty);
+  EXPECT_THAT(copy_constructed, PolygonIdenticalTo(empty));
+}
 
-  {
-    S2Polygon polygon;
-    S2Polygon moved = std::move(polygon);
-    EXPECT_TRUE(moved.is_empty());
-  }
+TEST(S2Polygon, CopyAssignmentFromEmptyIsIdenticalToSource) {
+  S2Polygon empty;
+  S2Polygon copy_assigned;
+  copy_assigned = empty;
+  EXPECT_THAT(copy_assigned, PolygonIdenticalTo(empty));
+}
+
+TEST_F(S2PolygonTestBase, MoveConstructionResultIdenticalToSource) {
+  unique_ptr<S2Polygon> polygon_orig = MakePolygonWithNonDefaultFields();
+  // Copy construction has already been tested, so we can use it here.
+  S2Polygon polygon(*polygon_orig);
+  S2Polygon moved(std::move(polygon));
+  EXPECT_THAT(moved, PolygonIdenticalTo(*polygon_orig));
+}
+
+TEST_F(S2PolygonTestBase, MoveAssignmentResultIdenticalToSource) {
+  unique_ptr<S2Polygon> polygon_orig = MakePolygonWithNonDefaultFields();
+  // Copy construction has already been tested, so we can use it here.
+  S2Polygon polygon(*polygon_orig);
+  S2Polygon moved;
+  moved = std::move(polygon);
+  EXPECT_THAT(moved, PolygonIdenticalTo(*polygon_orig));
 }
 
 struct TestCase {
@@ -1014,17 +1051,18 @@ TEST(S2Polygon, LoopPointers) {
   loops.emplace_back(s2textformat::MakeLoopOrDie("-1:-1, -9:-1, -9:-9, -1:-9"));
   loops.emplace_back(s2textformat::MakeLoopOrDie("-5:-5, -6:-5, -6:-6, -5:-6"));
 
-  flat_hash_set<const S2Loop*> loops_raw_ptrs;
-  for (auto& loop : loops) {
-    loops_raw_ptrs.insert(loop.get());
+  std::vector<const S2Loop*> expected_loops;
+  for (const auto& loop : loops) {
+    expected_loops.push_back(loop.get());
   }
   S2Polygon polygon(std::move(loops));
 
   // Check that loop pointers didn't change (but could've gotten reordered).
-  EXPECT_EQ(loops_raw_ptrs.size(), polygon.num_loops());
-  for (int i = 0; i < polygon.num_loops(); i++) {
-     EXPECT_EQ(1, loops_raw_ptrs.count(polygon.loop(i))) << "loop " << i;
+  std::vector<const S2Loop*> actual_loops;
+  for (int i = 0; i < polygon.num_loops(); ++i) {
+    actual_loops.push_back(polygon.loop(i));
   }
+  EXPECT_THAT(actual_loops, UnorderedElementsAreArray(expected_loops));
 }
 
 static vector<unique_ptr<S2Loop>> MakeLoops(
@@ -3281,3 +3319,1096 @@ TEST(S2Polygon, S2CoderWorks) {
   EXPECT_EQ(ToString(polygon), ToString(decoded));
 }
 
+static void GeneratePolygonForBenchmark(int num_vertices_per_loop,
+                                        S2Polygon* polygon) {
+  const int num_loops_per_polygon = 1;
+  S2Testing::ConcentricLoopsPolygon(s2textformat::MakePointOrDie("0:0"),
+                                    num_loops_per_polygon,
+                                    num_vertices_per_loop, polygon);
+}
+
+static string GenerateInputForBenchmark(int num_vertices_per_loop) {
+  S2Polygon polygon_to_encode;
+  GeneratePolygonForBenchmark(num_vertices_per_loop, &polygon_to_encode);
+  Encoder encoder;
+  polygon_to_encode.Encode(&encoder);
+  string encoded(encoder.base(), encoder.length());
+  return encoded;
+}
+
+static string GenerateCompressedInputForBenchmark(int num_vertices_per_loop) {
+  S2Polygon unsnapped_polygon;
+  GeneratePolygonForBenchmark(num_vertices_per_loop, &unsnapped_polygon);
+  S2Polygon polygon_to_encode;
+  polygon_to_encode.InitToSnapped(unsnapped_polygon);
+  ABSL_CHECK_GE(polygon_to_encode.GetSnapLevel(), 0);
+
+  // Encode() will use compressed encoding because the polygon is snapped.
+  Encoder encoder;
+  polygon_to_encode.Encode(&encoder);
+  string encoded(encoder.base(), encoder.length());
+
+  return encoded;
+}
+
+static void BM_S2Decoding(benchmark::State& state) {
+  const int num_vertices_per_loop = state.range(0);
+  string encoded = GenerateInputForBenchmark(num_vertices_per_loop);
+  for (auto _ : state) {
+    Decoder decoder(encoded.data(), encoded.size());
+    S2Polygon decoded_polygon;
+    ABSL_CHECK(decoded_polygon.Decode(&decoder));
+  }
+}
+BENCHMARK(BM_S2Decoding)->Arg(8)->Arg(1<<8)->Arg(1<<13)->Arg(1<<17);
+
+static void BM_S2EncodingCompressed(benchmark::State& state) {
+  const int num_vertices_per_loop = state.range(0);
+
+  S2Polygon unsnapped_polygon;
+  GeneratePolygonForBenchmark(num_vertices_per_loop, &unsnapped_polygon);
+  S2Polygon polygon_to_encode;
+  polygon_to_encode.InitToSnapped(unsnapped_polygon);
+  // We only want to measure encoding, not indexing.
+  polygon_to_encode.ForceBuildIndex();
+  ABSL_CHECK_GE(polygon_to_encode.GetSnapLevel(), 0);
+  for (auto _ : state) {
+    Encoder encoder;
+    polygon_to_encode.Encode(&encoder);
+  }
+}
+BENCHMARK(BM_S2EncodingCompressed)->Arg(8)->Arg(1<<8)->Arg(1<<13)->Arg(1<<17);
+
+static void BM_S2DecodingCompressed(benchmark::State& state) {
+  const int num_vertices_per_loop = state.range(0);
+  string encoded = GenerateCompressedInputForBenchmark(num_vertices_per_loop);
+  for (auto _ : state) {
+    Decoder decoder(encoded.data(), encoded.size());
+    S2Polygon decoded_polygon;
+    ABSL_CHECK(decoded_polygon.Decode(&decoder));
+  }
+}
+BENCHMARK(BM_S2DecodingCompressed)->Arg(8)->Arg(1<<8)->Arg(1<<13)->Arg(1<<17);
+
+static S1Angle GetDefaultRadius() {
+  return S2Testing::KmToAngle(absl::GetFlag(FLAGS_bm_loop_radius_km));
+}
+
+class PolygonFactory {
+ public:
+  PolygonFactory() = default;
+  virtual ~PolygonFactory() = default;
+  virtual unique_ptr<S2Polygon> New() = 0;
+ private:
+  PolygonFactory(const PolygonFactory&) = delete;
+  void operator=(const PolygonFactory&) = delete;
+};
+
+// Since our indexing is based on S2CellIds, it becomes inefficient when loop
+// edges are much smaller than the leaf cell size (which is about 1cm).  Since
+// edges smaller than 1mm are not typically needed for geographic data anyway,
+// we have a sanity check so that we don't accidentally generate such data in
+// the benchmarks.
+static void CheckEdgeLength(const S2Loop& loop) {
+  const S1Angle min_edge_length = S2Testing::MetersToAngle(0.001);
+  for (int j = 0; j < loop.num_vertices(); ++j) {
+    if (S1Angle(loop.vertex(j), loop.vertex(j+1)) < min_edge_length) {
+      ABSL_LOG(QFATAL)
+          << "A loop has edges that are unreasonably small (<1mm).  "
+          << "Decrease num_loops or --bm_loop_separation_fraction, "
+          << "or increase --bm_loop_radius_km.";
+    }
+  }
+}
+
+// Construct a polygon consisting of nested regular loops.  Note that
+// "num_loops" should be fairly small (<20), otherwise the edges can get so
+// small that loops become invalid.  (This is checked.)
+class NestedLoopsPolygonFactory : public PolygonFactory {
+ public:
+  NestedLoopsPolygonFactory(int num_loops, int total_num_vertices)
+      : num_loops_(num_loops), total_num_vertices_(total_num_vertices) {
+    const string seed_str = StrCat("NESTED_LOOPS_POLYGON_FACTORY",
+                                   absl::GetFlag(FLAGS_s2_random_seed));
+    std::seed_seq seed(seed_str.begin(), seed_str.end());
+    bitgen_.seed(seed);
+  }
+  unique_ptr<S2Polygon> New() override {
+    vector<unique_ptr<S2Loop>> loops;
+    int num_vertices_per_loop = max(3, total_num_vertices_ / num_loops_);
+    // Each loop is smaller than the previous one by a fixed ratio.  The first
+    // factor below compensates for loop edges cutting across the interior of
+    // the circle, while the second accounts for the separation requested by
+    // the user (which is measured relative to the radius of the inner loop).
+    double scale = (cos(M_PI / num_vertices_per_loop) /
+                    (1 + absl::GetFlag(FLAGS_bm_loop_separation_fraction)));
+    S2Point center = s2random::Point(bitgen_);
+    S1Angle radius = GetDefaultRadius();
+    for (int i = 0; i < num_loops_; ++i) {
+      unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
+          s2random::FrameAt(bitgen_, center), radius, num_vertices_per_loop));
+      CheckEdgeLength(*loop);
+      loops.push_back(std::move(loop));
+      radius *= scale;
+    }
+    return make_unique<S2Polygon>(std::move(loops));
+  }
+
+ private:
+  int num_loops_, total_num_vertices_;
+  std::mt19937_64 bitgen_;
+};
+
+// Construct a polygon consisting of nested fractal loops.  Note that
+// "num_loops" should be fairly small (<20), otherwise the edges can get so
+// small that loops become invalid.  (This is checked.)
+class NestedFractalsPolygonFactory : public PolygonFactory {
+ public:
+  NestedFractalsPolygonFactory(int num_loops, int total_num_vertices)
+      : num_loops_(num_loops), total_num_vertices_(total_num_vertices) {
+    const string seed_str = StrCat("NESTED_FRACTALS_POLYGON_FACTORY",
+                                   absl::GetFlag(FLAGS_s2_random_seed));
+    std::seed_seq seed(seed_str.begin(), seed_str.end());
+    bitgen_.seed(seed);
+  }
+  unique_ptr<S2Polygon> New() override {
+    vector<unique_ptr<S2Loop>> loops;
+    int num_vertices_per_loop = max(3, total_num_vertices_ / num_loops_);
+    S2Fractal fractal(bitgen_);
+    fractal.set_fractal_dimension(
+        absl::GetFlag(FLAGS_bm_loop_fractal_dimension));
+    fractal.SetLevelForApproxMaxEdges(num_vertices_per_loop);
+    // Scale each loop so that it fits entirely within the previous loop,
+    // with a gap equal to some fraction of the inner loop's radius.
+    double scale = (fractal.min_radius_factor() / fractal.max_radius_factor() /
+                    (1 + absl::GetFlag(FLAGS_bm_loop_separation_fraction)));
+    S2Point center = s2random::Point(bitgen_);
+    S1Angle radius = GetDefaultRadius();
+    for (int i = 0; i < num_loops_; ++i) {
+      unique_ptr<S2Loop> loop(
+          fractal.MakeLoop(s2random::FrameAt(bitgen_, center), radius));
+      CheckEdgeLength(*loop);
+      loops.push_back(std::move(loop));
+      radius *= scale;
+    }
+    return make_unique<S2Polygon>(std::move(loops));
+  }
+
+ private:
+  int num_loops_, total_num_vertices_;
+  std::mt19937_64 bitgen_;
+};
+
+// Construct a polygon consisting of a grid of regular loops.
+class LoopGridPolygonFactory : public PolygonFactory {
+ public:
+  LoopGridPolygonFactory(int num_loops, int total_num_vertices)
+      : num_loops_(num_loops), total_num_vertices_(total_num_vertices) {
+    const string seed_str = StrCat("LOOP_GRID_POLYGON_FACTORY",
+                                   absl::GetFlag(FLAGS_s2_random_seed));
+    std::seed_seq seed(seed_str.begin(), seed_str.end());
+    bitgen_.seed(seed);
+  }
+  unique_ptr<S2Polygon> New() override {
+    // Reduce the loop radius if necessary to limit distortion caused by the
+    // spherical projection (the total diameter of the grid is clamped to
+    // one-quarter of the sphere).  We then reduce the loop radius by the
+    // maximum amount of distortion at the edges of the grid to ensure that
+    // the loops do not intersect.
+    int sqrt_num_loops = ceil(sqrt(num_loops_));
+    double spacing_multiplier =
+        1 + absl::GetFlag(FLAGS_bm_loop_separation_fraction);
+    double max_angle = min(M_PI_4, (sqrt_num_loops * spacing_multiplier *
+                                    GetDefaultRadius().radians()));
+    double spacing = 2 * max_angle / sqrt_num_loops;
+    double radius = 0.5 * spacing * cos(max_angle) / spacing_multiplier;
+
+    // If "num_loops" is not a perfect square, make the grid slightly larger
+    // and leave some locations empty.
+    int left = num_loops_;
+    int num_vertices_per_loop = max(3, total_num_vertices_ / num_loops_);
+    Matrix3x3_d frame = s2random::Frame(bitgen_);
+    vector <unique_ptr<S2Loop>> loops;
+    for (int i = 0; i < sqrt_num_loops && left > 0; ++i) {
+      for (int j = 0; j < sqrt_num_loops && left > 0; ++j, --left) {
+        S2Point center(tan((i + 0.5) * spacing - max_angle),
+                       tan((j + 0.5) * spacing - max_angle), 1.0);
+        unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
+            S2::FromFrame(frame, center).Normalize(), S1Angle::Radians(radius),
+            num_vertices_per_loop));
+        CheckEdgeLength(*loop);
+        loops.push_back(std::move(loop));
+      }
+    }
+    return make_unique<S2Polygon>(std::move(loops));
+  }
+
+ private:
+  int num_loops_, total_num_vertices_;
+  std::mt19937_64 bitgen_;
+};
+
+static unique_ptr<S2Polygon> ConstructorBenchmarkSingleLoop(int num_vertices) {
+  const string seed_str = StrCat("CONSTRUCTOR_BENCHMARK_SINGLE_LOOP",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  const S1Angle kRadius = S1Angle::Degrees(1);
+  return make_unique<S2Polygon>(
+      S2Loop::MakeRegularLoop(s2random::Point(bitgen), kRadius, num_vertices));
+}
+
+static unique_ptr<S2Polygon> ConstructorBenchmarkLoopGrid(int num_loops) {
+  constexpr int kVerticesPerLoop = 20;  // More than one S2ShapeIndex cell
+  LoopGridPolygonFactory factory(num_loops, kVerticesPerLoop * num_loops);
+  return factory.New();
+}
+
+// Benchmark S2Polygon construction including its index, but *not* including
+// the time required to construct the S2Loops or their indexes.
+//
+// TODO(ericv): Measure S2Polygon construction and index construction
+// separately, since in some cases the index never needs to be built.
+static void BenchmarkConstructor(benchmark::State& state,
+                                 const S2Polygon& input) {
+  vector<unique_ptr<S2Loop>> loops;
+  S2Polygon copy;  // Make a copy so that we can release the loops.
+  copy = input;
+  loops = copy.Release();
+  // Don't time building of loop indices.
+  for (auto& loop : loops) loop->ForceBuildIndex();
+  for (auto _ : state) {
+    S2Polygon p(std::move(loops));
+    p.ForceBuildIndex();
+    loops = p.Release();
+  }
+}
+
+// Benchmark S2Polygon construction including its index and *also* including
+// the time required to construct the S2Loops and their indexes.
+//
+// TODO(ericv): Exclude S2Loop index construction time once S2Polygon no
+// longer depends on the existence of the S2Loop indexes.
+static void BenchmarkFullConstructor(benchmark::State& state,
+                                     const S2Polygon& input) {
+  int num_loops = input.num_loops();
+  vector<vector<S2Point>> loop_vertices(num_loops);
+  for (int i = 0; i < num_loops; ++i) {
+    S2Testing::AppendLoopVertices(*input.loop(i), &loop_vertices[i]);
+  }
+  for (auto _ : state) {
+    vector<unique_ptr<S2Loop>> loops(num_loops);
+    for (int i = 0; i < num_loops; ++i) {
+      loops[i] = make_unique<S2Loop>(loop_vertices[i]);
+      loops[i]->ForceBuildIndex();
+    }
+    S2Polygon p(std::move(loops));
+    p.ForceBuildIndex();
+  }
+}
+
+// Measure constructor performance for single loops of different sizes.
+static void BM_ConstructorSingleLoop(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  unique_ptr<S2Polygon> input(ConstructorBenchmarkSingleLoop(num_vertices));
+  BenchmarkConstructor(state, *input);
+}
+BENCHMARK(BM_ConstructorSingleLoop)->Arg(8)->Arg(1<<10)->Arg(1<<20);
+
+// Construct polygons from an NxN grid of small loops.
+static void BM_ConstructorLoopGrid(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  unique_ptr<S2Polygon> input(ConstructorBenchmarkLoopGrid(num_loops));
+  BenchmarkConstructor(state, *input);
+}
+BENCHMARK(BM_ConstructorLoopGrid)->Arg(2)->Arg(1<<6)->Arg(1<<12);
+
+// Measure the total constructor time, including S2Loop construction.
+static void BM_FullConstructorSingleLoop(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  unique_ptr<S2Polygon> input(ConstructorBenchmarkSingleLoop(num_vertices));
+  BenchmarkFullConstructor(state, *input);
+}
+BENCHMARK(BM_FullConstructorSingleLoop)->Arg(8)->Arg(1<<10)->Arg(1<<20);
+
+// Measure the total constructor time, including S2Loop construction.
+static void BM_FullConstructorLoopGrid(benchmark::State& state) {
+  const int num_loops = state.range(0);
+
+  unique_ptr<S2Polygon> input(ConstructorBenchmarkLoopGrid(num_loops));
+  BenchmarkFullConstructor(state, *input);
+}
+BENCHMARK(BM_FullConstructorLoopGrid)->Arg(2)->Arg(1<<6)->Arg(1<<12);
+
+static void BM_IsValidConcentricLoops(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+
+  const string seed_str = StrCat("BM_IS_VALID_CONCENTRIC_LOOPS",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  int num_vertices = total_num_vertices / num_loops;
+  S2Polygon polygon;
+  S2Testing::ConcentricLoopsPolygon(s2random::Point(bitgen), num_loops,
+                                    num_vertices, &polygon);
+  // Don't measure indexing time.
+  polygon.ForceBuildIndex();
+  for (auto _ : state) {
+    ABSL_CHECK(polygon.IsValid());
+  }
+  // S2Polygon destruction
+}
+BENCHMARK(BM_IsValidConcentricLoops)
+->ArgPair(1, 8)->ArgPair(2, 8)                           // 8 vertices
+->ArgPair(1, 1<<12)->RangePair(2, 1<<8, 1<<12, 1<<12)    // 4096 vertices
+->ArgPair(1, 1<<16)->RangePair(2, 1<<12, 1<<16, 1<<16);  // 65536 vertices
+
+// Benchmark ContainsPoint() on polygons generated by "factory".
+static void BenchmarkContainsPoint(benchmark::State& state,
+                                   PolygonFactory* factory) {
+  const string seed_str =
+      StrCat("BM_CONTAINS_POINT", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  constexpr int kNumQuerySamples = 100;
+  vector<S2Point> queries(kNumQuerySamples);
+  unique_ptr<S2Polygon> polygon;
+  int delta = 0;  // Bresenham-type algorithm for polygon sampling.
+  for (auto _ : state) {
+    delta -= absl::GetFlag(FLAGS_bm_num_polygon_samples);
+    if (delta < 0) {
+      state.PauseTiming();
+      delta += state.max_iterations;
+      polygon = factory->New();
+      // Don't measure indexing time.
+      polygon->ForceBuildIndex();
+      for (int i = 0; i < kNumQuerySamples; ++i) {
+        queries[i] = s2random::SamplePoint(bitgen, polygon->GetRectBound());
+      }
+      state.ResumeTiming();
+    }
+    benchmark::DoNotOptimize(
+        polygon->Contains(queries[state.iterations() % kNumQuerySamples]));
+  }
+}
+
+// Benchmark ContainsPoint() on an NxN grid of regular loops.
+static void BM_ContainsPointLoopGrid(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  LoopGridPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkContainsPoint(state, &factory);
+}
+BENCHMARK(BM_ContainsPointLoopGrid)
+->RangePair(4, 4, 1<<3, 1<<18)           // Vary the number of vertices
+->RangePair(1<<6, 1<<12, 1<<18, 1<<18);  // Vary the number of loops
+
+// Benchmark ContainsPoint() on nested fractal loops.
+static void BM_ContainsPointNestedFractals(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkContainsPoint(state, &factory);
+}
+BENCHMARK(BM_ContainsPointNestedFractals)
+->RangePair(2, 2, 1<<6, 1<<15)       // Vary the number of vertices
+->RangePair(2, 8, 1<<18, 1<<18);     // Vary the number of loops
+
+// This benchmark mainly measures Contains(S2Cell) and MayIntersect(S2Cell).
+static void BenchmarkCovering(benchmark::State& state, int max_cells,
+                              PolygonFactory* factory) {
+  S2RegionCoverer coverer;
+  coverer.mutable_options()->set_max_cells(max_cells);
+  unique_ptr<S2Polygon> polygon;
+  int delta = 0;  // Bresenham-type algorithm for polygon sampling.
+  for (auto _ : state) {
+    delta -= absl::GetFlag(FLAGS_bm_num_polygon_samples);
+    if (delta < 0) {
+      state.PauseTiming();
+      delta += state.max_iterations;
+      polygon = factory->New();
+      // Don't measure indexing time.
+      polygon->ForceBuildIndex();
+      state.ResumeTiming();
+    }
+    vector<S2CellId> covering;
+    coverer.GetCovering(*polygon, &covering);
+  }
+}
+
+// To reduce the number of test cases, we cover the "num_vertices" range by
+// multiplying by 16 at each step (rather than the default value of 8).
+static void CoveringBenchmarkArgs(benchmark::internal::Benchmark* b) {
+  for (int max_cells = 1<<3; max_cells <= 1<<9; max_cells <<= 3) {
+    for (int num_vertices = 1<<3; num_vertices <= 1<<19; num_vertices <<= 4) {
+      b = b->ArgPair(max_cells, num_vertices);
+    }
+  }
+}
+
+static void BM_FractalCovering(benchmark::State& state) {
+  const int max_cells = state.range(0);
+  const int num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(1, num_vertices);
+  BenchmarkCovering(state, max_cells, &factory);
+}
+BENCHMARK(BM_FractalCovering)->Apply(CoveringBenchmarkArgs);
+
+static void BM_AnnulusCovering(benchmark::State& state) {
+  const int max_cells = state.range(0);
+  const int num_vertices = state.range(1);
+  NestedLoopsPolygonFactory factory(2, num_vertices);
+  BenchmarkCovering(state, max_cells, &factory);
+}
+BENCHMARK(BM_AnnulusCovering)->Apply(CoveringBenchmarkArgs);
+
+// Generate "FLAGS_bm_num_polygon_samples" pairs of nested loops and append
+// them to "outer_loops" and "inner_loops".  All loops have "num_vertices"
+// vertices.  Each outer loop has the given "outer_radius".  Each inner loop
+// is inset from the outer loop by a small distance ("gap") approximately
+// equal to "gap_edge_multiple" times the edge length of the outer loop.
+// (This allows better testing of spatial indexing, which becomes less
+// effective at pruning intersection candidates as the loops get closer
+// together.)  Loops are otherwise positioned randomly (but repeatably).
+//
+// Caveats: the gap is actually measured to the incircle of the outer loop,
+// and the gap is clamped if necessary to prevent the inner loop from becoming
+// vanishingly small.  (Rule of thumb: to obtain a "gap_edge_multiple" of "m",
+// the loops must have approximately 7*m vertices or more.)
+static void GetNestedLoopPairs(S1Angle outer_radius, double gap_edge_multiple,
+                               int num_vertices,
+                               vector<unique_ptr<S2Polygon>>* outer_loops,
+                               vector<unique_ptr<S2Polygon>>* inner_loops) {
+  const string seed_str =
+      StrCat("GET_NESTED_LOOP_PAIRS", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  // The inner loop is inscribed within the incircle (maximum inscribed
+  // circle) of the outer loop.
+  S1Angle incircle_radius = outer_radius * cos(M_PI / num_vertices);
+  S1Angle edge_len = outer_radius * (2 * M_PI / num_vertices);
+
+  // If the edge count is too small, it may not be possible to inset the inner
+  // loop by the given multiple of the edge length.  We handle this by
+  // clamping "inner_radius" to be at least 1% of "outer_radius".
+  S1Angle inner_radius = max(incircle_radius - gap_edge_multiple * edge_len,
+                             0.01 * incircle_radius);
+
+  for (int i = 0; i < absl::GetFlag(FLAGS_bm_num_polygon_samples); ++i) {
+    // Generate two loops with the same center but with random different
+    // starting vertex positions.
+    Matrix3x3_d frame = s2random::Frame(bitgen);
+    outer_loops->emplace_back(new S2Polygon(
+        S2Loop::MakeRegularLoop(frame, outer_radius, num_vertices)));
+    inner_loops->emplace_back(new S2Polygon(S2Loop::MakeRegularLoop(
+        s2random::FrameAt(bitgen, frame.Col(2)), inner_radius, num_vertices)));
+    // Index polygons as we create them rather than doing it lazily.
+    outer_loops->back()->ForceBuildIndex();
+    inner_loops->back()->ForceBuildIndex();
+  }
+}
+
+// Generate "FLAGS_bm_num_polygon_samples" pairs of loops whose boundaries
+// cross each other and append them to "a_loops" and "b_loops".  All loops
+// have "num_vertices" vertices.  The "a_loops" all have radius "a_radius" and
+// similarly for the "b_loops".  Loops are otherwise positioned randomly (but
+// repeatably) on the sphere.
+static void GetCrossingLoopPairs(S1Angle a_radius, S1Angle b_radius,
+                                 int num_vertices,
+                                 vector<unique_ptr<S2Polygon>>* a_loops,
+                                 vector<unique_ptr<S2Polygon>>* b_loops) {
+  const string seed_str =
+      StrCat("GET_CROSSING_LOOP_PAIRS", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  // The edges of each loop are bounded by two circles, one circumscribed
+  // around the loop (the circumcircle), and the other inscribed within the
+  // loop (the incircle).  Our strategy is to place the smaller loop such that
+  // its incircle crosses both circles of the larger loop.
+  S1Angle max_radius = max(a_radius, b_radius);
+  S1Angle min_radius = min(a_radius, b_radius);
+
+  // Check that the smaller loop is big enough that its incircle can span the
+  // gap between the incircle and circumcircle of the larger loop.
+  double incircle_factor = cos(M_PI / num_vertices);
+  ABSL_CHECK_GT(min_radius * incircle_factor,
+                max_radius * (1 - incircle_factor));
+
+  // Compute the range of distances between the two loop centers such that the
+  // incircle of the smaller loop crosses both circles of the larger loop.
+  S1Angle min_dist = max_radius - incircle_factor * min_radius;
+  S1Angle max_dist = incircle_factor * (min_radius + max_radius);
+
+  // Now generate pairs of loops whose centers are separated by distances in
+  // the given range.  Starting vertex positions are chosen randomly.
+  for (int i = 0; i < absl::GetFlag(FLAGS_bm_num_polygon_samples); ++i) {
+    Matrix3x3_d frame = s2random::Frame(bitgen);
+    a_loops->emplace_back(new S2Polygon(
+        S2Loop::MakeRegularLoop(frame, a_radius, num_vertices)));
+    S2Point b_center = S2::GetPointOnLine(
+        frame.Col(2), s2random::Point(bitgen),
+        S1Angle::Radians(
+            absl::Uniform(bitgen, min_dist.radians(), max_dist.radians())));
+    b_loops->emplace_back(new S2Polygon(S2Loop::MakeRegularLoop(
+        s2random::FrameAt(bitgen, b_center), b_radius, num_vertices)));
+    // Index polygons as we create them rather than doing it lazily.
+    a_loops->back()->ForceBuildIndex();
+    b_loops->back()->ForceBuildIndex();
+  }
+}
+
+// Generate "FLAGS_bm_num_polygon_samples" pairs of disjoint loops and append
+// them to "outer_loops" and "inner_loops".  The pairs are constructed so that
+// the result can usually be determined using bounding rectangles.
+//
+// Both loops of each pair have "num_vertices" vertices and radius "radius".
+// The distance between the loops is equal to "loop_separation_fraction" times
+// the radius.  Loops are otherwise positioned randomly (but repeatably).
+static void GetDisjointEasyLoopPairs(
+    S1Angle radius, double loop_separation_fraction, int num_vertices,
+    vector<unique_ptr<S2Polygon>>* a_loops,
+    vector<unique_ptr<S2Polygon>>* b_loops) {
+  const string seed_str = StrCat("GET_DISJOINT_EASY_LOOP_PAIRS",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  for (int i = 0; i < absl::GetFlag(FLAGS_bm_num_polygon_samples); ++i) {
+    // Generate two loops with the same center but with random different
+    // starting vertex positions.
+    Matrix3x3_d frame = s2random::Frame(bitgen);
+    a_loops->emplace_back(new S2Polygon(
+        S2Loop::MakeRegularLoop(frame, radius, num_vertices)));
+    S2Point b_center =
+        S2::GetPointOnLine(frame.Col(2), s2random::Point(bitgen),
+                           (2.0 + loop_separation_fraction) * radius);
+    b_loops->emplace_back(new S2Polygon(S2Loop::MakeRegularLoop(
+        s2random::FrameAt(bitgen, b_center), radius, num_vertices)));
+    // Index polygons as we create them rather than doing it lazily.
+    a_loops->back()->ForceBuildIndex();
+    b_loops->back()->ForceBuildIndex();
+  }
+}
+
+// Generate "FLAGS_bm_num_polygon_samples" pairs of disjoint loops and append
+// them to "outer_loops" and "inner_loops".  The pairs are constructed so that
+// the relationship between the two loops cannot be determined solely from
+// their bounds (they could be nested, crossing, or disjoint).  Each "outer
+// loop" looks somewhat like the outline of the letter "C": it consists of two
+// nested loops (the "outside shell" and the "inside shell") which each have a
+// single edge removed and are then joined together to form a single loop.
+// The "inner loop" is then nested within the inside shell of the outer loop.
+//
+// The outer loop has "num_vertices" vertices split between its outside and
+// inside shells.  The radius of the outside shell is "outer_radius", while
+// the radius of the inside shell is (0.9 * outer_radius).
+//
+// The inner loop has "num_vertices" vertices, and is separated from the
+// inside shell of the outer loop by a small distance ("gap") which is
+// approximately equal to "gap_edge_multiple" times the edge length of the
+// inside shell.  (See GetNestedLoopPairs for details.)
+static void GetDisjointHardLoopPairs(
+    S1Angle outer_radius, double gap_edge_multiple, int num_vertices,
+    vector<unique_ptr<S2Polygon>>* outer_loops,
+    vector<unique_ptr<S2Polygon>>* inner_loops) {
+  const string seed_str = StrCat("GET_DISJOINT_HARD_LOOP_PAIRS",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  // Compute the radius of the inside shell of the outer loop, the edge length
+  // of the inside shell, and finally the incircle radius of the inside shell
+  // (this is the maximum possible radius of the inner loop).
+  S1Angle outer_inside_radius = 0.9 * outer_radius * cos(2*M_PI / num_vertices);
+  S1Angle edge_len = outer_inside_radius * (M_PI / num_vertices);
+  S1Angle incircle_radius = outer_inside_radius * cos(2*M_PI / num_vertices);
+
+  // See comments in GetNestedLoopPairs().
+  S1Angle inner_radius = max(incircle_radius - gap_edge_multiple * edge_len,
+                             0.01 * incircle_radius);
+  for (int i = 0; i < absl::GetFlag(FLAGS_bm_num_polygon_samples); ++i) {
+    Matrix3x3_d frame = s2random::Frame(bitgen);
+    // Join together the outside and inside shells to form the outer loop.
+    vector<S2Point> vertices;
+    unique_ptr<S2Loop> outer_outside(
+        S2Loop::MakeRegularLoop(frame, outer_radius, max(4, num_vertices / 2)));
+    unique_ptr<S2Loop> outer_inside(S2Loop::MakeRegularLoop(
+        frame, outer_inside_radius, max(4, num_vertices / 2)));
+    S2Testing::AppendLoopVertices(*outer_inside, &vertices);
+    std::reverse(vertices.begin(), vertices.end());
+    S2Testing::AppendLoopVertices(*outer_outside, &vertices);
+    outer_loops->emplace_back(new S2Polygon(make_unique<S2Loop>(vertices)));
+    // Now construct the inner loop with the same center but a different
+    // random starting vertex position.
+    inner_loops->emplace_back(new S2Polygon(S2Loop::MakeRegularLoop(
+        s2random::FrameAt(bitgen, frame.Col(2)), inner_radius, num_vertices)));
+    // Index polygons as we create them rather than doing it lazily.
+    outer_loops->back()->ForceBuildIndex();
+    inner_loops->back()->ForceBuildIndex();
+  }
+}
+
+// Given an S2Polygon relation method (e.g., Contains, Intersects) and a
+// collection of polygon pairs for which this method returns a known result
+// ("expected_result"), benchmark the method and then delete all the polygons.
+static void BenchmarkRelation(benchmark::State& state,
+                              bool (S2Polygon::*method)(const S2Polygon& b)
+                                  const,
+                              bool expected_result,
+                              vector<unique_ptr<S2Polygon>>* a_loops,
+                              vector<unique_ptr<S2Polygon>>* b_loops) {
+  int i = 0;
+  for (auto _ : state) {
+    ABSL_CHECK_EQ(expected_result,
+                  ((*a_loops)[i].get()->*method)(*(*b_loops)[i]));
+    if (++i == a_loops->size()) i = 0;
+  }
+}
+
+// Benchmark the given S2Polygon relation method (e.g., Intersects) on a
+// collection of loop pairs where one loop contains the other loop (i.e.,
+// nested loops).  Verify that the method always returns "expected_result".
+static void BenchmarkRelationContains(
+    benchmark::State& state,
+    bool (S2Polygon::*method)(const S2Polygon& b) const, bool expected_result,
+    int num_vertices) {
+  vector<unique_ptr<S2Polygon>> a_loops, b_loops;
+  GetNestedLoopPairs(GetDefaultRadius(),
+                     absl::GetFlag(FLAGS_bm_default_nested_gap_multiple),
+                     num_vertices, &a_loops, &b_loops);
+  BenchmarkRelation(state, method, expected_result, &a_loops, &b_loops);
+}
+
+// Benchmark the given S2Polygon relation method (e.g., Intersects) on a
+// collection of "easy" disjoint loop pairs (where the result can be
+// determined using bounding rectangles).  Verify that the method always
+// returns "expected_result".
+static void BenchmarkRelationDisjointEasy(
+    benchmark::State& state,
+    bool (S2Polygon::*method)(const S2Polygon& b) const, bool expected_result,
+    int num_vertices) {
+  vector<unique_ptr<S2Polygon>> a_loops, b_loops;
+  GetDisjointEasyLoopPairs(GetDefaultRadius(),
+                           absl::GetFlag(FLAGS_bm_loop_separation_fraction),
+                           num_vertices, &a_loops, &b_loops);
+  BenchmarkRelation(state, method, expected_result, &a_loops, &b_loops);
+}
+
+// Benchmark the given S2Polygon relation method (e.g., Intersects) on a
+// collection of "hard" disjoint loop pairs (where the result cannot be
+// determined solely from bounding rectangles).  Verify that the method
+// always returns "expected_result".
+static void BenchmarkRelationDisjointHard(
+    benchmark::State& state,
+    bool (S2Polygon::*method)(const S2Polygon& b) const, bool expected_result,
+    int num_vertices) {
+  vector<unique_ptr<S2Polygon>> a_loops, b_loops;
+  GetDisjointHardLoopPairs(GetDefaultRadius(),
+                           absl::GetFlag(FLAGS_bm_default_nested_gap_multiple),
+                           num_vertices, &a_loops, &b_loops);
+  BenchmarkRelation(state, method, expected_result, &a_loops, &b_loops);
+}
+
+// Benchmark the given S2Polygon relation method (e.g., Intersects) on a
+// collection of loop pairs where the loop boundaries cross each other.
+// Verify that the method always returns "expected_result".
+static void BenchmarkRelationCrosses(
+    benchmark::State& state,
+    bool (S2Polygon::*method)(const S2Polygon& b) const, bool expected_result,
+    int num_vertices) {
+  vector<unique_ptr<S2Polygon>> a_loops, b_loops;
+  S1Angle a_radius = GetDefaultRadius();
+  S1Angle b_radius =
+      a_radius * absl::GetFlag(FLAGS_bm_default_crossing_radius_ratio);
+  // GetCrossingLoopPairs calls ForceBuildIndex so indexing time is not
+  // counted in the benchmark.
+  GetCrossingLoopPairs(a_radius, b_radius, num_vertices, &a_loops, &b_loops);
+  BenchmarkRelation(state, method, expected_result, &a_loops, &b_loops);
+}
+
+// Benchmark whether a polygon generated by "factory" has the given
+// relationship to itself.
+static void BenchmarkRelationToSelf(
+    benchmark::State& state,
+    bool (S2Polygon::*method)(const S2Polygon& b) const, bool expected_result,
+    PolygonFactory* factory) {
+  unique_ptr<S2Polygon> polygon, copy;
+  int delta = 0;  // Bresenham-type algorithm for polygon sampling.
+  for (auto _ : state) {
+    delta -= absl::GetFlag(FLAGS_bm_num_polygon_samples);
+    if (delta < 0) {
+      state.PauseTiming();
+      delta += state.max_iterations;
+      polygon = factory->New();
+      // Make a separate copy to avoid any special optimizations for
+      // operations between a polygon and itself.
+      copy = std::make_unique<S2Polygon>(*polygon);
+      // Don't measure indexing time.
+      polygon->ForceBuildIndex();
+      copy->ForceBuildIndex();
+      state.ResumeTiming();
+    }
+    ABSL_CHECK_EQ(expected_result, (*polygon.*method)(*copy));
+  }
+}
+
+// Benchmark Contains() where one loop contains the other.
+static void BM_ContainsContains(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationContains(state, &S2Polygon::Contains, true, num_vertices);
+}
+BENCHMARK(BM_ContainsContains)->Range(8, 32768);
+
+// Benchmark Contains() where the loops are disjoint and well-separated.
+static void BM_ContainsDisjointEasy(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationDisjointEasy(state, &S2Polygon::Contains, false,
+                                num_vertices);
+}
+BENCHMARK(BM_ContainsDisjointEasy)->Range(8, 32768);
+
+// Benchmark Contains() where the loops are disjoint but this can't be
+// determined solely from bounding rectangles.
+static void BM_ContainsDisjointHard(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationDisjointHard(state, &S2Polygon::Contains, false,
+                                num_vertices);
+}
+BENCHMARK(BM_ContainsDisjointHard)->Range(8, 32768);
+
+// Benchmark Contains() where the loops cross each other.
+static void BM_ContainsCrosses(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationCrosses(state, &S2Polygon::Contains, false, num_vertices);
+}
+BENCHMARK(BM_ContainsCrosses)->Range(8, 32768);
+
+// Benchmark Intersects() where one loop contains the other loop.
+static void BM_IntersectsContains(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationContains(state, &S2Polygon::Intersects, true, num_vertices);
+}
+BENCHMARK(BM_IntersectsContains)->Range(8, 32768);
+
+// Benchmark Intersects() where the loops are disjoint and well-separated.
+static void BM_IntersectsDisjointEasy(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationDisjointEasy(state, &S2Polygon::Intersects, false,
+                                num_vertices);
+}
+BENCHMARK(BM_IntersectsDisjointEasy)->Range(8, 32768);
+
+// Benchmark Intersects() where the loops are disjoint but this can't be
+// determined solely from bounding rectangles.
+static void BM_IntersectsDisjointHard(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationDisjointHard(state, &S2Polygon::Intersects, false,
+                                num_vertices);
+}
+BENCHMARK(BM_IntersectsDisjointHard)->Range(8, 32768);
+
+// Benchmark Intersects() where the loops cross each other.
+static void BM_IntersectsCrosses(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationCrosses(state, &S2Polygon::Intersects, true, num_vertices);
+}
+BENCHMARK(BM_IntersectsCrosses)->Range(8, 32768);
+
+// Benchmark Contains() on nested loops as a function of the loop radius.
+// Performance degrades on very small loops because s2pred::ExpensiveSign() is
+// invoked more often.
+static void BM_ContainsVsRadiusMeters(benchmark::State& state) {
+  const int meters = state.range(0);
+  vector<unique_ptr<S2Polygon>> a_loops, b_loops;
+  GetNestedLoopPairs(S2Testing::MetersToAngle(meters),
+                     absl::GetFlag(FLAGS_bm_default_nested_gap_multiple),
+                     absl::GetFlag(FLAGS_bm_default_num_vertices), &a_loops,
+                     &b_loops);
+  BenchmarkRelation(state, &S2Polygon::Contains, true, &a_loops, &b_loops);
+}
+BENCHMARK(BM_ContainsVsRadiusMeters)
+->Arg(1)->Arg(8)->Arg(64)->Arg(1024)->Arg(65536);
+
+// Benchmark Contains() on nested loops as a function of the distance between
+// the loops (expressed as a multiple of the loop edge length).  Performance
+// degrades as the loops get very close together because spatial indexing is
+// not as effective at pruning the intersection candidates.
+static void BM_ContainsVsEdgeGapMultiple(benchmark::State& state) {
+  const int edge_gap_multiple = state.range(0);
+  vector<unique_ptr<S2Polygon>> a_loops, b_loops;
+  GetNestedLoopPairs(GetDefaultRadius(), edge_gap_multiple,
+                     absl::GetFlag(FLAGS_bm_default_num_vertices), &a_loops,
+                     &b_loops);
+  BenchmarkRelation(state, &S2Polygon::Contains, true, &a_loops, &b_loops);
+}
+BENCHMARK(BM_ContainsVsEdgeGapMultiple)
+->Arg(0)->Arg(1)->Arg(8)->Arg(64);
+
+// Benchmark Intersects() on crossing loops as a function of the relative
+// sizes of the two loops (e.g., one loop radius much larger than the other).
+// Performance of spatial indexing can degrade when one loop is much larger
+// than the other.
+static void BM_IntersectsCrossesVsLogRadiusRatio(benchmark::State& state) {
+  const int log_radius_ratio = state.range(0);
+  vector<unique_ptr<S2Polygon>> a_loops, b_loops;
+  S1Angle a_radius = GetDefaultRadius();
+  S1Angle b_radius = a_radius * pow(2.0, log_radius_ratio);
+  GetCrossingLoopPairs(a_radius, b_radius,
+                       absl::GetFlag(FLAGS_bm_default_num_vertices), &a_loops,
+                       &b_loops);
+  BenchmarkRelation(state, &S2Polygon::Intersects, true, &a_loops, &b_loops);
+}
+BENCHMARK(BM_IntersectsCrossesVsLogRadiusRatio)
+->Arg(-10)->Arg(-5)->Arg(0)->Arg(5)->Arg(10);
+
+static void BM_ContainsSelfLoopGrid(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  LoopGridPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkRelationToSelf(state, &S2Polygon::Contains, true, &factory);
+}
+BENCHMARK(BM_ContainsSelfLoopGrid)
+->RangePair(4, 4, 1<<6, 1<<15)           // Vary the number of vertices
+->RangePair(1<<6, 1<<12, 1<<15, 1<<15);  // Vary the number of loops
+
+static void BM_ContainsSelfNestedFractals(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkRelationToSelf(state, &S2Polygon::Contains, true, &factory);
+}
+BENCHMARK(BM_ContainsSelfNestedFractals)->RangePair(2, 2, 1<<3, 1<<18);
+
+static void BM_IntersectsSelfLoopGrid(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  LoopGridPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkRelationToSelf(state, &S2Polygon::Intersects, true, &factory);
+}
+BENCHMARK(BM_IntersectsSelfLoopGrid)
+->RangePair(4, 4, 1<<6, 1<<15)           // Vary the number of vertices
+->RangePair(1<<6, 1<<12, 1<<15, 1<<15);  // Vary the number of loops
+
+// Return a single-loop polygon that contains the given polygon.
+static unique_ptr<S2Polygon> GetBoundingPolygon(const S2Polygon& polygon) {
+  constexpr int kNumCapEdges = 8;
+  S2Cap cap = polygon.GetCapBound();
+  return make_unique<S2Polygon>(S2Loop::MakeRegularLoop(
+      cap.center(), cap.GetRadius() / cos(M_PI / kNumCapEdges), kNumCapEdges));
+}
+
+// Benchmark whether a polygon generated by "factory" Intersects() its
+// "complement" (obtained by subtracting the polygon from a simple bound).
+//
+// This is essentially a "worst case" for the Intersects() predicate, since
+// every edge from one polygon intersects three edges from the other polygon
+// (one in the reverse direction, and two intersections at vertices), and yet
+// the polygons themselves do not intersect (using semi-open boundaries).
+static void BenchmarkIntersectsCmpl(benchmark::State& state,
+                                    PolygonFactory* factory) {
+  unique_ptr<S2Polygon> polygon(factory->New());
+  unique_ptr<S2Polygon> bound(GetBoundingPolygon(*polygon));
+  S2Polygon complement;
+  complement.InitToDifference(*bound, *polygon);
+
+  // Don't measure indexing time.
+  polygon->ForceBuildIndex();
+  complement.ForceBuildIndex();
+
+  for (auto _ : state) {
+    ABSL_CHECK(!polygon->Intersects(complement));
+  }
+}
+
+static void BM_IntersectsCmplLoopGrid(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  LoopGridPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkIntersectsCmpl(state, &factory);
+}
+BENCHMARK(BM_IntersectsCmplLoopGrid)
+->RangePair(4, 4, 1<<6, 1<<15)           // Vary the number of vertices
+->RangePair(1<<6, 1<<12, 1<<15, 1<<15);  // Vary the number of loops
+
+static void BM_IntersectsCmplNestedFractals(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkIntersectsCmpl(state, &factory);
+}
+// Similar to ContainsSelfNestedFractals, so we just do some spot checks.
+BENCHMARK(BM_IntersectsCmplNestedFractals)
+->ArgPair(2, 1<<9)->ArgPair(2, 1<<18);
+
+// Benchmark an operation (InitToIntersection, etc) between a polygon
+// generated by "factory" and every cell in a covering of that polygon.
+static void BenchmarkOpWithCovering(
+    benchmark::State& state, int max_cells, PolygonFactory* factory,
+    void (S2Polygon::*method)(const S2Polygon& a, const S2Polygon& b)) {
+  S2RegionCoverer coverer;
+  coverer.mutable_options()->set_max_cells(max_cells);
+  unique_ptr<S2Polygon> polygon;
+  vector<S2CellId> covering;
+  int delta = 0;  // Bresenham-type algorithm for polygon sampling.
+  int icover = 0;
+  for (auto _ : state) {
+    delta -= absl::GetFlag(FLAGS_bm_num_polygon_samples);
+    if (delta < 0) {
+      state.PauseTiming();
+      delta += state.max_iterations;
+      polygon = factory->New();
+      // Don't measure indexing time.
+      polygon->ForceBuildIndex();
+      coverer.GetCovering(*polygon, &covering);
+      state.ResumeTiming();
+    }
+    if (icover >= covering.size()) icover = 0;
+    S2Cell cell(covering[icover]);
+    S2Polygon cell_poly(cell);
+    // Note that cell_poly indexing time *is* included in the benchmark.
+    cell_poly.ForceBuildIndex();
+    S2Polygon result;
+    (result.*method)(*polygon, cell_poly);
+    ++icover;
+  }
+}
+
+// The only interesting case is intersection, since for union and difference
+// the output polygon includes almost all of the input polygon.
+static void BM_IntersectFractalWithCovering(benchmark::State& state) {
+  const int max_cells = state.range(0);
+  const int total_num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(1, total_num_vertices);
+  BenchmarkOpWithCovering(state, max_cells, &factory,
+                          &S2Polygon::InitToIntersection);
+}
+BENCHMARK(BM_IntersectFractalWithCovering)
+->RangePair(2, 1<<5, 1<<7, 1<<7)
+->RangePair(1, 1<<12, 1<<15, 1<<15);
+
+// The only interesting case is intersection, since for union and difference
+// the output polygon includes almost all of the input polygon.
+static void BM_IntersectLoopGridWithCovering(benchmark::State& state) {
+  const int max_cells = state.range(0);
+  const int total_num_vertices = state.range(1);
+  constexpr int kNumVerticesPerLoop = 4;
+  int num_loops = total_num_vertices / kNumVerticesPerLoop;
+  LoopGridPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkOpWithCovering(state, max_cells, &factory,
+                          &S2Polygon::InitToIntersection);
+}
+BENCHMARK(BM_IntersectLoopGridWithCovering)
+->RangePair(2, 1<<5, 1<<7, 1<<7)
+->RangePair(1, 1<<12, 1<<15, 1<<15);
+
+// Benchmark an operation between a polygon generated by "factory" and itself.
+static void BenchmarkOpWithSelf(benchmark::State& state,
+                                PolygonFactory* factory,
+                                void (S2Polygon::*method)(const S2Polygon& a,
+                                                          const S2Polygon& b)) {
+  unique_ptr<S2Polygon> polygon, copy;
+  int delta = 0;  // Bresenham-type algorithm for polygon sampling.
+  for (auto _ : state) {
+    delta -= absl::GetFlag(FLAGS_bm_num_polygon_samples);
+    if (delta < 0) {
+      state.PauseTiming();
+      delta += state.max_iterations;
+      polygon = factory->New();
+      // Make a separate copy to avoid any special optimizations for
+      // operations between a polygon and itself.
+      copy = std::make_unique<S2Polygon>(*polygon);
+      // Don't measure indexing time.
+      polygon->ForceBuildIndex();
+      copy->ForceBuildIndex();
+      state.ResumeTiming();
+    }
+    S2Polygon result;
+    (result.*method)(*polygon, *copy);
+  }
+}
+
+static void BM_UnionNestedFractalWithSelf(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkOpWithSelf(state, &factory, &S2Polygon::InitToUnion);
+}
+BENCHMARK(BM_UnionNestedFractalWithSelf)->RangePair(1, 8, 1<<15, 1<<15);
+
+static void BM_IntersectNestedFractalWithSelf(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkOpWithSelf(state, &factory, &S2Polygon::InitToIntersection);
+}
+BENCHMARK(BM_IntersectNestedFractalWithSelf)->RangePair(1, 8, 1<<15, 1<<15);
+
+static void BM_SubtractNestedFractalFromSelf(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  NestedFractalsPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkOpWithSelf(state, &factory, &S2Polygon::InitToDifference);
+}
+BENCHMARK(BM_SubtractNestedFractalFromSelf)->RangePair(1, 8, 1<<15, 1<<15);
+
+// Benchmark an operation between a polygon generated by "factory" and a
+// simple bounding polygon.
+static void BenchmarkOpWithBound(
+    benchmark::State& state, PolygonFactory* factory,
+    void (S2Polygon::*method)(const S2Polygon& a, const S2Polygon& b)) {
+  unique_ptr<S2Polygon> polygon, bound;
+  int delta = 0;  // Bresenham-type algorithm for polygon sampling.
+  for (auto _ : state) {
+    delta -= absl::GetFlag(FLAGS_bm_num_polygon_samples);
+    if (delta < 0) {
+      state.PauseTiming();
+      delta += state.max_iterations;
+      polygon = factory->New();
+      bound = GetBoundingPolygon(*polygon);
+      // Don't measure indexing time.
+      polygon->ForceBuildIndex();
+      bound->ForceBuildIndex();
+      state.ResumeTiming();
+    }
+    S2Polygon result;
+    (result.*method)(*polygon, *bound);
+  }
+}
+
+static void BM_UnionLoopGridWithBound(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  LoopGridPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkOpWithBound(state, &factory, &S2Polygon::InitToUnion);
+}
+BENCHMARK(BM_UnionLoopGridWithBound)->RangePair(1, 1<<12, 1<<15, 1<<15);
+
+static void BM_SubtractBoundFromLoopGrid(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  const int total_num_vertices = state.range(1);
+  LoopGridPolygonFactory factory(num_loops, total_num_vertices);
+  BenchmarkOpWithBound(state, &factory, &S2Polygon::InitToDifference);
+}
+BENCHMARK(BM_SubtractBoundFromLoopGrid)->RangePair(1, 1<<12, 1<<15, 1<<15);
+
+static void BM_ShapeGetEdge(benchmark::State& state) {
+  const int num_loops = state.range(0);
+  S2Polygon polygon;
+  constexpr int kNumVerticesPerLoop = 6;
+  S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), num_loops,
+                                    kNumVerticesPerLoop, &polygon);
+  // Don't measure indexing time.
+  polygon.ForceBuildIndex();
+  S2Polygon::Shape shape(&polygon);
+  int e = 0;
+  for (auto _ : state) {
+    if (--e < 0) e += kNumVerticesPerLoop * num_loops;
+    (void) shape.edge(e);
+  }
+}
+BENCHMARK(BM_ShapeGetEdge)->Arg(1)->Arg(5)->Arg(10)->Arg(15)->Arg(20)->Arg(25);

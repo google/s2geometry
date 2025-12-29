@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/log_streamer.h"
@@ -87,8 +88,8 @@ class WindingNumberComparingLayer : public S2Builder::Layer {
                         DuplicateEdges::MERGE, SiblingPairs::KEEP);
   }
 
-  void Build(const Graph& g, S2Error* error) override {
-  // Find the reference vertex before and after snapping.
+  void Build(const Graph& g, S2Error* absl_nonnull error) override {
+    // Find the reference vertex before and after snapping.
     S2Point ref_in = builder_.input_edge(ref_input_edge_id_).v0;
     VertexId ref_v = s2builderutil::FindFirstVertexId(ref_input_edge_id_, g);
     ABSL_DCHECK_GE(ref_v, 0);
@@ -366,7 +367,7 @@ class WindingNumberCheckingLayer : public S2Builder::Layer {
                         duplicate_edges, sibling_pairs);
   }
 
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   mutable absl::BitGenRef bitgen_;
@@ -376,7 +377,8 @@ class WindingNumberCheckingLayer : public S2Builder::Layer {
   WindingTally* winding_tally_;
 };
 
-void WindingNumberCheckingLayer::Build(const Graph& g, S2Error* error) {
+void WindingNumberCheckingLayer::Build(const Graph& g,
+                                       S2Error* absl_nonnull error) {
   // First we locate the vertices R, R', I, I'.
   S2Point ref_in = builder_.input_edge(ref_input_edge_id_).v0;
   VertexId ref_v = s2builderutil::FindFirstVertexId(ref_input_edge_id_, g);

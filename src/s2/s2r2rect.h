@@ -195,7 +195,6 @@ class S2R2Rect final : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  S2R2Rect* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
   void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
@@ -204,6 +203,10 @@ class S2R2Rect final : public S2Region {
   bool MayIntersect(const S2Cell& cell) const override;
 
  private:
+  // Implements the S2Region interface.  Note that the copy constructor should
+  // be used instead.
+  S2Region* Clone() const override;
+
   R2Rect rect_;
 };
 

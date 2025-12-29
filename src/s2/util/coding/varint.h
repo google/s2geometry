@@ -33,7 +33,6 @@
 // Avoid adding expensive includes here.
 #include <cassert>
 #include <cstddef>
-
 #include <cstdint>
 #include <limits>
 #include <string>

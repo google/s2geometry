@@ -15,6 +15,7 @@
 
 #include "s2/s2region_sharder.h"
 
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -159,6 +160,32 @@ TEST_F(S2RegionSharderTest, GetIntersectingShards) {
   S2CellIndex index = IndexFromCoverings(coverings);
   Run(S2RegionSharder(&index));
   Run(S2RegionSharder(coverings));
+}
+
+TEST_F(S2RegionSharderTest, GetMostIntersectingShardTieBreaking) {
+  S2CellId c0 = S2CellId::FromFace(0).child(0);
+  S2CellId c1 = S2CellId::FromFace(1).child(0);
+  ASSERT_EQ(c0.lsb(), c1.lsb());
+
+  std::vector<S2CellUnion> coverings{
+      S2CellUnion({c1}),
+      S2CellUnion({c0}),
+  };
+  for (int i = 0; i < 2; ++i) {
+    // Tie-breaking: if two shards have same intersection area, pick lowest
+    // index.
+    //
+    // Shards 0 and 1 cover c1 and c0 on the first iteration and c0 and c1 on
+    // the second iteration.
+    // With region c0+c1, shard 0 intersects c0, shard 1 intersects c1.
+    // Intersection sums are equal, so the shard with smaller index must be
+    // chosen.
+    S2RegionSharder sharder(coverings);
+    EXPECT_EQ(0, sharder.GetMostIntersectingShard(S2CellUnion({c0, c1}), 42));
+
+    // Swap the order of the shards and repeat.
+    std::swap(coverings[0], coverings[1]);
+  }
 }
 
 }  // namespace

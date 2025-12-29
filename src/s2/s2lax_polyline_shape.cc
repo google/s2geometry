@@ -18,24 +18,23 @@
 #include "s2/s2lax_polyline_shape.h"
 
 #include <algorithm>
-#include <memory>
 #include <utility>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/types/span.h"
-#include "absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2polyline.h"
 #include "s2/s2shape.h"
 
 using absl::MakeSpan;
 using absl::Span;
-using std::make_unique;
+using ::s2internal::MakeS2PointArrayForOverwrite;
 
 S2LaxPolylineShape::S2LaxPolylineShape(S2LaxPolylineShape&& other) noexcept
     : num_vertices_(std::exchange(other.num_vertices_, 0)),
@@ -60,17 +59,16 @@ void S2LaxPolylineShape::Init(Span<const S2Point> vertices) {
   num_vertices_ = vertices.size();
   ABSL_LOG_IF(WARNING, num_vertices_ == 1)
       << "s2shapeutil::S2LaxPolylineShape with one vertex has no edges";
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
-  std::copy(vertices.begin(), vertices.end(), vertices_.get());
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+  std::copy_n(vertices.data(), num_vertices_, vertices_.get());
 }
 
 void S2LaxPolylineShape::Init(const S2Polyline& polyline) {
   num_vertices_ = polyline.num_vertices();
   ABSL_LOG_IF(WARNING, num_vertices_ == 1)
       << "s2shapeutil::S2LaxPolylineShape with one vertex has no edges";
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
-  std::copy(&polyline.vertex(0), &polyline.vertex(0) + num_vertices_,
-            vertices_.get());
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+  std::copy_n(&polyline.vertex(0), num_vertices_, vertices_.get());
 }
 
 void S2LaxPolylineShape::Encode(Encoder* encoder,
@@ -83,7 +81,7 @@ bool S2LaxPolylineShape::Init(Decoder* decoder) {
   s2coding::EncodedS2PointVector vertices;
   if (!vertices.Init(decoder)) return false;
   num_vertices_ = vertices.size();
-  vertices_ = make_unique<S2Point[]>(vertices.size());
+  vertices_ = MakeS2PointArrayForOverwrite(vertices.size());
   return vertices.Decode(absl::MakeSpan(vertices_.get(), vertices.size()));
 }
 
@@ -91,7 +89,7 @@ bool S2LaxPolylineShape::Init(Decoder* decoder, S2Error& error) {
   s2coding::EncodedS2PointVector vertices;
   if (!vertices.Init(decoder, error)) return false;
   num_vertices_ = vertices.size();
-  vertices_ = make_unique<S2Point[]>(vertices.size());
+  vertices_ = MakeS2PointArrayForOverwrite(vertices.size());
   vertices.Decode(absl::MakeSpan(vertices_.get(), vertices.size()), error);
   return error.ok();
 }

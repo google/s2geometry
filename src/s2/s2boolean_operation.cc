@@ -75,6 +75,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
@@ -739,7 +740,7 @@ class EdgeClippingLayer : public S2Builder::Layer {
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   const vector<unique_ptr<S2Builder::Layer>>& layers_;
@@ -756,7 +757,7 @@ GraphOptions EdgeClippingLayer::graph_options() const {
                       DuplicateEdges::KEEP, SiblingPairs::KEEP);
 }
 
-void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
+void EdgeClippingLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   // Data per graph edge:
   //   vector<EdgeId> order_;
   //   vector<int> rank_;
@@ -844,7 +845,7 @@ class S2BooleanOperation::Impl {
         tracker_(op->options_.memory_tracker()) {
   }
 
-  bool Build(S2Error* error);
+  bool Build(S2Error* absl_nonnull error);
 
  private:
   class CrossingIterator;
@@ -946,7 +947,8 @@ class S2BooleanOperation::Impl {
                        CrossingProcessor* cp);
   bool AreRegionsIdentical() const;
   bool BuildOpType(OpType op_type);
-  bool IsFullPolygonResult(const S2Builder::Graph& g, S2Error* error) const;
+  bool IsFullPolygonResult(const S2Builder::Graph& g,
+                           S2Error* absl_nonnull error) const;
   bool IsFullPolygonUnion(const S2ShapeIndex& a,
                           const S2ShapeIndex& b) const;
   bool IsFullPolygonIntersection(const S2ShapeIndex& a,
@@ -955,7 +957,7 @@ class S2BooleanOperation::Impl {
                                const S2ShapeIndex& b) const;
   bool IsFullPolygonSymmetricDifference(const S2ShapeIndex& a,
                                         const S2ShapeIndex& b) const;
-  void DoBuild(S2Error* error);
+  void DoBuild(S2Error* absl_nonnull error);
 
   // A bit mask representing all six faces of the S2 cube.
   static constexpr uint8_t kAllFacesMask = 0x3f;
@@ -1590,7 +1592,7 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge1(
   // Verify that edge crossings are being counted correctly.
   inside_ ^= (r.a1_crossings & 1);
   if (it->crossings_complete()) {
-    ABSL_DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1),
+    ABSL_DCHECK_EQ(S2ContainsPointQuery(&it->b_index()).Contains(a.v1),
                    inside_ ^ invert_b_);
   }
 
@@ -1864,7 +1866,7 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge2(
 
   // Verify that edge crossings are being counted correctly.
   if (it->crossings_complete()) {
-    ABSL_DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1),
+    ABSL_DCHECK_EQ(S2ContainsPointQuery(&it->b_index()).Contains(a.v1),
                    inside_ ^ invert_b_);
   }
   return true;
@@ -2104,7 +2106,7 @@ bool S2BooleanOperation::Impl::GetChainStarts(
   // operation early.
   bool b_has_interior = HasInterior(b_index);
   if (b_has_interior || invert_b || is_boolean_output()) {
-    auto query = MakeS2ContainsPointQuery(&b_index);
+    S2ContainsPointQuery query(&b_index);
     int num_shape_ids = a_index.num_shape_ids();
     for (int shape_id = 0; shape_id < num_shape_ids; ++shape_id) {
       const S2Shape* a_shape = a_index.shape(shape_id);
@@ -2329,7 +2331,7 @@ uint8_t GetFaceMask(const S2ShapeIndex& index) {
 // or full except for the degeneracies, i.e. whether the degeneracies represent
 // shells or holes.
 bool S2BooleanOperation::Impl::IsFullPolygonResult(
-    const S2Builder::Graph& g, S2Error* error) const {
+    const S2Builder::Graph& g, S2Error* absl_nonnull error) const {
   // If there are no edges of dimension 2, the result could be either the
   // empty polygon or the full polygon.  Note that this is harder to determine
   // than you might think due to snapping.  For example, the union of two
@@ -2559,7 +2561,7 @@ bool S2BooleanOperation::Impl::AreRegionsIdentical() const {
   return true;
 }
 
-void S2BooleanOperation::Impl::DoBuild(S2Error* error) {
+void S2BooleanOperation::Impl::DoBuild(S2Error* absl_nonnull error) {
   if (!tracker_.ok()) return;
   builder_options_ = S2Builder::Options(op_->options_.snap_function());
   builder_options_.set_intersection_tolerance(S2::kIntersectionError);
@@ -2585,7 +2587,7 @@ void S2BooleanOperation::Impl::DoBuild(S2Error* error) {
   // Add a predicate that decides whether a result with no polygon edges should
   // be interpreted as the empty polygon or the full polygon.
   builder_->AddIsFullPolygonPredicate(
-      [this](const S2Builder::Graph& g, S2Error* error) {
+      [this](const S2Builder::Graph& g, S2Error* absl_nonnull error) {
         return IsFullPolygonResult(g, error);
       });
   (void) BuildOpType(op_->op_type_);
@@ -2595,7 +2597,7 @@ void S2BooleanOperation::Impl::DoBuild(S2Error* error) {
   builder_->Build(error);
 }
 
-bool S2BooleanOperation::Impl::Build(S2Error* error) {
+bool S2BooleanOperation::Impl::Build(S2Error* absl_nonnull error) {
   // This wrapper ensures that memory tracking errors are reported.
   *error = S2Error::Ok();
   DoBuild(error);
@@ -2752,9 +2754,8 @@ S2BooleanOperation::S2BooleanOperation(
     const Options& options)
     : options_(options), op_type_(op_type), layers_(std::move(layers)) {}
 
-bool S2BooleanOperation::Build(const S2ShapeIndex& a,
-                               const S2ShapeIndex& b,
-                               S2Error* error) {
+bool S2BooleanOperation::Build(const S2ShapeIndex& a, const S2ShapeIndex& b,
+                               S2Error* absl_nonnull error) {
   regions_[0] = &a;
   regions_[1] = &b;
   return Impl(this).Build(error);

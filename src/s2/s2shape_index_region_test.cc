@@ -17,12 +17,15 @@
 
 #include <algorithm>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
+#include "absl/flags/flag.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
@@ -84,7 +87,7 @@ TEST(S2ShapeIndexRegion, GetCapBound) {
   MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(id, -kPadding));
   S2Cap cell_bound = S2Cell(id).GetCapBound();
-  S2Cap index_bound = MakeS2ShapeIndexRegion(&index).GetCapBound();
+  S2Cap index_bound = S2ShapeIndexRegion(&index).GetCapBound();
   EXPECT_TRUE(index_bound.Contains(cell_bound));
 
   // Note that S2CellUnion::GetCapBound returns a slightly larger bound than
@@ -99,7 +102,7 @@ TEST(S2ShapeIndexRegion, GetRectBound) {
   MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(id, -kPadding));
   S2LatLngRect cell_bound = S2Cell(id).GetRectBound();
-  S2LatLngRect index_bound = MakeS2ShapeIndexRegion(&index).GetRectBound();
+  S2LatLngRect index_bound = S2ShapeIndexRegion(&index).GetRectBound();
   EXPECT_EQ(index_bound, cell_bound);
 }
 
@@ -108,7 +111,7 @@ TEST(S2ShapeIndexRegion, GetCellUnionBoundMultipleFaces) {
   MutableS2ShapeIndex index;
   for (auto id : ids) index.Add(NewPaddedCell(id, -kPadding));
   vector<S2CellId> covering;
-  MakeS2ShapeIndexRegion(&index).GetCellUnionBound(&covering);
+  S2ShapeIndexRegion(&index).GetCellUnionBound(&covering);
   std::sort(ids.begin(), ids.end());
   EXPECT_EQ(ids, covering);
 }
@@ -134,7 +137,7 @@ TEST(S2ShapeIndexRegion, GetCellUnionBoundOneFace) {
     }
   }
   vector<S2CellId> actual;
-  MakeS2ShapeIndexRegion(&index).GetCellUnionBound(&actual);
+  S2ShapeIndexRegion(&index).GetCellUnionBound(&actual);
   EXPECT_EQ(expected, actual);
 }
 
@@ -144,17 +147,17 @@ TEST(S2ShapeIndexRegion, ContainsCellMultipleShapes) {
   // Add a polygon that is slightly smaller than the cell being tested.
   MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(id, -kPadding));
-  EXPECT_FALSE(MakeS2ShapeIndexRegion(&index).Contains(S2Cell(id)));
+  EXPECT_FALSE(S2ShapeIndexRegion(&index).Contains(S2Cell(id)));
 
   // Add a second polygon that is slightly larger than the cell being tested.
   // Note that Contains() should return true if *any* shape contains the cell.
   index.Add(NewPaddedCell(id, kPadding));
-  EXPECT_TRUE(MakeS2ShapeIndexRegion(&index).Contains(S2Cell(id)));
+  EXPECT_TRUE(S2ShapeIndexRegion(&index).Contains(S2Cell(id)));
 
   // Verify that all children of the cell are also contained.
   for (S2CellId child = id.child_begin();
        child != id.child_end(); child = child.next()) {
-    EXPECT_TRUE(MakeS2ShapeIndexRegion(&index).Contains(S2Cell(child)));
+    EXPECT_TRUE(S2ShapeIndexRegion(&index).Contains(S2Cell(child)));
   }
 }
 
@@ -164,7 +167,7 @@ TEST(S2ShapeIndexRegion, IntersectsShrunkenCell) {
   // Add a polygon that is slightly smaller than the cell being tested.
   MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(target, -kPadding));
-  auto region = MakeS2ShapeIndexRegion(&index);
+  S2ShapeIndexRegion region(&index);
 
   // Check that the index intersects the cell itself, but not any of the
   // neighboring cells.
@@ -182,7 +185,7 @@ TEST(S2ShapeIndexRegion, IntersectsExactCell) {
   // Adds a polygon that exactly follows a cell boundary.
   MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(target, 0.0));
-  auto region = MakeS2ShapeIndexRegion(&index);
+  S2ShapeIndexRegion region(&index);
 
   // Check that the index intersects the cell and all of its neighbors.
   vector<S2CellId> ids = {target};
@@ -228,9 +231,9 @@ class VisitIntersectingShapesTest {
           return true;
         }));
     for (int s = 0; s < index_->num_shape_ids(); ++s) {
-      auto shape_region = MakeS2ShapeIndexRegion(shape_indexes_[s].get());
+      S2ShapeIndexRegion shape_region(shape_indexes_[s].get());
       if (!shape_region.MayIntersect(target)) {
-        EXPECT_EQ(shape_contains.count(s), 0);
+        EXPECT_FALSE(shape_contains.contains(s));
       } else {
         EXPECT_EQ(shape_contains[s], shape_region.Contains(target));
       }
@@ -315,5 +318,75 @@ TEST(VisitIntersectingShapes, Polygons) {
   index.Add(NewPaddedCell(S2CellId::FromFace(0), 0));
   VisitIntersectingShapesTest(bitgen, &index).Run();
 }
+
+// Helper functions that generate target S2CellIds relative to index S2CellIds
+// for benchmarking VisitIntersectingShapes().
+
+S2CellId GetIndexCellId(S2CellId id) { return id; }
+
+S2CellId GetParentCellId(S2CellId id) {
+  return id.is_face() ? id : id.parent();
+}
+
+S2CellId GetDescendantCellId(S2CellId id) {
+  return id.level() > S2CellId::kMaxLevel - 2 ? id : id.child(0).child(2);
+}
+
+// Helper function that adds polygon geometry to an index for benchmarking.
+void AddPolygons(int n, MutableS2ShapeIndex* index) {
+  const string seed_str =
+      absl::StrCat("ADD_POLYGONS", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(3 * 256);
+  for (int k = 0; k < n; ++k) {
+    auto frame = s2random::FrameAt(
+        bitgen, s2random::SamplePoint(
+                    bitgen, S2Cap(S2LatLng::FromDegrees(5, 5).ToPoint(),
+                                  S1Angle::Radians(0.1))));
+    index->Add(make_unique<S2Loop::OwningShape>(
+        fractal.MakeLoop(frame, S1Angle::Radians(0.1))));
+  }
+  index->ForceBuild();
+}
+
+// Visits intersecting shapes for a collection of target cells where each
+// target cell is chosen relative to an index cell (e.g., its parent).
+void BenchmarkVisitIntersectingShapes(
+    benchmark::State& state,
+    void add_geometry(int n, MutableS2ShapeIndex* index),
+    S2CellId get_target(S2CellId id)) {
+  MutableS2ShapeIndex index;
+  add_geometry(state.range(0), &index);
+  S2ShapeIndexRegion region(&index);
+  for (auto _ : state) {
+    for (MutableS2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+         !it.done(); it.Next()) {
+      S2Cell target(get_target(it.id()));
+      region.VisitIntersectingShapes(
+          target, [](const S2Shape* shape, bool contains_target) {
+            benchmark::DoNotOptimize(shape);
+            return true;
+          });
+    }
+  }
+}
+
+void BM_VisitIntersectingPolygonsParentCells(benchmark::State& state) {
+  BenchmarkVisitIntersectingShapes(state, AddPolygons, GetParentCellId);
+}
+BENCHMARK(BM_VisitIntersectingPolygonsParentCells)->Arg(1)->Arg(5);
+
+void BM_VisitIntersectingPolygonsIndexCells(benchmark::State& state) {
+  BenchmarkVisitIntersectingShapes(state, AddPolygons, GetIndexCellId);
+}
+BENCHMARK(BM_VisitIntersectingPolygonsIndexCells)->Arg(1)->Arg(5);
+
+void BM_VisitIntersectingPolygonsDescendantCells(benchmark::State& state) {
+  BenchmarkVisitIntersectingShapes(state, AddPolygons, GetDescendantCellId);
+}
+BENCHMARK(BM_VisitIntersectingPolygonsDescendantCells)->Arg(1)->Arg(5);
 
 }  // namespace

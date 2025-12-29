@@ -20,8 +20,6 @@
 #ifndef S2_UTIL_CODING_CODER_H_
 #define S2_UTIL_CODING_CODER_H_
 
-#include <cstring>
-
 #include <cstdint>
 #include <cstring>
 #include <utility>

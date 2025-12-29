@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/attributes.h"
+#include "absl/base/macros.h"
 #include "absl/base/optimization.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
@@ -65,7 +67,7 @@
 // S2CellUnion GetCovering(const S2ShapeIndex& index) {
 //   S2RegionCoverer coverer;
 //   coverer.mutable_options()->set_max_cells(20);
-//   return coverer.GetCovering(MakeS2ShapeIndexRegion(&index));
+//   return coverer.GetCovering(S2ShapeIndexRegion(&index));
 // }
 //
 // This class is not thread-safe.  To use it in parallel, each thread should
@@ -73,21 +75,20 @@
 template <class IndexType>
 class S2ShapeIndexRegion final : public S2Region {
  public:
-  // Rather than calling this constructor, which requires specifying the
-  // S2ShapeIndex type explicitly, the preferred idiom is to call
-  // MakeS2ShapeIndexRegion(&index) instead.  For example:
-  //
-  //   coverer.GetCovering(MakeS2ShapeIndexRegion(&index), &covering);
-  explicit S2ShapeIndexRegion(const IndexType* index);
+  // This constructor may be called without specifying the template parameter.
+  // For example: `coverer.GetCovering(S2ShapeIndexRegion(&index), &covering);`
+  explicit S2ShapeIndexRegion(
+      const IndexType* index ABSL_ATTRIBUTE_LIFETIME_BOUND);
+
+  S2ShapeIndexRegion(const S2ShapeIndexRegion&) = default;
+  S2ShapeIndexRegion& operator=(const S2ShapeIndexRegion&) = default;
+  S2ShapeIndexRegion(S2ShapeIndexRegion&&) = default;
+  S2ShapeIndexRegion& operator=(S2ShapeIndexRegion&&) = default;
 
   const IndexType& index() const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
-
-  // Clone() returns a *shallow* copy; it does not make a copy of the
-  // underlying S2ShapeIndex.
-  S2ShapeIndexRegion<IndexType>* Clone() const override;
 
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
@@ -155,6 +156,13 @@ class S2ShapeIndexRegion final : public S2Region {
  private:
   using Iterator = typename IndexType::Iterator;
 
+  // Implements the S2Region interface.  Note that the copy constructor should
+  // be used instead.
+  //
+  // Clone() returns a *shallow* copy; it does not make a copy of the
+  // underlying S2ShapeIndex.
+  S2Region* Clone() const override;
+
   static void CoverRange(S2CellId first, S2CellId last,
                          std::vector<S2CellId> *cell_ids);
 
@@ -181,10 +189,12 @@ class S2ShapeIndexRegion final : public S2Region {
   Iterator& iter_ = *contains_query_.mutable_iter();
 };
 
-// Returns an S2ShapeIndexRegion that wraps the given S2ShapeIndex.  Note that
-// it is efficient to return S2ShapeIndexRegion objects by value.
+// Deduction guide so that clients can write:
+//   S2ShapeIndexRegion r(&index);
+// rather than:
+//   S2ShapeIndexRegion<S2ShapeIndex> r(&index);
 template <class IndexType>
-S2ShapeIndexRegion<IndexType> MakeS2ShapeIndexRegion(const IndexType* index);
+S2ShapeIndexRegion(const IndexType* index) -> S2ShapeIndexRegion<IndexType>;
 
 
 //////////////////   Implementation details follow   ////////////////////
@@ -201,8 +211,8 @@ inline const IndexType& S2ShapeIndexRegion<IndexType>::index() const {
 }
 
 template <class IndexType>
-S2ShapeIndexRegion<IndexType>* S2ShapeIndexRegion<IndexType>::Clone() const {
-  return new S2ShapeIndexRegion<IndexType>(&index());
+S2Region* S2ShapeIndexRegion<IndexType>::Clone() const {
+  return new S2ShapeIndexRegion(&index());
 }
 
 template <class IndexType>
@@ -456,9 +466,10 @@ bool S2ShapeIndexRegion<IndexType>::AnyEdgeIntersects(
 }
 
 template <class IndexType>
+ABSL_DEPRECATE_AND_INLINE()
 inline S2ShapeIndexRegion<IndexType> MakeS2ShapeIndexRegion(
-    const IndexType* index) {
-  return S2ShapeIndexRegion<IndexType>(index);
+    const IndexType* index ABSL_ATTRIBUTE_LIFETIME_BOUND) {
+  return S2ShapeIndexRegion(index);
 }
 
 #endif  // S2_S2SHAPE_INDEX_REGION_H_
