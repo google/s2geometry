@@ -105,12 +105,11 @@
 #ifndef S2_UTIL_GTL_DENSEHASHTABLE_H_
 #define S2_UTIL_GTL_DENSEHASHTABLE_H_
 
+#include <algorithm>  // For swap(), eg
 #include <cassert>
 #include <cstddef>
-#include <cstdio>  // for FILE, fwrite, fread
-
-#include <algorithm>  // For swap(), eg
 #include <cstdint>
+#include <cstdio>  // for FILE, fwrite, fread
 #include <functional>
 #include <iterator>  // For iterator tags
 #include <limits>    // for numeric_limits

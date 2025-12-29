@@ -20,10 +20,12 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/algorithm/container.h"
@@ -906,5 +908,57 @@ TYPED_TEST(S2LegacyValidTest, ShortChainsFail) {
   this->ExpectGeometryInvalid("## 0:0", kCode);
   this->ExpectGeometryInvalid("## 0:0, 1:1", kCode);
 }
+
+///////////////////////////////  Benchmarks  ////////////////////////////
+
+static void BM_LegacyValidFractal(benchmark::State& state) {
+  const string seed_str =
+      StrCat("LEGACY_VALID_FRACTAL", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int num_edges = state.range(0);
+  const S1Angle radius = S1Angle::Degrees(10);
+
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(num_edges);
+
+  S2Polygon polygon(fractal.MakeLoop(s2random::Frame(bitgen), radius));
+  const MutableS2ShapeIndex& index = polygon.index();
+  index.ForceBuild();
+
+  S2LegacyValidQuery<MutableS2ShapeIndex> query;
+  S2Error error;
+  for (auto _ : state) {
+    bool valid = query.Validate(index, &error);
+    benchmark::DoNotOptimize(valid);
+    ABSL_CHECK(valid);
+  }
+}
+BENCHMARK(BM_LegacyValidFractal)->Range(8, 2000000);
+
+static void BM_LegacyPolygonValidFractal(benchmark::State& state) {
+  const string seed_str = StrCat("LEGACY_POLYGON_VALID_FRACTAL",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int num_edges = state.range(0);
+  const S1Angle radius = S1Angle::Degrees(10);
+
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(num_edges);
+
+  S2Polygon polygon(fractal.MakeLoop(s2random::Frame(bitgen), radius));
+  polygon.index().ForceBuild();
+
+  S2Error error;
+  for (auto _ : state) {
+    bool valid = polygon.IsValid();
+    benchmark::DoNotOptimize(valid);
+    ABSL_CHECK(valid);
+  }
+}
+BENCHMARK(BM_LegacyPolygonValidFractal)->Range(8, 2000000);
 
 }  // namespace

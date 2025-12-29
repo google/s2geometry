@@ -18,15 +18,19 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <random>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
+#include "absl/flags/flag.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -646,5 +650,144 @@ TEST(S2PolylineAlignmentTest, ConsensusPolylineOverlappingPolylines) {
   const auto expected = s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2");
   EXPECT_TRUE(result->ApproxEquals(*expected));
 }
+
+// BENCHMARKS
+
+constexpr int kNumPolylines = 500;
+const double kPerturbation = 15.0;
+
+void BM_GetExactVertexAlignmentCost(benchmark::State& state) {
+  const string seed_str = StrCat("GET_EXACT_VERTEX_ALIGNMENT_COST",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  const int num_vertices = state.range(0);
+  const auto lines =
+      GenPolylines(bitgen, kNumPolylines, num_vertices, kPerturbation);
+
+  for (auto _ : state) {
+    int i = absl::Uniform(bitgen, 0, kNumPolylines);
+    int j = absl::Uniform(bitgen, 0, kNumPolylines);
+    double cost = GetExactVertexAlignmentCost(*lines[i], *lines[j]);
+    benchmark::DoNotOptimize(cost);
+  }
+}
+
+void BM_GetExactVertexAlignment(benchmark::State& state) {
+  const string seed_str =
+      StrCat("GET_EXACT_VERTEX_ALIGNMENT", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  const int num_vertices = state.range(0);
+  const auto lines =
+      GenPolylines(bitgen, kNumPolylines, num_vertices, kPerturbation);
+
+  for (auto _ : state) {
+    int i = absl::Uniform(bitgen, 0, kNumPolylines);
+    int j = absl::Uniform(bitgen, 0, kNumPolylines);
+    VertexAlignment va = GetExactVertexAlignment(*lines[i], *lines[j]);
+    benchmark::DoNotOptimize(va);
+  }
+}
+
+void BM_GetApproxVertexAlignment(benchmark::State& state) {
+  const string seed_str = StrCat("GET_APPROX_VERTEX_ALIGNMENT",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  const int num_vertices = state.range(0);
+  const int radius = state.range(1);
+  const auto lines =
+      GenPolylines(bitgen, kNumPolylines, num_vertices, kPerturbation);
+
+  // Keep a list of (i, j, approx_cost) tuples to check against the exact_cost.
+  vector<std::tuple<int, int, double>> approx_costs;
+
+  for (auto _ : state) {
+    int i = absl::Uniform(bitgen, 0, kNumPolylines);
+    int j = absl::Uniform(bitgen, 0, kNumPolylines);
+    VertexAlignment va = GetApproxVertexAlignment(*lines[i], *lines[j], radius);
+    approx_costs.push_back(std::make_tuple(i, j, va.alignment_cost));
+  }
+}
+
+void ComputeMedoid(benchmark::State& state, const bool approx) {
+  const string seed_str =
+      StrCat("COMPUTE_MEDOID", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  const int num_lines = state.range(0);
+  const int num_vertices = state.range(1);
+  const auto polylines =
+      GenPolylines(bitgen, num_lines, num_vertices, kPerturbation);
+  MedoidOptions opts;
+  opts.set_approx(approx);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(GetMedoidPolyline(polylines, opts));
+  }
+  state.SetLabel(absl::StrFormat("Approximation? %d", approx));
+}
+
+void ComputeConsensus(benchmark::State& state, const bool approx,
+                      const bool seed_medoid, const int iteration_cap) {
+  const string seed_str =
+      StrCat("COMPUTE_CONSENSUS", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  const int num_lines = state.range(0);
+  const int num_vertices = state.range(1);
+  const auto polylines =
+      GenPolylines(bitgen, num_lines, num_vertices, kPerturbation);
+  ConsensusOptions opts;
+  opts.set_approx(approx);
+  opts.set_seed_medoid(seed_medoid);
+  opts.set_iteration_cap(iteration_cap);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(GetConsensusPolyline(polylines, opts));
+  }
+  state.SetLabel(
+      absl::StrFormat("Approximation? %d SeedMedoid? %d", approx, seed_medoid));
+}
+
+void BM_ComputeMedoid(benchmark::State& state) {
+  ComputeMedoid(state, true /* approx */);
+}
+
+void BM_ComputeConsensusUnseeded(benchmark::State& state) {
+  ComputeConsensus(state, true /* approx */, false /* seed_medoid */,
+                   5 /* iteration_cap */);
+}
+
+void BM_ComputeConsensusSeeded(benchmark::State& state) {
+  ComputeConsensus(state, true /* approx */, true /* seed_medoid */,
+                   5 /* iteration_cap */);
+}
+
+BENCHMARK(BM_GetExactVertexAlignmentCost)->Range(16, 8192);
+
+BENCHMARK(BM_GetExactVertexAlignment)->Range(16, 8192);
+
+BENCHMARK(BM_GetApproxVertexAlignment)
+    ->ArgPair(128, 2)
+    ->ArgPair(128, 4)
+    ->ArgPair(128, 8)
+    ->ArgPair(1024, 2)
+    ->ArgPair(1024, 4)
+    ->ArgPair(1024, 8)
+    ->ArgPair(8192, 2)
+    ->ArgPair(8192, 4)
+    ->ArgPair(8192, 8);
+
+BENCHMARK(BM_ComputeMedoid)
+    ->ArgPair(50, 128)    // Lots of small polylines.
+    ->ArgPair(10, 1024);  // A few large polylines.
+
+BENCHMARK(BM_ComputeConsensusUnseeded)
+    ->ArgPair(50, 128)    // Lots of small polylines.
+    ->ArgPair(10, 1024);  // A few large polylines.
+
+BENCHMARK(BM_ComputeConsensusSeeded)
+    ->ArgPair(50, 128)    // Lots of small polylines.
+    ->ArgPair(10, 1024);  // A few large polylines.
 
 }  // namespace s2polyline_alignment

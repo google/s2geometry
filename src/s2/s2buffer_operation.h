@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_log.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
@@ -285,7 +286,7 @@ class S2BufferOperation {
   //
   // Note that if the buffer radius is negative, only a single input layer is
   // allowed (ignoring any layers that contain only points and polylines).
-  bool Build(S2Error* error);
+  bool Build(S2Error* absl_nonnull error);
 
  private:
   S1Angle GetMaxEdgeSpan(S1Angle radius, S1Angle requested_error) const;

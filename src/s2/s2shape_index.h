@@ -247,7 +247,7 @@ class S2ShapeIndexCell {
 //       index.Add(std::make_unique<S2Polygon::Shape>(polygon));
 //     }
 
-//     auto query = MakeS2ContainsPointQuery(&index);
+//     S2ContainsPointQuery query(&index);
 //     for (const auto& point : points) {
 //       for (int shape_id : query.GetContainingShapeIds(point)) {
 //         S2Polygon* polygon = polygons[shape_id];

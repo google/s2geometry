@@ -51,7 +51,6 @@ using S2::internal::kInvertMask;
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
 using S2::internal::kSwapMask;
-using std::fabs;
 using std::max;
 using std::min;
 using std::string;

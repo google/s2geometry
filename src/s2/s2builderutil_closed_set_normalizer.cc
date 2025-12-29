@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
@@ -79,8 +80,8 @@ ClosedSetNormalizer::ClosedSetNormalizer(
   graph_options_in_[2].set_sibling_pairs(SiblingPairs::DISCARD_EXCESS);
 }
 
-const vector<Graph>& ClosedSetNormalizer::Run(
-    const vector<Graph>& g, S2Error* error) {
+const vector<Graph>& ClosedSetNormalizer::Run(const vector<Graph>& g,
+                                              S2Error* absl_nonnull error) {
   // Ensure that the input graphs were built with our requested options.
   for (int dim = 0; dim < 3; ++dim) {
     ABSL_DCHECK(g[dim].options() == graph_options_in_[dim]);
@@ -162,7 +163,7 @@ inline Edge ClosedSetNormalizer::AdvanceIncoming(
 }
 
 void ClosedSetNormalizer::NormalizeEdges(absl::Span<const Graph> g,
-                                         S2Error* error) {
+                                         S2Error* absl_nonnull error) {
   // Find the degenerate polygon edges and sibling pairs, and classify each
   // edge as belonging to either a shell or a hole.
   auto degeneracies = FindPolygonDegeneracies(g[2], error);
@@ -288,7 +289,7 @@ class NormalizeClosedSetImpl {
 
     GraphOptions graph_options() const override { return graph_options_; }
 
-    void Build(const Graph& g, S2Error* error) override {
+    void Build(const Graph& g, S2Error* absl_nonnull error) override {
       impl_->Build(dimension_, g, error);
     }
 
@@ -298,7 +299,7 @@ class NormalizeClosedSetImpl {
     shared_ptr<NormalizeClosedSetImpl> impl_;
   };
 
-  void Build(int dimension, const Graph& g, S2Error* error) {
+  void Build(int dimension, const Graph& g, S2Error* absl_nonnull error) {
     // Errors are reported only on the last layer built.
     graphs_[dimension] = g;
     if (--graphs_left_ > 0) return;

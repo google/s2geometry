@@ -43,14 +43,18 @@ class S2PointRegion final : public S2Region {
   // Create a region containing the given point, which must be unit length.
   explicit S2PointRegion(const S2Point& point);
 
-  ~S2PointRegion() override;
+  S2PointRegion(const S2PointRegion&) = default;
+  S2PointRegion& operator=(const S2PointRegion&) = default;
+  S2PointRegion(S2PointRegion&&) = default;
+  S2PointRegion& operator=(S2PointRegion&&) = default;
+
+  ~S2PointRegion() override = default;
 
   const S2Point& point() const { return point_; }
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  S2PointRegion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
   void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
@@ -69,6 +73,10 @@ class S2PointRegion final : public S2Region {
   bool Decode(Decoder* decoder);
 
  private:
+  // Implements the S2Region interface.  Note that the copy constructor should
+  // be used instead.
+  S2Region* Clone() const override;
+
   S2Point point_;
 };
 

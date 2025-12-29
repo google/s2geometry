@@ -20,8 +20,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <memory>
-#include <vector>
 
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -30,6 +28,7 @@
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2polyline.h"
 #include "s2/s2shape.h"
 
@@ -100,7 +99,7 @@ class S2LaxPolylineShape : public S2Shape {
   // For clients that have many small polylines, we save some memory by
   // representing the vertices as an array rather than using std::vector.
   int32_t num_vertices_ = 0;
-  std::unique_ptr<S2Point[]> vertices_;
+  s2internal::UniqueS2PointArray vertices_;
 };
 
 // Exactly like S2LaxPolylineShape, except that the vertices are kept in an

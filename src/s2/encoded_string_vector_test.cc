@@ -96,20 +96,63 @@ TEST(EncodedStringVectorTest, SubscriptOperator) {
   EXPECT_EQ(v[1], "gala");
 }
 
-TEST(EncodedStringVectorTest, GetStart) {
-  const string kInput[] = {"pink lady", "gala"};
+TEST(EncodedStringVectorTest, ReInitialize) {
+  const string kInput1[] = {"abcd", "edfg"};
+  const string kInput2[] = {"hij", "klm", "nop", "qrs"};
+  const string kInput3[] = {"tu"};
 
   Encoder encoder;
-  StringVectorEncoder::Encode(kInput, &encoder);
-
-  Decoder decoder(encoder.base(), encoder.length());
+  Encoder reencoder;
   EncodedStringVector v;
-  ASSERT_TRUE(v.Init(&decoder));
 
+  StringVectorEncoder::Encode(kInput1, &encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  ASSERT_TRUE(v.Init(&decoder));
   ASSERT_EQ(v.size(), 2);
-  // `GetStart()` is not NUL-terminated, so can't use `testing::StartsWith`.
-  EXPECT_EQ(string_view(v.GetStart(0), std::strlen("pink lady")), "pink lady");
-  EXPECT_EQ(string_view(v.GetStart(1), std::strlen("gala")), "gala");
+  EXPECT_EQ(v[0], "abcd");
+
+  // Reinitialize with a larger input.
+  encoder.clear();
+  StringVectorEncoder::Encode(kInput2, &encoder);
+  decoder = Decoder(encoder.base(), encoder.length());
+  ASSERT_TRUE(v.Init(&decoder));
+  ASSERT_EQ(v.size(), 4);
+  EXPECT_EQ(v[0], "hij");
+
+  v.Encode(&reencoder);
+  EXPECT_EQ(string_view(encoder.base(), encoder.length()),
+            string_view(reencoder.base(), reencoder.length()));
+
+  // Reinitialize with a smaller input.
+  encoder.clear();
+  StringVectorEncoder::Encode(kInput3, &encoder);
+  decoder = Decoder(encoder.base(), encoder.length());
+  ASSERT_TRUE(v.Init(&decoder));
+  ASSERT_EQ(v.size(), 1);
+  EXPECT_EQ(v[0], "tu");
+
+  reencoder.clear();
+  v.Encode(&reencoder);
+  EXPECT_EQ(string_view(encoder.base(), encoder.length()),
+            string_view(reencoder.base(), reencoder.length()));
+
+  // Reinitialize with an empty input.
+  encoder.clear();
+  StringVectorEncoder::Encode({}, &encoder);
+  decoder = Decoder(encoder.base(), encoder.length());
+  ASSERT_TRUE(v.Init(&decoder));
+  ASSERT_EQ(v.size(), 0);
+
+  reencoder.clear();
+  v.Encode(&reencoder);
+  EXPECT_EQ(string_view(encoder.base(), encoder.length()),
+            string_view(reencoder.base(), reencoder.length()));
+
+  // Reinitialize with an invalid input.
+  encoder.clear();
+  decoder = Decoder(encoder.base(), encoder.length());
+  ASSERT_FALSE(v.Init(&decoder));
 }
+
 
 }  // namespace s2coding

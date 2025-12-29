@@ -27,13 +27,7 @@
 
 using std::max;
 using std::min;
-// Android with gnustl has ::nextafter but not std::nextafter.
-// https://github.com/android-ndk/ndk/issues/82
-// Check for gnustl with _GLIBCXX_CMATH, which is its cmath include
-// guard.
-#if !defined(__ANDROID__) || !defined(_GLIBCXX_CMATH)
 using std::nextafter;
-#endif
 
 static constexpr double kMaxLength2 = 4.0;
 

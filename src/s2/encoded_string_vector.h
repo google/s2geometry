@@ -20,7 +20,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -110,10 +109,6 @@ class EncodedStringVector {
   // Returns a Decoder initialized with the string at the given index.
   Decoder GetDecoder(size_t i) const;
 
-  // Returns a pointer to the start of the string at the given index.  This is
-  // faster than operator[] but returns an unbounded string.
-  const char* GetStart(size_t i) const;
-
   // Returns the entire vector of original strings.  Requires that the
   // data buffer passed to the constructor persists until the result vector is
   // no longer needed.
@@ -124,7 +119,7 @@ class EncodedStringVector {
 
  private:
   EncodedUintVector<uint64_t> offsets_;
-  const char* data_ = nullptr;
+  absl::string_view data_;
 };
 
 
@@ -143,7 +138,7 @@ inline Encoder* StringVectorEncoder::AddViaEncoder() {
 
 inline void EncodedStringVector::Clear() {
   offsets_.Clear();
-  data_ = nullptr;
+  data_ = absl::string_view();
 }
 
 inline size_t EncodedStringVector::size() const {
@@ -151,25 +146,21 @@ inline size_t EncodedStringVector::size() const {
 }
 
 inline absl::string_view EncodedStringVector::operator[](size_t i) const {
+  // Return an empty decoder if we don't have enough data.
+  if (i >= offsets_.size()) {
+    return absl::string_view();
+  }
   uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
   uint64_t limit = offsets_[i];
-  return absl::string_view(data_ + start, limit - start);
+  if (start <= limit && limit <= data_.size()) {
+    return data_.substr(start, limit - start);
+  } else {
+    return absl::string_view();  // Corrupt data, return empty string.
+  }
 }
 
 inline Decoder EncodedStringVector::GetDecoder(size_t i) const {
-  // Return an empty decoder if we don't have enough data.
-  if (i >= offsets_.size()) {
-    return Decoder(nullptr, 0);
-  }
-
-  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
-  uint64_t limit = offsets_[i];
-  return Decoder(data_ + start, limit - start);
-}
-
-inline const char* EncodedStringVector::GetStart(size_t i) const {
-  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
-  return data_ + start;
+  return Decoder((*this)[i]);
 }
 
 }  // namespace s2coding

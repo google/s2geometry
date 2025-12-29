@@ -298,6 +298,12 @@ TEST(SafeParseLatLngs, ValidInput) {
 TEST(SafeParseLatLngs, InvalidInput) {
   vector<S2LatLng> latlngs;
   EXPECT_FALSE(s2textformat::ParseLatLngs("blah", &latlngs));
+  // A few different ways of being invalid.  We don't need to be extremely
+  // thorough, since the implementation relies on `S2LatLng::is_valid()`.
+  EXPECT_FALSE(s2textformat::ParseLatLngs("NaN:0", &latlngs));
+  EXPECT_FALSE(s2textformat::ParseLatLngs("inf:0", &latlngs));
+  EXPECT_FALSE(s2textformat::ParseLatLngs("infinity:0", &latlngs));
+  EXPECT_FALSE(s2textformat::ParseLatLngs("91:0", &latlngs));
 }
 
 TEST(SafeParsePoints, ValidInput) {

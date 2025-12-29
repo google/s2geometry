@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
@@ -405,3 +406,31 @@ TEST(S2Cap, S2CoderWorks) {
   EXPECT_EQ(cap, decoded);
 }
 
+void BM_MayIntersectWholeFaceEmptyCap(benchmark::State& state) {
+  S2Cell root_cell = S2Cell::FromFace(0);
+  S2Cap cap = S2Cap::Empty();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(cap.MayIntersect(root_cell));
+  }
+}
+BENCHMARK(BM_MayIntersectWholeFaceEmptyCap);
+
+void BM_MayIntersectWholeFaceFullCap(benchmark::State& state) {
+  S2Cell root_cell = S2Cell::FromFace(0);
+  S2Cap cap = S2Cap::Full();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(cap.MayIntersect(root_cell));
+  }
+}
+BENCHMARK(BM_MayIntersectWholeFaceFullCap);
+
+void BM_MayIntersectBulging(benchmark::State& state) {
+  // The cap has the same center as the cell, intersects the cell's edges, but
+  // does not contain any of its vertices.
+  S2Cell root_cell = S2Cell::FromFace(0);
+  S2Cap cap(root_cell.GetCenter(), S1Angle::Radians(M_PI_4 + kEps));
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(cap.MayIntersect(root_cell));
+  }
+}
+BENCHMARK(BM_MayIntersectBulging);

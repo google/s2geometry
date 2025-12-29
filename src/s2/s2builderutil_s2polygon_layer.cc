@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
@@ -145,7 +146,7 @@ void S2PolygonLayer::ReorderEdgeLabels(const LoopMap& loop_map) {
   label_set_ids_->swap(new_ids);
 }
 
-void S2PolygonLayer::Build(const Graph& g, S2Error* error) {
+void S2PolygonLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   if (label_set_ids_) label_set_ids_->clear();
 
   // It's tricky to compute the edge labels for S2Polygons because the

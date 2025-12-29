@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
@@ -38,13 +39,14 @@
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2polygon.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_get_reference_point.h"
 
 using absl::MakeSpan;
 using absl::Span;
-using std::make_unique;
+using ::s2internal::MakeS2PointArrayForOverwrite;
 using std::unique_ptr;
 using std::vector;
 using ChainPosition = S2Shape::ChainPosition;
@@ -133,16 +135,8 @@ void S2LaxPolygonShape::Init(Span<const Span<const S2Point>> loops) {
     num_vertices_ = 0;
   } else if (num_loops_ == 1) {
     num_vertices_ = loops[0].size();
-    // TODO(ericv): Use std::allocator to obtain uninitialized memory instead.
-    // This would avoid default-constructing all the elements before we
-    // overwrite them, and it would also save 8 bytes of memory allocation
-    // since "new T[]" stores its own copy of the array size.
-    //
-    // Note that even absl::make_unique_for_overwrite<> and c++20's
-    // std::make_unique_for_overwrite<T[]> default-construct all elements when
-    // T is a class type.
-    vertices_ = make_unique<S2Point[]>(num_vertices_);
-    std::copy(loops[0].begin(), loops[0].end(), vertices_.get());
+    vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+    std::copy_n(loops[0].data(), num_vertices_, vertices_.get());
   } else {
     // Don't use make_unique<> here in order to avoid zero initialization.
     loop_starts_ = make_unique_for_overwrite<uint32_t[]>(num_loops_ + 1);
@@ -152,10 +146,10 @@ void S2LaxPolygonShape::Init(Span<const Span<const S2Point>> loops) {
       num_vertices_ += loops[i].size();
     }
     loop_starts_[num_loops_] = num_vertices_;
-    vertices_ = make_unique<S2Point[]>(num_vertices_);  // TODO(see above)
+    vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
     for (int i = 0; i < num_loops_; ++i) {
-      std::copy(loops[i].begin(), loops[i].end(),
-                vertices_.get() + loop_starts_[i]);
+      std::copy_n(loops[i].data(), loops[i].size(),
+                  &vertices_[loop_starts_[i]]);
     }
   }
 }
@@ -192,7 +186,7 @@ void S2LaxPolygonShape::Encode(Encoder* encoder,
   }
 }
 
-bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error* error) {
+bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error* absl_nullable error) {
   const auto Error = [&error](absl::string_view message) {
     if (error != nullptr) {
       *error = S2Error::DataLoss(message);
@@ -229,7 +223,7 @@ bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error* error) {
     num_vertices_ = 0;
   } else {
     num_vertices_ = vertices.size();
-    vertices_ = make_unique<S2Point[]>(num_vertices_);  // TODO(see above)
+    vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
 
     // Load the polygon vertices from the encoded s2point vector.
     if (error == nullptr) {

@@ -27,6 +27,8 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/base/macros.h"
+#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -134,13 +136,13 @@ class S2Polygon final : public S2Region {
   //
   //   std::vector<std::unique_ptr<S2Loop>> loops;
   //   // ... set up loops ...
-  //   S2Polygon* polygon = new S2Polygon(std::move(loops), S2Debug::DISABLE);
+  //   S2Polygon polygon(std::move(loops), S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
-  //   S2Polygon* polygon = new S2Polygon;
-  //   polygon->set_s2debug_override(S2Debug::DISABLE);
-  //   polygon->InitNested(std::move(loops));
+  //   S2Polygon polygon;
+  //   polygon.set_s2debug_override(S2Debug::DISABLE);
+  //   polygon.InitNested(std::move(loops));
   explicit S2Polygon(std::vector<std::unique_ptr<S2Loop>> loops,
                      S2Debug override = S2Debug::ALLOW);
 
@@ -155,6 +157,10 @@ class S2Polygon final : public S2Region {
   explicit S2Polygon(std::unique_ptr<S2Loop> loop,
                      S2Debug override = S2Debug::ALLOW);
 
+  // S2Polygon is copyable and movable.  The complexity of copying is linear
+  // in the number of vertices.
+  S2Polygon(const S2Polygon&);
+  S2Polygon& operator=(const S2Polygon&);
   S2Polygon(S2Polygon&&) noexcept;
   S2Polygon& operator=(S2Polygon&&) noexcept;
 
@@ -194,7 +200,8 @@ class S2Polygon final : public S2Region {
 
   // Makes a deep copy of the given source polygon.  The destination polygon
   // will be cleared if necessary.
-  void Copy(const S2Polygon& src);
+  ABSL_DEPRECATE_AND_INLINE()
+  void Copy(const S2Polygon& src) { *this = src; }
 
   // Destroys the polygon and frees its loops.
   ~S2Polygon() override;
@@ -227,7 +234,7 @@ class S2Polygon final : public S2Region {
   // numbered in reverse order, starting from the last vertex of the loop.
   //
   // REQUIRES: error != nullptr
-  bool FindValidationError(S2Error* error) const;
+  bool FindValidationError(S2Error* absl_nonnull error) const;
 
   // Return true if this is the empty polygon (consisting of no loops).
   bool is_empty() const { return loops_.empty(); }
@@ -383,28 +390,28 @@ class S2Polygon final : public S2Region {
                           const S2Builder::SnapFunction& snap_function);
   bool InitToIntersection(const S2Polygon& a, const S2Polygon& b,
                           const S2Builder::SnapFunction& snap_function,
-                          S2Error* error);
+                          S2Error* absl_nonnull error);
 
   void InitToUnion(const S2Polygon& a, const S2Polygon& b);
   void InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function);
   bool InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function,
-                   S2Error* error);
+                   S2Error* absl_nonnull error);
 
   void InitToDifference(const S2Polygon& a, const S2Polygon& b);
   void InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function);
   bool InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function,
-                        S2Error* error);
+                        S2Error* absl_nonnull error);
 
   void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b);
   void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function);
   bool InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function,
-                                 S2Error* error);
+                                 S2Error* absl_nonnull error);
 
   // Snaps the vertices of the given polygon using the given SnapFunction
   // (e.g., s2builderutil::IntLatLngSnapFunction(6) snaps to E6 coordinates).
@@ -817,7 +824,8 @@ class S2Polygon final : public S2Region {
   // returning an error on failure.
   bool InitToOperation(S2BooleanOperation::OpType op_type,
                        const S2Builder::SnapFunction& snap_function,
-                       const S2Polygon& a, const S2Polygon& b, S2Error* error);
+                       const S2Polygon& a, const S2Polygon& b,
+                       S2Error* absl_nonnull error);
 
   // Initializes the polygon to the result of the given boolean operation,
   // logging an error on failure (fatal in debug builds).
@@ -896,9 +904,6 @@ class S2Polygon final : public S2Region {
 
   // Spatial index containing this polygon.
   MutableS2ShapeIndex index_;
-
-  S2Polygon(const S2Polygon&) = delete;
-  void operator=(const S2Polygon&) = delete;
 };
 
 //////////////////   Implementation details follow   ////////////////////

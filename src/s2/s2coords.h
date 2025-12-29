@@ -103,6 +103,7 @@
 // NOLINTNEXTLINE(misc-include-cleaner) Used only by S2_TAN_PROJECTION.
 #include <cstdint>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
@@ -153,9 +154,10 @@ double UVtoST(double u);
 double IJtoSTMin(int i);
 
 // Return the i- or j-index of the leaf cell containing the given
-// s- or t-value.  If the argument is outside the range spanned by valid
-// leaf cell indices, return the index of the closest valid leaf cell (i.e.,
-// return values are clamped to the range of valid leaf cell indices).
+// s- or t-value.  Requires that the argument is a number (i.e. not NaN).
+// If the argument is outside the range spanned by valid leaf cell indices,
+// return the index of the closest valid leaf cell (i.e., return values are
+// clamped to the range of valid leaf cell indices).
 int STtoIJ(double s);
 
 // Convert an si- or ti-value to the corresponding s- or t-value.
@@ -341,12 +343,16 @@ inline double IJtoSTMin(int i) {
 }
 
 inline int STtoIJ(double s) {
+  ABSL_DCHECK(!std::isnan(s));
+  // Catches non-positive values, including NaN.  This is to avoid undefined
+  // behavior in the `static_cast` below.
+  if (ABSL_PREDICT_FALSE(!(s > 0))) return 0;
+
   // `static_cast` is acting as `floor` here, since we clamp to `0` on the
   // low side.  This generates better code than `std::floor`.
   // https://godbolt.org/z/xYxb5nfPs
   // We need to clamp to `kLimitIJ - 1` since `s == 1.0` is a special case.
-  // TODO(b/362282346): See if we need `clamp` or can just use `min`.
-  return std::clamp(static_cast<int>(kLimitIJ * s), 0, kLimitIJ - 1);
+  return std::min(static_cast<int>(kLimitIJ * s), kLimitIJ - 1);
 }
 
 inline double SiTitoST(unsigned int si) {
@@ -361,13 +367,19 @@ inline unsigned int STtoSiTi(double s) {
 
 inline S2Point FaceUVtoXYZ(int face, double u, double v) {
   switch (face) {
+    // clang-format off
     case 0:  return S2Point( 1,  u,  v);
     case 1:  return S2Point(-u,  1,  v);
     case 2:  return S2Point(-u, -v,  1);
     case 3:  return S2Point(-1, -v, -u);
     case 4:  return S2Point( v, -1, -u);
+    // TODO(b/465912778): Replace `default` with `case 5`.  Error checking
+    // is missing in `EncodedS2PointVector::DecodeCellIdsFormat`, which
+    // will need to be added first.
     default: return S2Point( v,  u, -1);
+    // clang-format on
   }
+  ABSL_UNREACHABLE();
 }
 
 inline S2Point FaceUVtoXYZ(int face, const R2Point& uv) {
@@ -378,12 +390,15 @@ inline void ValidFaceXYZtoUV(int face, const S2Point& p,
                              double* pu, double* pv) {
   ABSL_DCHECK_GT(p.DotProd(GetNorm(face)), 0);
   switch (face) {
-    case 0:  *pu =  p[1] / p[0]; *pv =  p[2] / p[0]; break;
-    case 1:  *pu = -p[0] / p[1]; *pv =  p[2] / p[1]; break;
-    case 2:  *pu = -p[0] / p[2]; *pv = -p[1] / p[2]; break;
-    case 3:  *pu =  p[2] / p[0]; *pv =  p[1] / p[0]; break;
-    case 4:  *pu =  p[2] / p[1]; *pv = -p[0] / p[1]; break;
-    default: *pu = -p[1] / p[2]; *pv = -p[0] / p[2]; break;
+    // clang-format off
+    case 0: *pu =  p[1] / p[0]; *pv =  p[2] / p[0]; break;
+    case 1: *pu = -p[0] / p[1]; *pv =  p[2] / p[1]; break;
+    case 2: *pu = -p[0] / p[2]; *pv = -p[1] / p[2]; break;
+    case 3: *pu =  p[2] / p[0]; *pv =  p[1] / p[0]; break;
+    case 4: *pu =  p[2] / p[1]; *pv = -p[0] / p[1]; break;
+    case 5: *pu = -p[1] / p[2]; *pv = -p[0] / p[2]; break;
+    default: ABSL_UNREACHABLE();
+    // clang-format on
   }
 }
 
@@ -424,24 +439,30 @@ inline bool FaceXYZtoUV(int face, const S2Point& p, R2Point* puv) {
 
 inline S2Point GetUNorm(int face, double u) {
   switch (face) {
-    case 0:  return S2Point( u, -1,  0);
-    case 1:  return S2Point( 1,  u,  0);
-    case 2:  return S2Point( 1,  0,  u);
-    case 3:  return S2Point(-u,  0,  1);
-    case 4:  return S2Point( 0, -u,  1);
-    default: return S2Point( 0, -1, -u);
+    // clang-format off
+    case 0: return S2Point( u, -1,  0);
+    case 1: return S2Point( 1,  u,  0);
+    case 2: return S2Point( 1,  0,  u);
+    case 3: return S2Point(-u,  0,  1);
+    case 4: return S2Point( 0, -u,  1);
+    case 5: return S2Point( 0, -1, -u);
+    // clang-format on
   }
+  ABSL_UNREACHABLE();
 }
 
 inline S2Point GetVNorm(int face, double v) {
   switch (face) {
-    case 0:  return S2Point(-v,  0,  1);
-    case 1:  return S2Point( 0, -v,  1);
-    case 2:  return S2Point( 0, -1, -v);
-    case 3:  return S2Point( v, -1,  0);
-    case 4:  return S2Point( 1,  v,  0);
-    default: return S2Point( 1,  0,  v);
+    // clang-format off
+    case 0: return S2Point(-v,  0,  1);
+    case 1: return S2Point( 0, -v,  1);
+    case 2: return S2Point( 0, -1, -v);
+    case 3: return S2Point( v, -1,  0);
+    case 4: return S2Point( 1,  v,  0);
+    case 5: return S2Point( 1,  0,  v);
+    // clang-format on
   }
+  ABSL_UNREACHABLE();
 }
 
 inline S2Point GetNorm(int face) {

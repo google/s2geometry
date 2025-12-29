@@ -22,6 +22,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/base/attributes.h"
 #include "absl/strings/string_view.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
@@ -95,6 +96,8 @@
 //   * PolygonBoundaryEquals: defined as S2Polygon::BoundaryEquals
 //   * PolygonBoundaryApproxEquals: defined as S2Polygon::BoundaryApproxEquals
 //   * PolygonBoundaryNear: defined as S2Polygon::BoundaryNear
+//   * PolygonIdenticalTo: checks that two polygons are identical, including
+//     their loops, bounds, and debug overrides.
 //
 // Examples:
 //   EXPECT_THAT(polygon, S2::PolygonEquals("10:10,10:0,0:0");
@@ -105,6 +108,7 @@
 //                            expected, S1Angle::Radians(1e-10));
 //   EXPECT_THAT(polygon, S2::PolygonBoundaryNear(
 //                            expected, S1Angle::Radians(1e-10));
+//   EXPECT_THAT(polygon, S2::PolygonIdenticalTo(expected));
 //
 // ======================
 // =     S2Polyline     =
@@ -113,11 +117,14 @@
 // Matchers:
 //   * PolylineEquals: defined as S2Polyline::Equals
 //   * PolylineApproxEquals: defined as S2Polyline::ApproxEquals
+//   * PolylineIdenticalTo: checks that two polylines are identical, including
+//     their structure, bounds, and debug overrides.
 //
 // Examples:
 //   EXPECT_THAT(line, S2::PolylineEquals(expected));
 //   EXPECT_THAT(line, S2::PolylineApproxEquals(
 //                         "10:10,20:20", S1Angle::Radians(1e-10)));
+//   EXPECT_THAT(line, S2::PolylineIdenticalTo(expected));
 //
 // ==================
 // =     S2Loop     =
@@ -128,6 +135,8 @@
 //   * LoopBoundaryEquals: defined as S2Loop::BoundaryEquals
 //   * LoopBoundaryApproxEquals: defined as S2Loop::BoundaryApproxEquals
 //   * LoopBoundaryNear: defined as S2Loop::BoundaryNear
+//   * LoopIdenticalTo: checks that two loops are identical, including their
+//     structure, bounds, depth, and debug overrides.
 //
 // Examples:
 //   EXPECT_THAT(loop, S2::LoopEquals("10:10,10:0,0:0"));
@@ -136,6 +145,7 @@
 //                         expected, S1Angle::Radians(1e-10)));
 //   EXPECT_THAT(loop, S2::LoopBoundaryNear(
 //                         expected, S1Angle::Radians(1e-10)));
+//   EXPECT_THAT(loop, S2::LoopIdenticalTo(expected_loop));
 
 // Print methods necessary for gmock to print values of S2Point, S2Polyline,
 // S2Polygon, and S2LatLngRect.
@@ -165,7 +175,7 @@ class S2PointMatcher {
   bool MatchAndExplain(const S2Point& g,
                        ::testing::MatchResultListener* listener) const;
 
-  void DescribeTo(::std::ostream* os) const {
+  void DescribeTo(std::ostream* os) const {
     *os << "== " << s2textformat::ToString(expected_);
   }
 
@@ -224,7 +234,7 @@ class S2PolylineMatcher {
   bool MatchAndExplain(const S2Polyline& g,
                        ::testing::MatchResultListener* listener) const;
 
-  void DescribeTo(::std::ostream* os) const {
+  void DescribeTo(std::ostream* os) const {
     *os << "== " << s2textformat::ToString(*expected_);
   }
 
@@ -235,6 +245,27 @@ class S2PolylineMatcher {
  private:
   std::unique_ptr<S2Polyline> expected_;
   Options options_;
+};
+
+// Matcher that checks that two polylines are identical, including their
+// structure, bounds, and debug overrides.
+//
+// Note: The matcher stores a pointer to the expected polyline, so the expected
+// polyline must outlive the matcher.
+class S2PolylineIdenticalToMatcher {
+ public:
+  explicit S2PolylineIdenticalToMatcher(
+      const S2Polyline& expected ABSL_ATTRIBUTE_LIFETIME_BOUND);
+
+  bool MatchAndExplain(const S2Polyline& g,
+                       ::testing::MatchResultListener* listener) const;
+
+  void DescribeTo(::std::ostream* os) const;
+
+  void DescribeNegationTo(std::ostream* os) const;
+
+ private:
+  const S2Polyline* expected_;
 };
 
 // Matcher for S2Polygon.
@@ -284,7 +315,7 @@ class S2PolygonMatcher {
   bool MatchAndExplain(const S2Polygon& g,
                        ::testing::MatchResultListener* listener) const;
 
-  void DescribeTo(::std::ostream* os) const {
+  void DescribeTo(std::ostream* os) const {
     *os << "== " << s2textformat::ToString(*expected_);
   }
 
@@ -342,7 +373,7 @@ class S2LoopMatcher {
   bool MatchAndExplain(const S2Loop& g,
                        ::testing::MatchResultListener* listener) const;
 
-  void DescribeTo(::std::ostream* os) const {
+  void DescribeTo(std::ostream* os) const {
     *os << "== " << s2textformat::ToString(*expected_);
   }
 
@@ -353,6 +384,45 @@ class S2LoopMatcher {
  private:
   std::unique_ptr<S2Loop> expected_;
   Options options_;
+};
+
+// Matcher that checks that two loops are identical, including their
+// structure, bounds, depth, and debug overrides.
+class S2LoopIdenticalToMatcher {
+ public:
+  explicit S2LoopIdenticalToMatcher(
+      const S2Loop& expected ABSL_ATTRIBUTE_LIFETIME_BOUND);
+
+  bool MatchAndExplain(const S2Loop& g,
+                       ::testing::MatchResultListener* listener) const;
+
+  void DescribeTo(::std::ostream* os) const;
+
+  void DescribeNegationTo(std::ostream* os) const;
+
+ private:
+  const S2Loop* expected_;
+};
+
+// Matcher that checks that two polygons are identical, including their
+// loops, bounds, and debug overrides.
+//
+// Note: The matcher stores a pointer to the expected polygon, so the expected
+// polygon must outlive the matcher.
+class S2PolygonIdenticalToMatcher {
+ public:
+  explicit S2PolygonIdenticalToMatcher(
+      const S2Polygon& expected ABSL_ATTRIBUTE_LIFETIME_BOUND);
+
+  bool MatchAndExplain(const S2Polygon& g,
+                       ::testing::MatchResultListener* listener) const;
+
+  void DescribeTo(::std::ostream* os) const;
+
+  void DescribeNegationTo(std::ostream* os) const;
+
+ private:
+  const S2Polygon* expected_;
 };
 
 // Matcher for S2LatLngRect.
@@ -402,7 +472,7 @@ class S2LatLngRectMatcher {
   bool MatchAndExplain(const S2LatLngRect& g,
                        ::testing::MatchResultListener* listener) const;
 
-  void DescribeTo(::std::ostream* os) const {
+  void DescribeTo(std::ostream* os) const {
     *os << "== " << s2textformat::ToString(expected_);
   }
 
@@ -454,7 +524,7 @@ class S2LatLngMatcher {
   bool MatchAndExplain(const S2LatLng& g,
                        ::testing::MatchResultListener* listener) const;
 
-  void DescribeTo(::std::ostream* os) const {
+  void DescribeTo(std::ostream* os) const {
     *os << "== " << s2textformat::ToString(expected_);
   }
 
@@ -502,6 +572,9 @@ class S2LatLngMatcher {
 ::testing::PolymorphicMatcher<S2PolylineMatcher> PolylineApproxEquals(
     absl::string_view expected, S1Angle tolerance);
 
+::testing::PolymorphicMatcher<S2PolylineIdenticalToMatcher> PolylineIdenticalTo(
+    const S2Polyline& expected);
+
 // Matchers for S2Polygons provided as objects.
 
 ::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonEquals(
@@ -518,6 +591,9 @@ class S2LatLngMatcher {
 
 ::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryNear(
     const S2Polygon& expected, S1Angle tolerance);
+
+::testing::PolymorphicMatcher<S2PolygonIdenticalToMatcher> PolygonIdenticalTo(
+    const S2Polygon& expected);
 
 // Matchers for S2Polygons provided as string.
 
@@ -548,6 +624,9 @@ class S2LatLngMatcher {
 
 ::testing::PolymorphicMatcher<S2LoopMatcher> LoopBoundaryNear(
     const S2Loop& expected, S1Angle tolerance);
+
+::testing::PolymorphicMatcher<S2LoopIdenticalToMatcher> LoopIdenticalTo(
+    const S2Loop& expected);
 
 // Matchers for S2Loops provided as string.
 

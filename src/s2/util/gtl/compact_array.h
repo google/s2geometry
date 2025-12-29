@@ -37,12 +37,12 @@
 #ifndef S2_UTIL_GTL_COMPACT_ARRAY_H_
 #define S2_UTIL_GTL_COMPACT_ARRAY_H_
 
-#include <cstddef>
-#include <cstring>
 #include <sys/types.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <memory>
 #include <ostream>  // NOLINT

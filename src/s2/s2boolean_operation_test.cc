@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/base/nullability.h"
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"

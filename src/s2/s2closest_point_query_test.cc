@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -335,3 +336,195 @@ TEST(S2ClosestPointQueryTest, ConservativeCellDistanceIsUsed) {
   TestWithIndexFactory(FractalPointIndexFactory(), 5, 100, 10, bitgen);
 }
 
+ABSL_FLAG(bool, bm_use_brute_force, false,
+          "Benchmarks: Use the brute force implementation");
+
+enum class TargetType { POINT, EDGE };
+
+static void BenchmarkFindClosest(benchmark::State& state,
+                                 const PointIndexFactory& factory,
+                                 int num_points, double max_distance_fraction,
+                                 TargetType target_type,
+                                 bool choose_target_from_index) {
+  const std::string seed_str = absl::StrCat(
+      "BENCHMARK_FIND_CLOSEST", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  TestIndex index;
+  TestQuery query(&index);
+  const S1Angle radius = kTestCapRadius;
+  query.mutable_options()->set_max_results(1);
+  if (max_distance_fraction > 0) {
+    query.mutable_options()->set_max_distance(max_distance_fraction * radius);
+  }
+  query.mutable_options()->set_use_brute_force(
+      absl::GetFlag(FLAGS_bm_use_brute_force));
+
+  // Execute the given number of queries spread out over a total of
+  // kNumIndexSamples different geometry samples.  (Performance is affected
+  // by how the points are positioned relative to the S2Cell hierarchy.)
+  static constexpr int kNumIndexSamples = 8;
+
+  // To save time, we generate at most this many distinct targets per index.
+  static constexpr int kMaxTargetsPerIndex = 100;
+
+  int delta = 0;  // Bresenham-type algorithm for sampling point sets.
+  vector<S2Point> index_points;
+  vector<unique_ptr<S2ClosestPointQueryTarget>> targets;
+  int i_target = 0;
+  for (auto s : state) {
+    delta -= kNumIndexSamples;
+    if (delta < 0) {
+      // Generate a new index and a new set of targets to go with it.
+      // Reset the random number seed so that we use the same sequence of
+      // indexed shapes no matter how many iterations are specified.
+      state.PauseTiming();
+      delta += state.max_iterations;
+      index.Clear();
+      S2Cap query_cap(s2random::Point(bitgen), radius);
+      factory.AddPoints(query_cap, num_points, bitgen, &index);
+      index_points.clear();
+      for (TestIndex::Iterator it(&index); !it.done(); it.Next()) {
+        index_points.push_back(it.point());
+      }
+      query.ReInit();
+      targets.clear();
+      for (int i = 0; i < kMaxTargetsPerIndex; ++i) {
+        if (target_type == TargetType::POINT) {
+          S2Point point;
+          if (choose_target_from_index) {
+            point = index_points[absl::Uniform<size_t>(bitgen, 0,
+                                                       index_points.size())];
+          } else {
+            point = s2random::SamplePoint(bitgen, query_cap);
+          }
+          targets.push_back(make_unique<S2ClosestPointQueryPointTarget>(point));
+        } else {
+          ABSL_DCHECK(target_type == TargetType::EDGE);
+          S2Point a, b;
+          if (choose_target_from_index) {
+            int i = absl::Uniform<size_t>(bitgen, 0, index_points.size() - 1);
+            a = index_points[i];
+            b = index_points[i+1];
+          } else {
+            a = s2random::SamplePoint(bitgen, query_cap);
+            b = s2random::SamplePoint(
+                bitgen,
+                S2Cap(a, s2random::LogUniform(bitgen, 1e-4, 1.0) * radius));
+          }
+          targets.push_back(make_unique<S2ClosestPointQueryEdgeTarget>(a, b));
+        }
+      }
+      state.ResumeTiming();
+    }
+    query.FindClosestPoint(targets[i_target].get());
+    if (++i_target == targets.size()) i_target = 0;
+  }
+}
+
+// The maximum number of points to use in the benchmarks.  Some of the
+// benchmarks are run *only* with this number of points.
+static constexpr int kMaxPoints = 3 * 65536;
+
+namespace {
+// Define shorthand names to make the benchmark names less verbose.
+using Grid = GridPointIndexFactory;
+using Fractal = FractalPointIndexFactory;
+using Circle = CirclePointIndexFactory;
+}  // namespace
+
+// Test searching within the general vicinity of the index points.
+template <class Factory>
+static void BM_FindClosest(benchmark::State& state) {
+  int num_points = state.range(0);
+  BenchmarkFindClosest(state, Factory(), num_points, -1, TargetType::POINT,
+                       false);
+}
+BENCHMARK_TEMPLATE(BM_FindClosest, Grid)
+->Arg(3*4)->Arg(3*16)->Arg(3*256)->Arg(3*4096)->Arg(kMaxPoints);
+
+// Test searching with a distance limit.  This case is important for
+// applications where the distance limit is small enough that there may not be
+// any points in the result.
+template <class Factory>
+static void BM_FindClosestMaxDistPow10(benchmark::State& state) {
+  int num_points = state.range(0);
+  int max_distance_fraction_pow10 = state.range(1);
+  BenchmarkFindClosest(state, Factory(), num_points,
+                       exp(M_LN10 * max_distance_fraction_pow10),
+                       TargetType::POINT, false);
+}
+BENCHMARK_TEMPLATE(BM_FindClosestMaxDistPow10, Grid)
+->ArgPair(kMaxPoints, -2)->ArgPair(kMaxPoints, -6);
+
+// Test searching where the query point is an index point ("site").
+template <class Factory>
+static void BM_FindClosestNearSite(benchmark::State& state) {
+  int num_points = state.range(0);
+  BenchmarkFindClosest(state, Factory(), num_points, -1, TargetType::POINT,
+                       true);
+}
+BENCHMARK_TEMPLATE(BM_FindClosestNearSite, Grid)
+->Arg(3 * 256)->Arg(kMaxPoints);
+
+// Repeat the benchmarks for edge targets rather than point targets.
+// (We don't measure searching with a small distance limit because it
+// is only beneficial when the edge is small compared to the spacing of the
+// index points, which is not the case here.)
+
+template <class Factory>
+static void BM_FindClosestToEdge(benchmark::State& state) {
+  int num_points = state.range(0);
+  BenchmarkFindClosest(state, Factory(), num_points, -1, TargetType::EDGE,
+                       false);
+}
+BENCHMARK_TEMPLATE(BM_FindClosestToEdge, Grid)
+->Arg(3*4)->Arg(3*256)->Arg(kMaxPoints);
+
+template <class Factory>
+static void BM_FindClosestToEdgeNearSite(benchmark::State& state) {
+  int num_points = state.range(0);
+  BenchmarkFindClosest(state, Factory(), num_points, -1, TargetType::EDGE,
+                       true);
+}
+BENCHMARK_TEMPLATE(BM_FindClosestToEdgeNearSite, Grid)
+->Arg(3 * 256)->Arg(kMaxPoints);
+
+// Now repeat all the benchmarks for points placed along a circle or grid.  We
+// group the benchmarks together by the type of geometry so that it's easier
+// to see what effect the various options have (max_distance, etc).
+
+// CirclePointIndexFactory Benchmarks
+
+BENCHMARK_TEMPLATE(BM_FindClosest, Circle)
+->Arg(3*4)->Arg(3*16)->Arg(3*256)->Arg(3*4096)->Arg(kMaxPoints);
+
+BENCHMARK_TEMPLATE(BM_FindClosestMaxDistPow10, Circle)
+->ArgPair(kMaxPoints, -2)->ArgPair(kMaxPoints, -6);
+
+BENCHMARK_TEMPLATE(BM_FindClosestNearSite, Circle)
+->Arg(3 * 256)->Arg(kMaxPoints);
+
+BENCHMARK_TEMPLATE(BM_FindClosestToEdge, Circle)
+->Arg(3*4)->Arg(3*256)->Arg(kMaxPoints);
+
+BENCHMARK_TEMPLATE(BM_FindClosestToEdgeNearSite, Circle)
+->Arg(3 * 256)->Arg(kMaxPoints);
+
+// FractalPointIndexFactory Benchmarks
+
+BENCHMARK_TEMPLATE(BM_FindClosest, Fractal)
+->Arg(3*4)->Arg(3*16)->Arg(3*256)->Arg(3*4096)->Arg(kMaxPoints);
+
+BENCHMARK_TEMPLATE(BM_FindClosestMaxDistPow10, Fractal)
+->ArgPair(kMaxPoints, -2)->ArgPair(kMaxPoints, -6);
+
+BENCHMARK_TEMPLATE(BM_FindClosestNearSite, Fractal)
+->Arg(3 * 256)->Arg(kMaxPoints);
+
+BENCHMARK_TEMPLATE(BM_FindClosestToEdge, Fractal)
+->Arg(3*4)->Arg(3*256)->Arg(kMaxPoints);
+
+BENCHMARK_TEMPLATE(BM_FindClosestToEdgeNearSite, Fractal)
+->Arg(3 * 256)->Arg(kMaxPoints);

@@ -20,10 +20,13 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
+#include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
@@ -350,3 +353,97 @@ TEST(RectBounder, AccuracyBug) {
   EXPECT_GE(ac_expanded.lat().hi(), ac.lat().hi());
 }
 
+// Generates a vector of random LatLngs for use in the benchmarks below.
+// Both lat and lng are placed randomly in a range of -30 degrees to +45
+// degrees.  This range is arbitrary -- the exact range does not affect
+// the runtime of the benchmarks.
+static void GenerateRandomLatLng(vector<S2LatLng>* latlng, int size) {
+  ABSL_CHECK(latlng->empty());
+  latlng->reserve(size);
+
+  const std::string seed_str =
+      StrCat("GENERATE_RANDOM_LAT_LNG", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  for (int i = 0; i < size; ++i) {
+    latlng->push_back(
+        S2LatLng::FromDegrees(absl::Uniform(bitgen, -30.0, 45.0),
+                              absl::Uniform(bitgen, -30.0, 45.0)));
+  }
+}
+
+// Measures performance when an S2LatLngRectBounder is populated from a
+// collection of S2Points via S2LatLngRectBounder::AddPoint().
+static void BM_AddPoints(benchmark::State& state) {
+  const int point_count = state.range(0);
+  vector<S2LatLng> latlng;
+  GenerateRandomLatLng(&latlng, point_count);
+
+  vector<S2Point> points;
+  points.reserve(point_count);
+  for (const auto& ll : latlng) points.push_back(ll.ToPoint());
+
+  int64_t items_processed = 0;
+  while (state.KeepRunningBatch(point_count)) {
+    S2LatLngRectBounder bounder;
+    for (const S2Point& point : points) {
+      bounder.AddPoint(point);
+    }
+
+    S2LatLngRect bound = bounder.GetBound();
+    benchmark::DoNotOptimize(bound);
+    items_processed += point_count;
+  }
+
+  state.SetItemsProcessed(items_processed);
+}
+
+BENCHMARK(BM_AddPoints)->Range(8, 128 * 1024);
+
+// Measures performance when an S2LatLngRectBounder is populated from a
+// collection of S2LatLngs via S2LatLngRectBounder::AddPoint().  This includes
+// the cost of converting each S2LatLng to an S2Point.
+static void BM_AddLatLngAsPoints(benchmark::State& state) {
+  const int point_count = state.range(0);
+  vector<S2LatLng> latlng;
+  GenerateRandomLatLng(&latlng, point_count);
+
+  int64_t items_processed = 0;
+  while (state.KeepRunningBatch(point_count)) {
+    S2LatLngRectBounder bounder;
+    for (const S2LatLng& ll : latlng) {
+      bounder.AddPoint(ll.ToPoint());
+    }
+    S2LatLngRect bound = bounder.GetBound();
+    benchmark::DoNotOptimize(bound);
+    items_processed += point_count;
+  }
+
+  state.SetItemsProcessed(items_processed);
+}
+
+BENCHMARK(BM_AddLatLngAsPoints)->Range(8, 128 * 1024);
+
+// Measures performance when an S2LatLngRectBounder is populated from a
+// collection of S2LatLngs via S2LatLngRectBounder::AddLatLng().
+static void BM_AddLatLngAsLatLng(benchmark::State& state) {
+  const int point_count = state.range(0);
+  vector<S2LatLng> latlng;
+  GenerateRandomLatLng(&latlng, point_count);
+
+  int64_t items_processed = 0;
+  while (state.KeepRunningBatch(point_count)) {
+    S2LatLngRectBounder bounder;
+    for (const S2LatLng& ll : latlng) {
+      bounder.AddLatLng(ll);
+    }
+    S2LatLngRect bound = bounder.GetBound();
+    benchmark::DoNotOptimize(bound);
+    items_processed += point_count;
+  }
+
+  state.SetItemsProcessed(items_processed);
+}
+
+BENCHMARK(BM_AddLatLngAsLatLng)->Range(8, 128 * 1024);

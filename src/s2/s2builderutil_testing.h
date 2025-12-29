@@ -67,7 +67,7 @@ class GraphCloningLayer : public S2Builder::Layer {
     return graph_options_;
   }
 
-  void Build(const S2Builder::Graph& g, S2Error* error) override {
+  void Build(const S2Builder::Graph& g, S2Error* absl_nonnull error) override {
     gc_->Init(g);
   }
 
@@ -91,7 +91,7 @@ class GraphAppendingLayer : public S2Builder::Layer {
     return graph_options_;
   }
 
-  void Build(const S2Builder::Graph& g, S2Error* error) override {
+  void Build(const S2Builder::Graph& g, S2Error* absl_nonnull error) override {
     clones_->push_back(std::make_unique<GraphClone>(g));
     graphs_->push_back(clones_->back()->graph());
   }
@@ -126,7 +126,7 @@ class IndexMatchingLayer : public S2Builder::Layer {
     return graph_options_;
   }
 
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   using EdgeVector = std::vector<S2Shape::Edge>;

@@ -68,7 +68,7 @@ bool S2MaxDistancePointTarget::VisitContainingShapeIds(
   // For furthest points, we visit the polygons whose interior contains the
   // antipode of the target point.  (These are the polygons whose
   // S2MaxDistance to the target is S2MaxDistance::Zero().)
-  return MakeS2ContainsPointQuery(&index).VisitContainingShapeIds(
+  return S2ContainsPointQuery(&index).VisitContainingShapeIds(
       -point_,
       [this, &visitor](int shape_id) { return visitor(shape_id, point_); });
 }
@@ -195,7 +195,7 @@ bool S2MaxDistanceShapeIndexTarget::set_max_error(
 // is the set of points whose S2MaxDistance to the target is
 // S2MaxDistance::Zero().)
 S2Cap S2MaxDistanceShapeIndexTarget::GetCapBound() {
-  S2Cap cap = MakeS2ShapeIndexRegion(index_).GetCapBound();
+  S2Cap cap = S2ShapeIndexRegion(index_).GetCapBound();
   return S2Cap(-cap.center(), cap.radius());
 }
 

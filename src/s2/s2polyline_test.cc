@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "absl/log/log_streamer.h"
@@ -31,6 +32,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
+#include "s2/gmock_matchers.h"
 #include "s2/s1angle.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cell.h"
@@ -51,6 +53,7 @@
 
 using absl::StrCat;
 using absl::string_view;
+using ::S2::PolylineIdenticalTo;
 using s2builderutil::S2CellIdSnapFunction;
 using std::fabs;
 using std::make_unique;
@@ -111,19 +114,66 @@ TEST(S2Polyline, NoDataClone) {
   ASSERT_NE(cloned_poly, nullptr);
 }
 
-TEST(S2Polyline, MoveConstruct) {
-  unique_ptr<S2Polyline> line = MakePolyline("1:1, 4:4");
-  S2Polyline moved(std::move(*line));
-  ASSERT_EQ(0, line->num_vertices());
-  ASSERT_EQ(2, moved.num_vertices());
+static unique_ptr<S2Polyline> MakePolylineWithNonDefaultFields() {
+  unique_ptr<S2Polyline> polyline = MakePolyline("1:1, 4:4");
+  polyline->set_s2debug_override(S2Debug::DISABLE);
+  return polyline;
 }
 
-TEST(S2Polyline, MoveAssign) {
-  unique_ptr<S2Polyline> line = MakePolyline("1:1, 4:4");
+TEST(S2Polyline, CloneResultIdenticalToSource) {
+  unique_ptr<S2Polyline> polyline = MakePolylineWithNonDefaultFields();
+  unique_ptr<S2Polyline> cloned(polyline->Clone());
+  EXPECT_THAT(*cloned, PolylineIdenticalTo(*polyline));
+}
+
+TEST(S2Polyline, CopyConstructionResultIdenticalToSource) {
+  unique_ptr<S2Polyline> polyline = MakePolylineWithNonDefaultFields();
+  S2Polyline copied(*polyline);
+  EXPECT_THAT(copied, PolylineIdenticalTo(*polyline));
+}
+
+TEST(S2Polyline, CopyAssignmentResultIdenticalToSource) {
+  unique_ptr<S2Polyline> polyline = MakePolylineWithNonDefaultFields();
   S2Polyline copied;
-  copied = std::move(*line);
-  ASSERT_EQ(0, line->num_vertices());
-  ASSERT_EQ(2, copied.num_vertices());
+  copied = *polyline;
+  EXPECT_THAT(copied, PolylineIdenticalTo(*polyline));
+}
+
+TEST(S2Polyline, CopyAssignmentToSelfIsNoOp) {
+  unique_ptr<S2Polyline> polyline_ptr = MakePolylineWithNonDefaultFields();
+  S2Polyline line = *polyline_ptr;
+  line = line;
+  EXPECT_THAT(line, PolylineIdenticalTo(*polyline_ptr));
+}
+
+TEST(S2Polyline, CopyConstructionFromEmptyIsIdenticalToSource) {
+  S2Polyline empty;
+  S2Polyline copy_constructed(empty);
+  EXPECT_THAT(copy_constructed, PolylineIdenticalTo(empty));
+}
+
+TEST(S2Polyline, CopyAssignmentFromEmptyIsIdenticalToSource) {
+  S2Polyline empty;
+  S2Polyline copy_assigned;
+  copy_assigned = empty;
+  EXPECT_THAT(copy_assigned, PolylineIdenticalTo(empty));
+}
+
+TEST(S2Polyline, MoveConstructionResultIdenticalToSource) {
+  unique_ptr<S2Polyline> polyline_orig = MakePolylineWithNonDefaultFields();
+  // Copy construction has already been tested, so we can use it here.
+  S2Polyline polyline(*polyline_orig);
+  S2Polyline moved(std::move(polyline));
+  EXPECT_THAT(moved, PolylineIdenticalTo(*polyline_orig));
+}
+
+TEST(S2Polyline, MoveAssignmentResultIdenticalToSource) {
+  unique_ptr<S2Polyline> polyline_orig = MakePolylineWithNonDefaultFields();
+  // Copy construction has already been tested, so we can use it here.
+  S2Polyline polyline(*polyline_orig);
+  S2Polyline moved;
+  moved = std::move(polyline);
+  EXPECT_THAT(moved, PolylineIdenticalTo(*polyline_orig));
 }
 
 TEST(S2Polyline, GetLengthAndCentroid) {

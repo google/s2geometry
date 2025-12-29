@@ -42,7 +42,7 @@ class S2LatLng;
 // The internal representation is a double-precision value in radians, so
 // conversion to and from radians is exact.  Conversions between E5, E6, E7,
 // and Degrees are not always exact; for example, Degrees(3.1) is different
-// from E6(3100000) or E7(310000000).  However, the following properties are
+// from E6(3100000) or E7(31000000).  However, the following properties are
 // guaranteed for any integer "n", provided that "n" is in the input range of
 // both functions:
 //
@@ -136,11 +136,31 @@ class S1Angle {
 
   // Comparison operators.
   friend constexpr bool operator==(S1Angle x, S1Angle y);
-  friend constexpr bool operator!=(S1Angle x, S1Angle y);
-  friend constexpr bool operator<(S1Angle x, S1Angle y);
-  friend constexpr bool operator>(S1Angle x, S1Angle y);
-  friend constexpr bool operator<=(S1Angle x, S1Angle y);
-  friend constexpr bool operator>=(S1Angle x, S1Angle y);
+#if defined(__cpp_impl_three_way_comparison) && \
+    __cpp_impl_three_way_comparison >= 201907L
+  // This should be `= default`, but can't be due to PyCLIF limitations.
+  // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+  friend constexpr auto operator<=>(S1Angle x, S1Angle y) {
+    // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+    return x.radians() <=> y.radians();
+  }
+#else
+  friend constexpr bool operator!=(S1Angle x, S1Angle y) {
+    return x.radians() != y.radians();
+  }
+  friend constexpr bool operator<(S1Angle x, S1Angle y) {
+    return x.radians() < y.radians();
+  }
+  friend constexpr bool operator>(S1Angle x, S1Angle y) {
+    return x.radians() > y.radians();
+  }
+  friend constexpr bool operator<=(S1Angle x, S1Angle y) {
+    return x.radians() <= y.radians();
+  }
+  friend constexpr bool operator>=(S1Angle x, S1Angle y) {
+    return x.radians() >= y.radians();
+  }
+#endif
 
   // Simple arithmetic operators for manipulating S1Angles.
   friend constexpr S1Angle operator-(S1Angle a);
@@ -246,26 +266,6 @@ inline S1Angle abs(S1Angle a) {
 
 inline constexpr bool operator==(S1Angle x, S1Angle y) {
   return x.radians() == y.radians();
-}
-
-inline constexpr bool operator!=(S1Angle x, S1Angle y) {
-  return x.radians() != y.radians();
-}
-
-inline constexpr bool operator<(S1Angle x, S1Angle y) {
-  return x.radians() < y.radians();
-}
-
-inline constexpr bool operator>(S1Angle x, S1Angle y) {
-  return x.radians() > y.radians();
-}
-
-inline constexpr bool operator<=(S1Angle x, S1Angle y) {
-  return x.radians() <= y.radians();
-}
-
-inline constexpr bool operator>=(S1Angle x, S1Angle y) {
-  return x.radians() >= y.radians();
 }
 
 inline constexpr S1Angle operator-(S1Angle a) {

@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_log.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
@@ -493,7 +494,7 @@ class S2BooleanOperation {
   // sets "error" appropriately.  (This class does not generate any errors
   // itself, but the S2Builder::Layer might.)
   bool Build(const S2ShapeIndex& a, const S2ShapeIndex& b,
-             S2Error* error);
+             S2Error* absl_nonnull error);
 
   // Convenience method that returns true if the result of the given operation
   // is empty.

@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -34,6 +35,7 @@
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2polygon.h"
 #include "s2/s2shape.h"
 
@@ -161,10 +163,10 @@ class S2LaxPolygonShape : public S2Shape {
   TypeTag type_tag() const override { return kTypeTag; }
 
  private:
-  // Decodes an S2LaxPolygonShape, returning true on success.  When error is
-  // given, if any errors are encountered during decoding, the S2Error is set
-  // and false is returned.
-  bool Init(Decoder* decoder, S2Error* error);
+  // Decodes an S2LaxPolygonShape, returning true on success and false
+  // otherwise.  If `error` is non-nullptr and an error occurs, it is populated
+  // with details.
+  bool Init(Decoder* decoder, S2Error* absl_nullable error);
 
   // Note that the parent class has a 4-byte S2Shape::id_ field so there is no
   // wasted space in the following layout. num_loops_ cannot be INT32_MAX, as
@@ -178,7 +180,7 @@ class S2LaxPolygonShape : public S2Shape {
   mutable std::atomic<int> prev_loop_{0};
 
   int32_t num_vertices_ = 0;
-  std::unique_ptr<S2Point[]> vertices_;
+  s2internal::UniqueS2PointArray vertices_;
 
   // When num_loops_ > 1, stores an array of size (num_loops_ + 1) where
   // element "i" represents the total number of vertices in loops 0..i-1.

@@ -274,8 +274,9 @@ size_t EncodedUintVector<T>::lower_bound(T target) const {
     case 5: return lower_bound<5>(target);
     case 6: return lower_bound<6>(target);
     case 7: return lower_bound<7>(target);
-    default: return lower_bound<8>(target);
+    case 8: return lower_bound<8>(target);
   }
+  ABSL_UNREACHABLE();
 }
 
 template <class T> template <int length>

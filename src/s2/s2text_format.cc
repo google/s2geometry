@@ -23,6 +23,8 @@
 
 #include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -46,6 +48,7 @@
 #include "s2/s2polyline.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
+#include "s2/util/task/status_macros.h"
 
 using absl::Span;
 using absl::string_view;
@@ -56,268 +59,192 @@ using std::vector;
 
 namespace s2textformat {
 
+namespace {
 static vector<string_view> SplitString(string_view str, char separator) {
   vector<string_view> result =
       absl::StrSplit(str, separator, absl::SkipWhitespace());
-  for (auto& e : result) {
+  for (string_view& e : result) {
     e = absl::StripAsciiWhitespace(e);
   }
   return result;
 }
+}  // namespace
 
-vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
+absl::StatusOr<vector<S2LatLng>> ParseLatLngs(string_view str) {
   vector<S2LatLng> latlngs;
-  ABSL_CHECK(ParseLatLngs(str, &latlngs)) << ": str == \"" << str << "\"";
-  return latlngs;
-}
-
-bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
   for (const string_view lat_lng_str :
        absl::StrSplit(str, ',', absl::SkipEmpty())) {
     const absl::InlinedVector<string_view, 2> lat_lng =
         absl::StrSplit(lat_lng_str, ':');
-    if (lat_lng.size() != 2) return false;
+    if (lat_lng.size() != 2) {
+      return absl::InvalidArgumentError(absl::StrCat(
+          "Invalid latlng format (expected lat:lng): ", lat_lng_str));
+    }
     double lat, lng;
-    if (!absl::SimpleAtod(lat_lng[0], &lat)) return false;
-    if (!absl::SimpleAtod(lat_lng[1], &lng)) return false;
-    latlngs->push_back(S2LatLng::FromDegrees(lat, lng));
+    if (!absl::SimpleAtod(lat_lng[0], &lat)) {
+      return absl::InvalidArgumentError(
+          absl::StrCat("Failed to parse latitude: ", lat_lng[0]));
+    }
+    if (!absl::SimpleAtod(lat_lng[1], &lng)) {
+      return absl::InvalidArgumentError(
+          absl::StrCat("Failed to parse longitude: ", lat_lng[1]));
+    }
+    S2LatLng latlng = S2LatLng::FromDegrees(lat, lng);
+    if (!latlng.is_valid()) {
+      return absl::InvalidArgumentError(
+          absl::StrCat("Invalid latlng coordinates: ", lat_lng_str));
+    }
+    latlngs.push_back(latlng);
   }
-  return true;
+  return latlngs;
 }
 
-vector<S2Point> ParsePointsOrDie(string_view str) {
-  vector<S2Point> vertices;
-  ABSL_CHECK(ParsePoints(str, &vertices)) << ": str == \"" << str << "\"";
-  return vertices;
-}
-
-bool ParsePoints(string_view str, vector<S2Point>* vertices) {
-  vector<S2LatLng> latlngs;
-  if (!ParseLatLngs(str, &latlngs)) return false;
-  for (const auto& latlng : latlngs) {
-    vertices->push_back(latlng.ToPoint());
+absl::StatusOr<vector<S2Point>> ParsePoints(string_view str) {
+  ASSIGN_OR_RETURN(vector<S2LatLng> latlngs, ParseLatLngs(str));
+  vector<S2Point> points;
+  points.reserve(latlngs.size());
+  for (const S2LatLng& latlng : latlngs) {
+    points.push_back(latlng.ToPoint());
   }
-  return true;
+  return points;
 }
 
-S2Point MakePointOrDie(string_view str) {
-  S2Point point;
-  ABSL_CHECK(MakePoint(str, &point)) << ": str == \"" << str << "\"";
-  return point;
+absl::StatusOr<S2Point> MakePoint(string_view str) {
+  ASSIGN_OR_RETURN(vector<S2Point> points, ParsePoints(str));
+  if (points.size() != 1) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Expected 1 point, got ", points.size()));
+  }
+  return points[0];
 }
 
-bool MakePoint(string_view str, S2Point* point) {
-  vector<S2Point> vertices;
-  if (!ParsePoints(str, &vertices) || vertices.size() != 1) return false;
-  *point = vertices[0];
-  return true;
+absl::StatusOr<S2LatLng> MakeLatLng(string_view str) {
+  ASSIGN_OR_RETURN(vector<S2LatLng> latlngs, ParseLatLngs(str));
+  if (latlngs.size() != 1) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Expected 1 latlng, got ", latlngs.size()));
+  }
+  return latlngs[0];
 }
 
-bool MakeLatLng(string_view str, S2LatLng* latlng) {
-  vector<S2LatLng> latlngs;
-  if (!ParseLatLngs(str, &latlngs) || latlngs.size() != 1) return false;
-  *latlng = latlngs[0];
-  return true;
-}
-
-S2LatLng MakeLatLngOrDie(string_view str) {
-  S2LatLng latlng;
-  ABSL_CHECK(MakeLatLng(str, &latlng)) << ": str == \"" << str << "\"";
-  return latlng;
-}
-
-S2LatLngRect MakeLatLngRectOrDie(string_view str) {
-  S2LatLngRect rect;
-  ABSL_CHECK(MakeLatLngRect(str, &rect)) << ": str == \"" << str << "\"";
-  return rect;
-}
-
-bool MakeLatLngRect(string_view str, S2LatLngRect* rect) {
-  vector<S2LatLng> latlngs;
-  if (!ParseLatLngs(str, &latlngs) || latlngs.empty()) return false;
-  *rect = S2LatLngRect::FromPoint(latlngs[0]);
+absl::StatusOr<S2LatLngRect> MakeLatLngRect(string_view str) {
+  ASSIGN_OR_RETURN(vector<S2LatLng> latlngs, ParseLatLngs(str));
+  if (latlngs.empty()) {
+    return absl::InvalidArgumentError(
+        "No points found to construct S2LatLngRect");
+  }
+  S2LatLngRect rect = S2LatLngRect::FromPoint(latlngs[0]);
   for (size_t i = 1; i < latlngs.size(); ++i) {
-    rect->AddPoint(latlngs[i]);
+    rect.AddPoint(latlngs[i]);
   }
   return rect;
 }
 
-bool MakeCellId(string_view str, S2CellId* cell_id) {
-  *cell_id = S2CellId::FromDebugString(str);
-  return *cell_id != S2CellId::None();
-}
-
-S2CellId MakeCellIdOrDie(string_view str) {
-  S2CellId cell_id;
-  ABSL_CHECK(MakeCellId(str, &cell_id)) << ": str == \"" << str << "\"";
+absl::StatusOr<S2CellId> MakeCellId(string_view str) {
+  S2CellId cell_id = S2CellId::FromDebugString(str);
+  if (cell_id == S2CellId::None()) {
+    return absl::InvalidArgumentError(absl::StrCat("Invalid S2CellId: ", str));
+  }
   return cell_id;
 }
 
-bool MakeCellUnion(string_view str, S2CellUnion* cell_union) {
+absl::StatusOr<S2CellUnion> MakeCellUnion(string_view str) {
   vector<S2CellId> cell_ids;
-  for (const auto& cell_str : SplitString(str, ',')) {
-    S2CellId cell_id;
-    if (!MakeCellId(cell_str, &cell_id)) return false;
+  for (const string_view cell_str : SplitString(str, ',')) {
+    ASSIGN_OR_RETURN(S2CellId cell_id, MakeCellId(cell_str));
     cell_ids.push_back(cell_id);
   }
-  *cell_union = S2CellUnion(std::move(cell_ids));
-  return true;
+  return S2CellUnion(std::move(cell_ids));
 }
 
-S2CellUnion MakeCellUnionOrDie(string_view str) {
-  S2CellUnion cell_union;
-  ABSL_CHECK(MakeCellUnion(str, &cell_union)) << ": str == \"" << str << "\"";
-  return cell_union;
-}
-
-unique_ptr<S2Loop> MakeLoopOrDie(string_view str, S2Debug debug_override) {
-  unique_ptr<S2Loop> loop;
-  ABSL_CHECK(MakeLoop(str, &loop, debug_override))
-      << ": str == \"" << str << "\"";
-  return loop;
-}
-
-bool MakeLoop(string_view str, unique_ptr<S2Loop>* loop,
-              S2Debug debug_override) {
+absl::StatusOr<unique_ptr<S2Loop>> MakeLoop(string_view str,
+                                            S2Debug debug_override) {
   if (str == "empty") {
-    *loop = make_unique<S2Loop>(S2Loop::kEmpty());
-    return true;
+    return make_unique<S2Loop>(S2Loop::kEmpty());
   }
   if (str == "full") {
-    *loop = make_unique<S2Loop>(S2Loop::kFull());
-    return true;
+    return make_unique<S2Loop>(S2Loop::kFull());
   }
-  vector<S2Point> vertices;
-  if (!ParsePoints(str, &vertices)) return false;
-  *loop = make_unique<S2Loop>(vertices, debug_override);
-  return true;
+  ASSIGN_OR_RETURN(vector<S2Point> vertices, ParsePoints(str));
+  return make_unique<S2Loop>(vertices, debug_override);
 }
 
-unique_ptr<S2Polyline> MakePolylineOrDie(string_view str,
-                                         S2Debug debug_override) {
-  unique_ptr<S2Polyline> polyline;
-  ABSL_CHECK(MakePolyline(str, &polyline, debug_override))
-      << ": str == \"" << str << "\"";
-  return polyline;
+absl::StatusOr<unique_ptr<S2Polyline>> MakePolyline(string_view str,
+                                                    S2Debug debug_override) {
+  ASSIGN_OR_RETURN(vector<S2Point> vertices, ParsePoints(str));
+  return make_unique<S2Polyline>(vertices, debug_override);
 }
 
-bool MakePolyline(string_view str, unique_ptr<S2Polyline>* polyline,
-                  S2Debug debug_override) {
-  vector<S2Point> vertices;
-  if (!ParsePoints(str, &vertices)) return false;
-  *polyline = make_unique<S2Polyline>(vertices, debug_override);
-  return true;
+absl::StatusOr<unique_ptr<S2LaxPolylineShape>> MakeLaxPolyline(
+    string_view str) {
+  ASSIGN_OR_RETURN(vector<S2Point> vertices, ParsePoints(str));
+  return make_unique<S2LaxPolylineShape>(vertices);
 }
 
-unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(string_view str) {
-  unique_ptr<S2LaxPolylineShape> lax_polyline;
-  ABSL_CHECK(MakeLaxPolyline(str, &lax_polyline))
-      << ": str == \"" << str << "\"";
-  return lax_polyline;
-}
-
-bool MakeLaxPolyline(string_view str,
-                     unique_ptr<S2LaxPolylineShape>* lax_polyline) {
-  vector<S2Point> vertices;
-  if (!ParsePoints(str, &vertices)) return false;
-  *lax_polyline = make_unique<S2LaxPolylineShape>(vertices);
-  return true;
-}
-
-static bool InternalMakePolygon(string_view str,
-                                S2Debug debug_override,
-                                bool normalize_loops,
-                                unique_ptr<S2Polygon>* polygon) {
+static absl::StatusOr<unique_ptr<S2Polygon>> InternalMakePolygon(
+    string_view str, S2Debug debug_override, bool normalize_loops) {
   if (str == "empty") str = "";
   vector<string_view> loop_strs = SplitString(str, ';');
   vector<unique_ptr<S2Loop>> loops;
-  for (const auto& loop_str : loop_strs) {
-    unique_ptr<S2Loop> loop;
-    if (!MakeLoop(loop_str, &loop, debug_override)) return false;
+  for (const string_view loop_str : loop_strs) {
+    ASSIGN_OR_RETURN(unique_ptr<S2Loop> loop,
+                     MakeLoop(loop_str, debug_override));
     // Don't normalize loops that were explicitly specified as "full".
     if (normalize_loops && !loop->is_full()) loop->Normalize();
     loops.push_back(std::move(loop));
   }
-  *polygon = make_unique<S2Polygon>(std::move(loops), debug_override);
-  return true;
+  return make_unique<S2Polygon>(std::move(loops), debug_override);
 }
 
-unique_ptr<S2Polygon> MakePolygonOrDie(string_view str,
-                                       S2Debug debug_override) {
-  unique_ptr<S2Polygon> polygon;
-  ABSL_CHECK(MakePolygon(str, &polygon, debug_override))
-      << ": str == \"" << str << "\"";
-  return polygon;
+absl::StatusOr<unique_ptr<S2Polygon>> MakePolygon(string_view str,
+                                                  S2Debug debug_override) {
+  return InternalMakePolygon(str, debug_override, /*normalize_loops=*/true);
 }
 
-bool MakePolygon(string_view str, unique_ptr<S2Polygon>* polygon,
-                 S2Debug debug_override) {
-  return InternalMakePolygon(str, debug_override, true, polygon);
+absl::StatusOr<unique_ptr<S2Polygon>> MakeVerbatimPolygon(string_view str) {
+  return InternalMakePolygon(str, S2Debug::ALLOW, /*normalize_loops=*/false);
 }
 
-unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(string_view str) {
-  unique_ptr<S2Polygon> polygon;
-  ABSL_CHECK(MakeVerbatimPolygon(str, &polygon))
-      << ": str == \"" << str << "\"";
-  return polygon;
-}
-
-bool MakeVerbatimPolygon(string_view str, unique_ptr<S2Polygon>* polygon) {
-  return InternalMakePolygon(str, S2Debug::ALLOW, false, polygon);
-}
-
-unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(string_view str) {
-  unique_ptr<S2LaxPolygonShape> lax_polygon;
-  ABSL_CHECK(MakeLaxPolygon(str, &lax_polygon)) << ": str == \"" << str << "\"";
-  return lax_polygon;
-}
-
-bool MakeLaxPolygon(string_view str,
-                    unique_ptr<S2LaxPolygonShape>* lax_polygon) {
+absl::StatusOr<unique_ptr<S2LaxPolygonShape>> MakeLaxPolygon(string_view str) {
   vector<string_view> loop_strs = SplitString(str, ';');
   vector<vector<S2Point>> loops;
-  for (const auto& loop_str : loop_strs) {
+  for (const string_view loop_str : loop_strs) {
     if (loop_str == "full") {
       loops.push_back(vector<S2Point>());
     } else if (loop_str != "empty") {
-      vector<S2Point> points;
-      if (!ParsePoints(loop_str, &points)) return false;
-      loops.push_back(points);
+      ASSIGN_OR_RETURN(vector<S2Point> points, ParsePoints(loop_str));
+      loops.push_back(std::move(points));
     }
   }
-  *lax_polygon = make_unique<S2LaxPolygonShape>(loops);
-  return true;
+  return make_unique<S2LaxPolygonShape>(std::move(loops));
 }
 
-unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(string_view str) {
-  auto index = make_unique<MutableS2ShapeIndex>();
-  ABSL_CHECK(MakeIndex(str, &index)) << ": str == \"" << str << "\"";
-  return index;
-}
-
-bool MakeIndex(string_view str, unique_ptr<MutableS2ShapeIndex>* index) {
+absl::StatusOr<unique_ptr<MutableS2ShapeIndex>> MakeIndex(string_view str) {
   absl::InlinedVector<string_view, 3> strs = absl::StrSplit(str, '#');
-  ABSL_DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
+  if (strs.size() != 3) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Must contain two # characters: ", str));
+  }
+  auto index = make_unique<MutableS2ShapeIndex>();
   vector<S2Point> points;
-  for (const auto& point_str : SplitString(strs[0], '|')) {
-    S2Point point;
-    if (!MakePoint(point_str, &point)) return false;
+  for (const string_view point_str : SplitString(strs[0], '|')) {
+    ASSIGN_OR_RETURN(S2Point point, MakePoint(point_str));
     points.push_back(point);
   }
   if (!points.empty()) {
-    (*index)->Add(make_unique<S2PointVectorShape>(std::move(points)));
+    index->Add(make_unique<S2PointVectorShape>(std::move(points)));
   }
-  for (const auto& line_str : SplitString(strs[1], '|')) {
-    unique_ptr<S2LaxPolylineShape> lax_polyline;
-    if (!MakeLaxPolyline(line_str, &lax_polyline)) return false;
-    (*index)->Add(std::move(lax_polyline));
+  for (const string_view line_str : SplitString(strs[1], '|')) {
+    ASSIGN_OR_RETURN(unique_ptr<S2LaxPolylineShape> lax_polyline,
+                     MakeLaxPolyline(line_str));
+    index->Add(std::move(lax_polyline));
   }
-  for (const auto& polygon_str : SplitString(strs[2], '|')) {
-    unique_ptr<S2LaxPolygonShape> lax_polygon;
-    if (!MakeLaxPolygon(polygon_str, &lax_polygon)) return false;
-    (*index)->Add(std::move(lax_polygon));
+  for (const string_view polygon_str : SplitString(strs[2], '|')) {
+    ASSIGN_OR_RETURN(unique_ptr<S2LaxPolygonShape> lax_polygon,
+                     MakeLaxPolygon(polygon_str));
+    index->Add(std::move(lax_polygon));
   }
-  return true;
+  return index;
 }
 
 static void AppendVertex(const S2LatLng& ll, string* out,

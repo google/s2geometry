@@ -29,6 +29,7 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
+#include "s2/s2region.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 
@@ -45,17 +46,17 @@ void S2ShapeIndexBufferedRegion::Init(const S2ShapeIndex* index,
   query_.mutable_options()->set_include_interiors(true);
 }
 
-S2ShapeIndexBufferedRegion* S2ShapeIndexBufferedRegion::Clone() const {
+S2Region* S2ShapeIndexBufferedRegion::Clone() const {
   return new S2ShapeIndexBufferedRegion(&index(), radius_);
 }
 
 S2Cap S2ShapeIndexBufferedRegion::GetCapBound() const {
-  S2Cap orig_cap = MakeS2ShapeIndexRegion(&index()).GetCapBound();
+  S2Cap orig_cap = S2ShapeIndexRegion(&index()).GetCapBound();
   return S2Cap(orig_cap.center(), orig_cap.radius() + radius_);
 }
 
 S2LatLngRect S2ShapeIndexBufferedRegion::GetRectBound() const {
-  S2LatLngRect orig_rect = MakeS2ShapeIndexRegion(&index()).GetRectBound();
+  S2LatLngRect orig_rect = S2ShapeIndexRegion(&index()).GetRectBound();
   return orig_rect.ExpandedByDistance(radius_.ToAngle());
 }
 
@@ -77,7 +78,7 @@ void S2ShapeIndexBufferedRegion::GetCellUnionBound(vector<S2CellId> *cellids)
   // increases the covered area by a factor of 16, so it is not a very good
   // covering, but it is much better than always returning the 6 face cells.
   vector<S2CellId> orig_cellids;
-  MakeS2ShapeIndexRegion(&index()).GetCellUnionBound(&orig_cellids);
+  S2ShapeIndexRegion(&index()).GetCellUnionBound(&orig_cellids);
   cellids->clear();
   for (S2CellId id : orig_cellids) {
     if (id.is_face()) {
@@ -97,7 +98,7 @@ bool S2ShapeIndexBufferedRegion::Contains(const S2Cell& cell) const {
   // cheaper to compute.
 
   // Return true if the unbuffered region contains this cell.
-  if (MakeS2ShapeIndexRegion(&index()).Contains(cell)) return true;
+  if (S2ShapeIndexRegion(&index()).Contains(cell)) return true;
 
   // Otherwise approximate the cell by its bounding cap.
   //

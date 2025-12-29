@@ -22,6 +22,7 @@
 #include <cmath>
 #include <new>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
@@ -42,6 +43,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
 #include "s2/s2predicates.h"
+#include "s2/s2region.h"
 
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
@@ -70,11 +72,14 @@ S2Cell::S2Cell(S2CellId id) {
 
 S2Point S2Cell::GetEdgeRaw(int k) const {
   switch (k & 3) {
-    case 0:  return S2::GetVNorm(face_, uv_[1][0]);   // Bottom
-    case 1:  return S2::GetUNorm(face_, uv_[0][1]);   // Right
-    case 2:  return -S2::GetVNorm(face_, uv_[1][1]);  // Top
-    default: return -S2::GetUNorm(face_, uv_[0][0]);  // Left
+    // clang-format off
+    case 0: return  S2::GetVNorm(face_, uv_[1][0]);  // Bottom
+    case 1: return  S2::GetUNorm(face_, uv_[0][1]);  // Right
+    case 2: return -S2::GetVNorm(face_, uv_[1][1]);  // Top
+    case 3: return -S2::GetUNorm(face_, uv_[0][0]);  // Left
+    // clang-format on
   }
+  ABSL_UNREACHABLE();
 }
 
 bool S2Cell::Subdivide(S2Cell children[4]) const {
@@ -147,7 +152,7 @@ double S2Cell::ExactArea() const {
   return S2::Area(v0, v1, v2) + S2::Area(v0, v2, v3);
 }
 
-S2Cell* S2Cell::Clone() const {
+S2Region* S2Cell::Clone() const {
   return new S2Cell(*this);
 }
 
@@ -233,6 +238,7 @@ S2LatLngRect S2Cell::GetRectBound() const {
 
   S2LatLngRect bound;
   switch (face_) {
+    // clang-format off
     case 0:
       bound = S2LatLngRect(R1Interval(-M_PI_4, M_PI_4),
                            S1Interval(-M_PI_4, M_PI_4));
@@ -253,10 +259,12 @@ S2LatLngRect S2Cell::GetRectBound() const {
       bound = S2LatLngRect(R1Interval(-M_PI_4, M_PI_4),
                            S1Interval(-3*M_PI_4, -M_PI_4));
       break;
-    default:
+    case 5:
       bound = S2LatLngRect(R1Interval(-M_PI_2, -kPoleMinLat),
                            S1Interval::Full());
       break;
+    default: ABSL_UNREACHABLE();
+    // clang-format on
   }
   // Finally, we expand the bound to account for the error when a point P is
   // converted to an S2LatLng to test for containment.  (The bound should be
@@ -269,7 +277,7 @@ S2LatLngRect S2Cell::GetRectBound() const {
 }
 
 void S2Cell::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
-  GetCapBound().GetCellUnionBound(cell_ids);
+  *cell_ids = {id_};
 }
 
 bool S2Cell::MayIntersect(const S2Cell& cell) const {
@@ -509,9 +517,18 @@ S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {
   // cell and an edge of the other cell (including the edge endpoints).  This
   // represents a total of 32 possible (vertex, edge) pairs.
   //
-  // TODO(ericv): This could be optimized to be at least 5x faster by pruning
+  // TODO(b/284470618): This could be optimized to be ~3x faster by pruning
   // the set of possible closest vertex/edge pairs using the faces and (u,v)
-  // ranges of both cells.
+  // ranges of both cells.  Only the neighboring edges in the direction of
+  // maximum separation need to be checked (4 vertex/edge pairs instead
+  // of 32).  For example, if `target` is far above `*this` and slightly to
+  // the right, the v-direction has the greatest separation and only the
+  // bottom edge of `target` needs to be compared to the top edge of `*this`.
+  // This is straightforward for same-face cells, which are the most important
+  // case, and can be extended to handle other faces.  It is also possible to
+  // identify exactly which comparison needs to be done (instead of doing 4),
+  // but the overhead may make it not worthwhile.  If we do this, we should
+  // also optimize IsDistanceLess().
   S2Point va[4], vb[4];
   for (int i = 0; i < 4; ++i) {
     va[i] = GetVertex(i);
@@ -521,7 +538,10 @@ S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
       S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &min_dist);
-      S2::UpdateMinDistance(vb[i], va[j], va[(j + 1) & 3], &min_dist);
+      // Endpoints will be checked by the `UpdateMinDistance` call above, so
+      // we don't need to check them here.  `UpdateMinInteriorDistance` is
+      // faster since it doesn't compute the distance endpoints.
+      S2::UpdateMinInteriorDistance(vb[i], va[j], va[(j + 1) & 3], &min_dist);
     }
   }
   return min_dist;
@@ -568,8 +588,42 @@ S1ChordAngle S2Cell::GetMaxDistance(const S2Cell& target) const {
 }
 
 bool S2Cell::IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
-  // TODO: b/284470618 - Use more efficient implementation
-  return GetDistance(target) < limit;
+  // Implementation of this function is similar to GetDistance(target), but
+  // instead of returning the distance, we return true if the distance is less
+  // than the limit, and we can exit early if the limit or distance is zero.
+
+  if (limit <= S1ChordAngle::Zero()) {
+    return false;
+  }
+
+  // If the cells intersect, the distance is zero.  We use the (u,v) ranges
+  // rather S2CellId::intersects() so that cells that share a partial edge or
+  // corner are considered to intersect.
+  if (face_ == target.face_ && uv_.Intersects(target.uv_)) {
+    return true;
+  }
+
+  // Otherwise, the minimum distance always occurs between a vertex of one
+  // cell and an edge of the other cell (including the edge endpoints).  This
+  // represents a total of 32 possible (vertex, edge) pairs.
+  S2Point va[4], vb[4];
+  for (int i = 0; i < 4; ++i) {
+    va[i] = GetVertex(i);
+    vb[i] = target.GetVertex(i);
+  }
+  S1ChordAngle dist = limit;
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      // TODO: b/284470618 - Use `s2pred::CompareEdgeDistance` for efficiency.
+      // Note we don't need to check `dist`, if `UpdateMinDistance` returns
+      // `true`, the distance was updated, so is less than `limit`.
+      if (S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &dist) ||
+          S2::UpdateMinInteriorDistance(vb[i], va[j], va[(j + 1) & 3], &dist)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 bool S2Cell::IsDistanceLessOrEqual(const S2Cell& target,

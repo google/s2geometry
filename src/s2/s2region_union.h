@@ -52,6 +52,14 @@ class S2RegionUnion final : public S2Region {
   // Create a region representing the union of the given regions.
   explicit S2RegionUnion(std::vector<std::unique_ptr<S2Region>> regions);
 
+  // S2RegionUnion is copyable and movable, however copying may be expensive
+  // if the contained regions are expensive to copy (e.g. S2Polygons with
+  // many vertices).
+  S2RegionUnion(const S2RegionUnion&);
+  S2RegionUnion& operator=(const S2RegionUnion&);
+  S2RegionUnion(S2RegionUnion&&) noexcept;
+  S2RegionUnion& operator=(S2RegionUnion&&) noexcept;
+
   ~S2RegionUnion() override = default;
 
   // Initialize region by taking ownership of the given regions.
@@ -85,13 +93,7 @@ class S2RegionUnion final : public S2Region {
   bool MayIntersect(const S2Cell& cell) const override;
 
  private:
-  // Internal copy constructor used only by Clone() that makes a deep copy of
-  // its argument.
-  S2RegionUnion(const S2RegionUnion& src);
-
   std::vector<std::unique_ptr<S2Region>> regions_;
-
-  void operator=(const S2RegionUnion&) = delete;
 };
 
 #endif  // S2_S2REGION_UNION_H_

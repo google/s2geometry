@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "s2/base/casts.h"
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/algorithm/container.h"
@@ -378,7 +379,7 @@ void CompareS2LoopToShape(absl::BitGenRef bitgen, const S2Loop& loop,
   MutableS2ShapeIndex index;
   index.Add(std::move(shape));
   S2Cap cap = loop.GetCapBound();
-  auto query = MakeS2ContainsPointQuery(&index);
+  S2ContainsPointQuery query(&index);
   for (int iter = 0; iter < 100; ++iter) {
     S2Point point = s2random::SamplePoint(bitgen, cap);
     EXPECT_EQ(loop.Contains(point), query.ShapeContains(0, point));
@@ -485,7 +486,7 @@ TEST(S2LaxPolygonShape, ChainVertexIteratorWorks) {
     // Testing with STL algorithms and containers.
     vector<S2Point> copy1(vertices.begin(), vertices.end());
     vector<S2Point> copy2(vertices.num_vertices());
-    std::copy(vertices.begin(), vertices.end(), copy2.begin());
+    std::copy_n(vertices.begin(), vertices.num_vertices(), copy2.data());
     for (int i = 0; i < vertices.num_vertices(); ++i) {
       EXPECT_EQ(copy1[i], loops[chain_counter][i]);
       EXPECT_EQ(copy2[i], loops[chain_counter][i]);
@@ -538,3 +539,40 @@ TEST(S2LaxPolygonShapeTest, BadLoopOffsets) {
   EXPECT_THAT(DecodeS2LaxPolygonShape(std::string("\001\225\243C\000\373", 6)),
               HasSubstr("Failed to decode loop offsets"));
 }
+
+static S2LaxPolygonShape MakePolygon(int num_points) {
+  const S2Point center = MakePointOrDie("23:16");
+  const S1Angle radius = S2Testing::KmToAngle(10);
+
+  // Outer loop composing a shell.
+  std::vector<std::vector<S2Point>> points;
+  points.emplace_back(
+      S2Testing::MakeRegularPoints(center, radius, num_points / 2));
+
+  // Inner loop composing a hole.
+  points.emplace_back(
+      S2Testing::MakeRegularPoints(center, radius / 2, num_points / 2));
+  absl::c_reverse(points.back());
+
+  return S2LaxPolygonShape(std::move(points));
+}
+
+static void BM_DecodeS2LaxPolygonShape(benchmark::State& state) {
+  CodingHint hint = state.range(0) ? CodingHint::COMPACT : CodingHint::FAST;
+
+  auto polygon = MakePolygon(state.range(1));
+  Encoder encoder;
+  polygon.Encode(&encoder, hint);
+
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    S2LaxPolygonShape decoded;
+    decoded.Init(&decoder);
+    benchmark::DoNotOptimize(decoded);
+  }
+}
+BENCHMARK(BM_DecodeS2LaxPolygonShape)
+    ->ArgPair(0, 10)
+    ->ArgPair(0, 10000)
+    ->ArgPair(1, 10)
+    ->ArgPair(1, 10000);

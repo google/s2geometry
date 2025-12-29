@@ -83,7 +83,7 @@ void BuildPolygonBoundaries(absl::Span<const vector<S2Shape*>> components,
   }
   // Find the loops containing each component.
   vector<vector<int>> ancestors(components.size());
-  auto contains_query = MakeS2ContainsPointQuery(&index);
+  S2ContainsPointQuery contains_query(&index);
   for (size_t i = 0; i < outer_loops.size(); ++i) {
     auto loop = outer_loops[i];
     ABSL_DCHECK_GT(loop->num_edges(), 0);

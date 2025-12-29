@@ -63,7 +63,7 @@ bool S2MinDistancePointTarget::VisitContainingShapeIds(
     const S2ShapeIndex& index,
     absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>
         visitor) {
-  return MakeS2ContainsPointQuery(&index).VisitContainingShapeIds(
+  return S2ContainsPointQuery(&index).VisitContainingShapeIds(
       point_,
       [this, &visitor](int shape_id) { return visitor(shape_id, point_); });
 }
@@ -244,7 +244,7 @@ bool S2MinDistanceShapeIndexTarget::set_max_error(
 }
 
 S2Cap S2MinDistanceShapeIndexTarget::GetCapBound() {
-  return MakeS2ShapeIndexRegion(index_).GetCapBound();
+  return S2ShapeIndexRegion(index_).GetCapBound();
 }
 
 inline bool S2MinDistanceShapeIndexTarget::UpdateMinDistance(

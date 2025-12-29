@@ -24,15 +24,15 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
-#include "absl/utility/utility.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_get_reference_point.h"
 
 using absl::Span;
-using std::make_unique;
 using ReferencePoint = S2Shape::ReferencePoint;
+using ::s2internal::MakeS2PointArrayForOverwrite;
 
 S2LaxLoopShape::S2LaxLoopShape(S2LaxLoopShape&& other) noexcept
     : num_vertices_(std::exchange(other.num_vertices_, 0)),
@@ -54,8 +54,8 @@ S2LaxLoopShape::S2LaxLoopShape(const S2Loop& loop) {
 
 void S2LaxLoopShape::Init(Span<const S2Point> vertices) {
   num_vertices_ = vertices.size();
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
-  std::copy(vertices.begin(), vertices.end(), vertices_.get());
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+  std::copy_n(vertices.data(), num_vertices_, vertices_.get());
 }
 
 void S2LaxLoopShape::Init(const S2Loop& loop) {
@@ -66,9 +66,8 @@ void S2LaxLoopShape::Init(const S2Loop& loop) {
     vertices_ = nullptr;
   } else {
     num_vertices_ = loop.num_vertices();
-    vertices_ = make_unique<S2Point[]>(num_vertices_);
-    std::copy(&loop.vertex(0), &loop.vertex(0) + num_vertices_,
-              vertices_.get());
+    vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+    std::copy_n(&loop.vertex(0), num_vertices_, vertices_.get());
   }
 }
 
@@ -113,7 +112,7 @@ void S2VertexIdLaxLoopShape::Init(Span<const int32_t> vertex_ids,
                                   const S2Point* vertex_array) {
   num_vertices_ = vertex_ids.size();
   vertex_ids_.reset(new int32_t[num_vertices_]);
-  std::copy(vertex_ids.begin(), vertex_ids.end(), vertex_ids_.get());
+  std::copy_n(vertex_ids.data(), num_vertices_, vertex_ids_.get());
   vertex_array_ = vertex_array;
 }
 

@@ -19,6 +19,7 @@
 
 #include <optional>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "s2/s2point.h"
@@ -101,6 +102,28 @@ TEST(DisjointSetTest, SizeAndClearWorks) {
   set.Clear();
   EXPECT_EQ(set.Size(), 0);
 }
+
+void BM_FindRoot(benchmark::State &state) {
+  int size = state.range(0);
+
+  DisjointSet<int> set;
+  set.Reserve(size);
+  for (int i = 0; i < size; ++i) {
+    set.Add(i);
+  }
+
+  // Union consecutive sets together to form a chain that can be length N.
+  for (int i = 0; i < set.Size() - 1; ++i) {
+    set.Union(i, i + 1);
+  }
+
+  // Benchmark the FindRoot time.
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(set.FindRoot(1));
+  }
+  state.SetItemsProcessed(state.iterations());
+}
+BENCHMARK(BM_FindRoot)->Range(2, 1 << 20);
 
 }  // namespace
 }  // namespace internal

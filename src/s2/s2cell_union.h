@@ -96,6 +96,11 @@ class S2CellUnion final : public S2Region {
   // Creates an empty cell union.
   S2CellUnion() = default;
 
+  S2CellUnion(const S2CellUnion&);
+  S2CellUnion& operator=(const S2CellUnion&);
+  S2CellUnion(S2CellUnion&&);
+  S2CellUnion& operator=(S2CellUnion&&);
+
   // Constructs a cell union with the given S2CellIds, then calls Normalize()
   // to sort them, remove duplicates, and merge cells when possible.  (See
   // FromNormalized if your vector is already normalized.)
@@ -328,7 +333,6 @@ class S2CellUnion final : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  S2CellUnion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
   void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
@@ -386,6 +390,10 @@ class S2CellUnion final : public S2Region {
   std::string ToString() const;
 
  private:
+  // Implements the S2Region interface.  Note that the copy constructor should
+  // be used instead.
+  S2Region* Clone() const override;
+
   friend class S2CellUnionTestPeer;  // For creating invalid S2CellUnions.
 
   // Internal constructor that does not check "cell_ids" for validity.

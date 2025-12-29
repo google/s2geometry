@@ -53,6 +53,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
@@ -101,9 +102,10 @@ using InputVertexEdgeMap = absl::btree_multimap<S2Point, EdgeSnap>;
 // The winding number returned when a usage error is detected.
 constexpr int kErrorResult = std::numeric_limits<int>::max();
 
-bool BuildChain(
-    VertexId ref_v, const Graph& g, InputVertexEdgeMap* input_vertex_edge_map,
-    vector<S2Point>* chain_in, vector<S2Point>* chain_out, S2Error* error) {
+bool BuildChain(VertexId ref_v, const Graph& g,
+                InputVertexEdgeMap* input_vertex_edge_map,
+                vector<S2Point>* chain_in, vector<S2Point>* chain_out,
+                S2Error* absl_nonnull error) {
   ABSL_DCHECK(chain_in->empty());
   ABSL_DCHECK(chain_out->empty());
 
@@ -202,10 +204,11 @@ vector<EdgeId> GetIncidentEdgesBruteForce(VertexId v, const Graph& g) {
 
 }  // namespace
 
-int GetSnappedWindingDelta(
-    const S2Point& ref_in, VertexId ref_v, Span<const EdgeId> incident_edges,
-    const InputEdgeFilter& input_edge_filter, const S2Builder& builder,
-    const Graph& g, S2Error* error) {
+int GetSnappedWindingDelta(const S2Point& ref_in, VertexId ref_v,
+                           Span<const EdgeId> incident_edges,
+                           const InputEdgeFilter& input_edge_filter,
+                           const S2Builder& builder, const Graph& g,
+                           S2Error* absl_nonnull error) {
   ABSL_DCHECK(!builder.options().simplify_edge_chains());
   ABSL_DCHECK(g.options().edge_type() == S2Builder::EdgeType::DIRECTED);
   ABSL_DCHECK(g.options().degenerate_edges() ==
@@ -399,10 +402,11 @@ int GetSnappedWindingDelta(
   return winding_delta;
 }
 
-int GetSnappedWindingDelta(
-    const S2Point& ref_in, S2Builder::Graph::VertexId ref_v,
-    const InputEdgeFilter &input_edge_filter, const S2Builder& builder,
-    const Graph& g, S2Error* error) {
+int GetSnappedWindingDelta(const S2Point& ref_in,
+                           S2Builder::Graph::VertexId ref_v,
+                           const InputEdgeFilter& input_edge_filter,
+                           const S2Builder& builder, const Graph& g,
+                           S2Error* absl_nonnull error) {
   return GetSnappedWindingDelta(
       ref_in, ref_v, GetIncidentEdgesBruteForce(ref_v, g),
       input_edge_filter, builder, g, error);

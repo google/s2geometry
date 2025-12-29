@@ -19,10 +19,12 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
@@ -34,9 +36,11 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/s1angle.h"
+#include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2random.h"
+#include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 
 using absl::flat_hash_set;
@@ -430,5 +434,62 @@ TEST_F(S2CellIndexTest, IntersectionSemiRandomUnions) {
     TestIntersection(S2CellUnion(std::move(target)));
   }
 }
+
+// The approximate radius of S2Cap within which test caps are constructed.
+static const S1Angle kQueryCapRadius = S2Testing::KmToAngle(10);
+
+S2CellUnion GetCapCovering(absl::BitGenRef bitgen, const S2Cap& query_cap,
+                           double area_fraction, int num_cells_per_cap) {
+  auto cap = S2Cap::FromCenterArea(s2random::SamplePoint(bitgen, query_cap),
+                                   area_fraction * query_cap.GetArea());
+  S2RegionCoverer coverer;
+  coverer.mutable_options()->set_max_cells(num_cells_per_cap);
+  return coverer.GetCovering(cap);
+}
+
+// Creates "arg0" S2Caps in a query area such that a random cap will intersect
+// approximately (arg0 / arg1) other caps.  Each cap is approximated by a
+// covering consisting of "arg2" cells.  Then benchmarks how long it takes to
+// find the set of coverings that intersect a random query cap constructed in
+// the same way.
+static void BM_FindIntersectingCapCoverings(benchmark::State& state) {
+  const string seed_str = absl::StrCat("FIND_INTERSECTING_CAP_COVERINGS",
+                                       absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  int num_caps = state.range(0);
+  int num_caps_per_area = state.range(1);
+  int num_cells_per_cap = state.range(2);
+  S2CellIndex index;
+  S2Cap query_cap(s2random::Point(bitgen), kQueryCapRadius);
+  for (int i = 0; i < num_caps; ++i) {
+    double area_fraction = absl::Uniform(bitgen, 0.0, 1.0) / num_caps_per_area;
+    index.Add(
+        GetCapCovering(bitgen, query_cap, area_fraction, num_cells_per_cap), i);
+  }
+  index.Build();
+  vector<S2CellUnion> targets;
+  for (int i = 0; i < 100; ++i) {
+    double area_fraction = absl::Uniform(bitgen, 0.0, 1.0) / num_caps_per_area;
+    targets.push_back(
+        GetCapCovering(bitgen, query_cap, area_fraction, num_cells_per_cap));
+  }
+  uint64_t iters = 0, count = 0;
+  int i_target = 0;
+  for (auto _ : state) {
+    count += index.GetIntersectingLabels(targets[i_target]).size();
+    iters += 1;
+    if (++i_target == targets.size()) i_target = 0;
+  }
+  state.SetLabel(
+      absl::StrFormat("avg_count:%.3f", static_cast<double>(count) / iters));
+}
+BENCHMARK(BM_FindIntersectingCapCoverings)
+->Args({100, 1000, 16})       // ~0.1 labels/query
+->Args({100, 1000, 128})      // ~0.1 labels/query
+->Args({10000, 100000, 16})   // ~0.1 labels/query
+->Args({10000, 10000, 16})    // ~1 label/query
+->Args({10000, 1000, 16});    // ~10 labels/query
 
 }  // namespace

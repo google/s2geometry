@@ -19,10 +19,13 @@
 
 #include <cmath>
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
+#include "absl/base/nullability.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -299,5 +302,43 @@ TEST(S2WindingOperationOptions, SetGetSnapFunction) {
   opts.set_snap_function(IdentitySnapFunction());
   EXPECT_EQ(opts.snap_function().snap_radius(), S1Angle::Zero());
 }
+
+// The performance of S2WindingOperation is dominated by S2Builder with one
+// possible exception, namely the part where we compute the winding number at
+// one arbitrary vertex of each connected component.  This benchmark can be
+// used to tune the following parameters of s2builderutil::WindingOracle:
+//
+//   WindingOracle::brute_force_winding_tests_left_
+//   WindingOracle::WindingOracle::kMaxEdgesPerCell
+//
+static void BM_LoopWithPointCloud(benchmark::State& state) {
+  const string seed_str = absl::StrCat("LOOP_WITH_POINT_CLOUD",
+                                       absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  S2Point center = s2random::Point(bitgen);
+  vector<S2Point> loop_vertices = S2Testing::MakeRegularPoints(
+      center, S1Angle::Degrees(10), state.range(0));
+  vector<S2Point> cloud_points(state.range(1));
+  for (S2Point& p : cloud_points) p = s2random::Point(bitgen);
+  for (auto _ : state) {
+    S2LaxPolygonShape output;
+    S2WindingOperation::Options options;
+    options.set_include_degeneracies(true);
+    S2WindingOperation op(make_unique<s2builderutil::LaxPolygonLayer>(&output),
+                          options);
+    op.AddLoop(loop_vertices);
+    for (const S2Point& p : cloud_points) {
+      op.AddLoop(S2PointLoopSpan{p});
+    }
+    S2Error error;
+    ABSL_CHECK(op.Build(center, 1, WindingRule::POSITIVE, &error));
+    ABSL_CHECK_GT(output.num_loops(), 0.5 * cloud_points.size());
+  }
+}
+BENCHMARK(BM_LoopWithPointCloud)
+->ArgPair(10000, 0)->ArgPair(10000, 1)->ArgPair(10000, 10)
+->ArgPair(10000, 100)->ArgPair(10000, 1000);
 
 }  // namespace

@@ -522,6 +522,16 @@ TEST(S2LatLngRect, GetCapBound) {
   EXPECT_TRUE(RectFromDegrees(-30, -150, -10, 50).GetCapBound().
               ApproxEquals(S2Cap(S2Point(0, 0, -1), S1Angle::Degrees(80))));
 
+  // Longitude span > 180 degrees and latitude span > 90 degrees. This results
+  // in a polar cap that is larger than the "midpoint cap" (centered at the
+  // center of the rect and containing the vertices), but is nonetheless the
+  // correct result. The "midpoint cap" must not be returned since it doesn't
+  // contain the entire rect due the rect being wider than 180 degrees. In this
+  // example, (-34, 49) is in the rect but not the midpoint cap.
+  // Screenshot: http://screen/BBLe8K9R6jHCWfk.
+  EXPECT_TRUE(RectFromDegrees(-60, -150, 70, 50).GetCapBound().
+              ApproxEquals(S2Cap(S2Point(0, 0, 1), S1Angle::Degrees(150))));
+
   // Ensure hemispheres are bounded conservatively.
   EXPECT_GE(RectFromDegrees(-10, -100, 0, 100).GetCapBound().radius(),
             S1ChordAngle::Right());

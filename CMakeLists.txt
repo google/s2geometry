@@ -4,6 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
+include(FetchContent)
 include(FindPackageHandleStandardArgs)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
@@ -11,6 +12,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
 option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
 add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
+
+option(BUILD_TESTS "Build unit tests." ON)
 
 feature_summary(WHAT ALL)
 
@@ -159,12 +162,7 @@ add_library(s2
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
-add_library(s2testing STATIC
-            src/s2/gmock_matchers.cc
-            src/s2/s2builderutil_testing.cc
-            src/s2/s2shapeutil_testing.cc
-            src/s2/s2testing.cc
-            src/s2/thread_testing.cc)
+
 target_link_libraries(
     s2
     ${OPENSSL_LIBRARIES}
@@ -188,18 +186,12 @@ target_link_libraries(
     absl::memory
     absl::span
     absl::status
+    absl::statusor
     absl::str_format
     absl::strings
     absl::type_traits
     absl::utility
     ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(
-    s2testing
-    absl::check
-    absl::flags
-    absl::log
-    absl::memory
-    absl::strings)
 
 # Allow other CMake projects to use this one with:
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
@@ -295,6 +287,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2min_distance_targets.h
               src/s2/s2padded_cell.h
               src/s2/s2point.h
+              src/s2/s2point_array.h
               src/s2/s2point_compression.h
               src/s2/s2point_index.h
               src/s2/s2point_region.h
@@ -373,6 +366,7 @@ install(FILES src/s2/util/gtl/compact_array.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/requires.h
               src/s2/util/gtl/unaligned.h
+              src/s2/util/gtl/value_or_die.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
@@ -387,11 +381,56 @@ install(FILES src/s2/util/units/length-units.h
         DESTINATION include/s2/util/units)
 install(TARGETS s2 DESTINATION lib)
 
-message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
-if (GOOGLETEST_ROOT)
-  add_subdirectory(${GOOGLETEST_ROOT}/googlemock build_gmock)
-  include_directories(${GOOGLETEST_ROOT}/googlemock/include)
-  include_directories(${GOOGLETEST_ROOT}/googletest/include)
+if (BUILD_TESTS)
+  # We could use a pre-installed benchmark with
+  # `find_package(benchmark QUIET)` then, `if (NOT benchmark_FOUND)`, but
+  # that could run into trouble if benchmark isn't PIC, but
+  # s2geometry is.  benchmark isn't PIC by default, but s2geometry is
+  # when building a shared lib.  Always build benchmark for simplicity.
+  message(STATUS "Downloading and building benchmark...")
+  FetchContent_Declare(
+      benchmark
+      # https://github.com/google/benchmark/releases/tag/v1.9.4
+      URL https://github.com/google/benchmark/archive/eddb0241389718a23a42db6af5f0164b6e0139af.zip
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  )
+  # Don't install benchmark when s2geometry is installed.
+  set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+  set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(benchmark)
+
+  # https://google.github.io/googletest/quickstart-cmake.html#set-up-a-project
+  message(STATUS "Downloading googletest...")
+  FetchContent_Declare(
+      googletest
+      # https://github.com/google/googletest/releases/tag/v1.17.0
+      URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  )
+  FetchContent_MakeAvailable(googletest)
+  include(GoogleTest)
+
+  add_library(s2testing STATIC
+              src/s2/gmock_matchers.cc
+              src/s2/s2builderutil_testing.cc
+              src/s2/s2shapeutil_testing.cc
+              src/s2/s2testing.cc
+              src/s2/thread_testing.cc)
+
+  target_link_libraries(
+      s2testing
+      absl::check
+      absl::flags
+      absl::log
+      absl::memory
+      absl::strings
+      GTest::gmock)
+
+  add_library(test_main
+              OBJECT src/s2/testing/test_main.cc)
+  target_link_libraries(test_main
+                        PRIVATE benchmark::benchmark
+                        PRIVATE GTest::gtest)
 
   set(S2TestFiles
       src/s2/encoded_s2cell_id_vector_test.cc
@@ -539,8 +578,12 @@ if (GOOGLETEST_ROOT)
         absl::status
         absl::strings
         absl::synchronization
-        gmock_main)
-    add_test(${test} ${test})
+        benchmark::benchmark
+        test_main)
+    # Compared to `add_test()`, displays progress and success/failure of each
+    # test case rather than just the binary, so we see
+    # `S2Cell.TestSubdivide ... PASSED`.  Also lists disabled tests.
+    gtest_discover_tests(${test})
   endforeach()
 endif()
 

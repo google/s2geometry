@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/base/call_once.h"
 #include "absl/flags/flag.h"
@@ -383,3 +384,430 @@ TEST(EncodedS2ShapeIndex, JavaByteCompatibility) {
   s2testing::ExpectEqual(expected, actual);
 }
 
+// The number of different polygons used for benchmarking purposes.
+static constexpr int kNumBenchmarkPolygons = 3;
+
+// Returns a pointer to a cached polygon of the given type and snap state.
+//
+// REQUIRES: type < kNumBenchmarkPolygons
+const S2Polygon* GetBenchmarkPolygon(int type, bool snapped) {
+  // Store an array of pointers to cache test polygons.  We'll never call
+  // destructors so this doesn't violate the trivial destruction rule.
+  struct CachedPolygon {
+    absl::once_flag once;
+    const S2Polygon* polygon;
+    const S2Polygon* snapped;
+  };
+
+  static CachedPolygon cache[kNumBenchmarkPolygons] = {};
+
+  ABSL_CHECK_GE(type, 0);
+  ABSL_CHECK_LT(type, kNumBenchmarkPolygons);
+
+  // Initialize cache entry if it hasn't been done yet.
+  absl::call_once(cache[type].once, [type]() {
+    const string seed_str =
+        StrCat("BENCHMARK_POLYGON", absl::GetFlag(FLAGS_s2_random_seed), type);
+    std::seed_seq seed(seed_str.begin(), seed_str.end());
+    std::mt19937_64 bitgen(seed);
+
+    S2Polygon* polygon;
+    switch (type) {
+      case 0: {
+        // A small regular loop.
+        polygon = new S2Polygon(S2Loop::MakeRegularLoop(
+            s2random::Point(bitgen), S2Testing::KmToAngle(10), 8));
+        break;
+      }
+      case 1: {
+        // A medium-sized fractal loop, e.g. a small natural feature.
+        S2Fractal fractal(bitgen);
+        fractal.SetLevelForApproxMaxEdges(3 * 256);
+        Matrix3x3_d frame = s2random::Frame(bitgen);
+        auto loop = fractal.MakeLoop(frame, S2Testing::KmToAngle(10));
+        polygon = new S2Polygon(std::move(loop));
+        break;
+      }
+      case 2: {
+        // A large number of small loops.
+        polygon = new S2Polygon();
+        S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), 100, 10, polygon);
+        break;
+      }
+      default:
+        ABSL_LOG(FATAL) << "Unsupported benchmark polygon index: " << type;
+    }
+
+    // Build snapped variant of polygon
+    S2Polygon* snapped = new S2Polygon();
+    snapped->InitToSnapped(*polygon, S2CellId::kMaxLevel);
+
+    cache[type].polygon = polygon;
+    cache[type].snapped = snapped;
+  });
+
+  // Cache will always be initialized at this point, safe to read values.
+  return snapped ? cache[type].snapped : cache[type].polygon;
+}
+
+// Returns a pointer to a cached polygon specified by the benchmark state.
+//
+// REQUIRES: state.range(0) < kNumBenchmarkPolygons
+const S2Polygon* GetBenchmarkPolygon(const benchmark::State& state) {
+  return GetBenchmarkPolygon(state.range(0), state.range(1));
+}
+
+// Returns an owning pointer to a polygon specified by the benchmark state.
+// Since the returned pointer is mutable, polygons are cloned from the cached
+// values returned by `GetBenchmarkPolygon`
+//
+// REQUIRES: state.range(0) < kNumBenchmarkPolygons
+unique_ptr<S2Polygon> GetMutableBenchmarkPolygon(
+    const benchmark::State& state) {
+  return unique_ptr<S2Polygon>(GetBenchmarkPolygon(state)->Clone());
+}
+
+// Returns a pointer to a lax polygon specified by the benchmark state.
+//
+// REQUIRES: state.range(0) < kNumBenchmarkPolygons
+const S2LaxPolygonShape* GetLaxBenchmarkPolygon(const benchmark::State& state) {
+  // Store an array of pointers to cache test polygons.  We'll never call
+  // destructors so this doesn't violate the trivial destruction rule.
+  static absl::once_flag once;
+  static const S2LaxPolygonShape* cache[kNumBenchmarkPolygons][2] = {};
+
+  // Construct the lax polygon cache once.
+  absl::call_once(once, []() {
+    for (int type = 0; type < kNumBenchmarkPolygons; type++) {
+      for (int snapped = 0; snapped <= 1; snapped++) {
+        const S2Polygon* polygon = GetBenchmarkPolygon(type, snapped);
+        cache[type][snapped] = new S2LaxPolygonShape(*polygon);
+      }
+    }
+  });
+
+  int type = state.range(0);
+  bool snapped = state.range(1);
+
+  ABSL_CHECK_GE(type, 0);
+  ABSL_CHECK_LT(type, kNumBenchmarkPolygons);
+
+  // Cache will always be initialized at this point, safe to read values.
+  return cache[type][snapped];
+}
+
+// Runs the given benchmark for all benchmark polygons using the given value
+// of the "snapped" parameter.
+template <bool snap>
+void BenchmarkArgsSnapped(benchmark::internal::Benchmark* benchmark) {
+  for (int i = 0; i < kNumBenchmarkPolygons; ++i) {
+    benchmark->ArgPair(i, snap);
+  }
+}
+
+// Runs the given benchmark for all benchmark polygons, with and without
+// snapping (which controls whether the FAST or COMPACT encoding is used).
+void BenchmarkArgs(benchmark::internal::Benchmark* benchmark) {
+  BenchmarkArgsSnapped<false>(benchmark);
+  BenchmarkArgsSnapped<true>(benchmark);
+}
+
+// Measure the time to build and destruct a MutableS2ShapeIndex.
+static void BM_MutableIndexBuildDestruct(benchmark::State& state) {
+  auto polygon = GetBenchmarkPolygon(state);
+  state.SetLabel(StrCat("vertices = ", polygon->num_vertices(),
+                        ", loops = ", polygon->num_loops()));
+  for (auto _ : state) {
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2Polygon::Shape>(polygon));
+    index.ForceBuild();
+  }
+}
+BENCHMARK(BM_MutableIndexBuildDestruct)->Apply(BenchmarkArgsSnapped<false>);
+
+// Measure the time to decode and destruct a MutableS2ShapeIndex.
+static void BM_MutableIndexDecodeDestruct(benchmark::State& state) {
+  Encoder encoder;
+  {
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2LaxPolygonShape>(*GetBenchmarkPolygon(state)));
+    ABSL_CHECK(s2shapeutil::FastEncodeTaggedShapes(index, &encoder));
+    index.Encode(&encoder);
+  }
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    MutableS2ShapeIndex index;
+    ABSL_CHECK(
+        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+  }
+}
+BENCHMARK(BM_MutableIndexDecodeDestruct)->Apply(BenchmarkArgsSnapped<false>);
+
+// Measure the time to initialize and destruct an EncodedS2ShapeIndex.
+static void BM_EncodedIndexInitDestruct(benchmark::State& state) {
+  Encoder encoder;
+  {
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2LaxPolygonShape>(*GetBenchmarkPolygon(state)));
+    ABSL_CHECK(s2shapeutil::FastEncodeTaggedShapes(index, &encoder));
+    int index_start = encoder.length();
+    index.Encode(&encoder);
+    Decoder decoder(encoder.base(), encoder.length());
+    state.SetLabel(StrCat("index_bytes = ",
+                          encoder.length() - index_start));
+  }
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    EncodedS2ShapeIndex index;
+    ABSL_CHECK(
+        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+  }
+}
+BENCHMARK(BM_EncodedIndexInitDestruct)->Apply(BenchmarkArgsSnapped<false>);
+
+// Measure the time to decode and destruct a snapped/unsnapped S2Polygon.
+static void BM_S2PolygonDecodeDestructSnapped(benchmark::State& state) {
+  Encoder encoder;
+  GetBenchmarkPolygon(state)->Encode(&encoder);
+  state.SetLabel(StrCat("bytes = ", encoder.length()));
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    S2Polygon polygon;
+    ABSL_CHECK(polygon.Decode(&decoder));
+  }
+}
+BENCHMARK(BM_S2PolygonDecodeDestructSnapped)->Apply(BenchmarkArgs);
+
+// Measure the time to fully decode and destruct a snapped/unsnapped
+// S2LaxPolygonShape.
+static void BM_LaxPolygonDecodeDestructSnapped(
+    benchmark::State& state) {
+  Encoder encoder;
+  GetLaxBenchmarkPolygon(state)->Encode(&encoder,
+                                        s2coding::CodingHint::COMPACT);
+  state.SetLabel(StrCat("bytes = ", encoder.length()));
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    S2LaxPolygonShape polygon;
+    ABSL_CHECK(polygon.Init(&decoder));
+  }
+}
+BENCHMARK(BM_LaxPolygonDecodeDestructSnapped)->Apply(BenchmarkArgs);
+
+// Measure the time to initialize and destruct a snapped/unsnapped
+// EncodedS2LaxPolygonShape.
+static void BM_EncodedPolygonInitDestructSnapped(
+    benchmark::State& state) {
+  Encoder encoder;
+  GetLaxBenchmarkPolygon(state)->Encode(&encoder,
+                                        s2coding::CodingHint::COMPACT);
+  state.SetLabel(StrCat("bytes = ", encoder.length()));
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    EncodedS2LaxPolygonShape polygon;
+    ABSL_CHECK(polygon.Init(&decoder));
+  }
+}
+BENCHMARK(BM_EncodedPolygonInitDestructSnapped)->Apply(BenchmarkArgs);
+
+// Measure the time to access an edge of an S2Polygon::Shape.
+static void BM_S2PolygonGetEdge(benchmark::State& state) {
+  S2Polygon::OwningShape shape(GetMutableBenchmarkPolygon(state));
+  int i = 0, num_edges = shape.num_edges();
+  for (auto _ : state) {
+    (void) shape.edge(i);
+    if (++i == num_edges) i = 0;
+  }
+}
+BENCHMARK(BM_S2PolygonGetEdge)->Apply(BenchmarkArgsSnapped<false>);
+
+static void BM_LaxPolygonGetEdge(benchmark::State& state) {
+  const S2LaxPolygonShape& shape = *GetLaxBenchmarkPolygon(state);
+  int i = 0, num_edges = shape.num_edges();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(shape.edge(i));
+    if (++i == num_edges) i = 0;
+  }
+}
+BENCHMARK(BM_LaxPolygonGetEdge)->Apply(BenchmarkArgsSnapped<false>);
+
+// Measure the time to access an edge of a snapped/unsnapped
+// EncodedS2LaxPolygonShape.
+static void BM_EncodedPolygonGetEdge(benchmark::State& state) {
+  Encoder encoder;
+  GetLaxBenchmarkPolygon(state)->Encode(&encoder,
+                                        s2coding::CodingHint::COMPACT);
+  state.SetLabel(StrCat("bytes = ", encoder.length()));
+  Decoder decoder(encoder.base(), encoder.length());
+  EncodedS2LaxPolygonShape shape;
+  ABSL_CHECK(shape.Init(&decoder));
+  int i = 0, num_edges = shape.num_edges();
+  for (auto _ : state) {
+    (void) shape.edge(i);
+    if (++i == num_edges) i = 0;
+  }
+}
+BENCHMARK(BM_EncodedPolygonGetEdge)->Apply(BenchmarkArgs);
+
+// Measure the time to check whether the polygon contains one of its vertices,
+// using a MutableS2ShapeIndex containing an S2Polygon::Shape.
+static void BM_ContainsPointMutableIndexS2Polygon(benchmark::State& state) {
+  auto polygon = GetBenchmarkPolygon(state);
+  MutableS2ShapeIndex index;
+  index.Add(make_unique<S2Polygon::Shape>(polygon));
+  index.ForceBuild();
+  int i = 0, num_edges = index.shape(0)->num_edges();
+  for (auto _ : state) {
+    S2Point test_point = index.shape(0)->edge(i).v0;
+    if (S2ContainsPointQuery(&index).Contains(test_point)) ++i;
+    if ((i += 10) >= num_edges) i = 0;
+  }
+}
+BENCHMARK(BM_ContainsPointMutableIndexS2Polygon)
+->Apply(BenchmarkArgsSnapped<false>);
+
+// Measure the time to check whether the polygon contains one of its vertices,
+// using an EncodedS2ShapeIndex containing a snapped/unsnapped
+// EncodedS2LaxPolygonShape.
+static void BM_ContainsPointEncodedIndexPolygon(benchmark::State& state) {
+  Encoder encoder;
+  {
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2LaxPolygonShape>(*GetBenchmarkPolygon(state)));
+    ABSL_CHECK(s2shapeutil::CompactEncodeTaggedShapes(index, &encoder));
+    index.Encode(&encoder);
+  }
+  Decoder decoder(encoder.base(), encoder.length());
+  EncodedS2ShapeIndex index;
+  ABSL_CHECK(
+      index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+  int i = 0, num_edges = index.shape(0)->num_edges();
+  for (auto _ : state) {
+    S2Point test_point = index.shape(0)->edge(i).v0;
+    if (S2ContainsPointQuery(&index).Contains(test_point)) ++i;
+    if ((i += 10) >= num_edges) {
+      // In theory we should stop benchmark timing for this, but ironically
+      // that throws off the benchmark results.
+      i = 0;
+      index.Minimize();
+    }
+  }
+}
+BENCHMARK(BM_ContainsPointEncodedIndexPolygon)->Apply(BenchmarkArgs);
+
+// Measure the time to compute distance from the polygon to one of its
+// vertices, using a MutableS2ShapeIndex containing an S2Polygon::Shape.
+static void BM_VertexDistanceMutableIndexS2Polygon(benchmark::State& state) {
+  auto polygon = GetBenchmarkPolygon(state);
+  MutableS2ShapeIndex index;
+  index.Add(make_unique<S2Polygon::Shape>(polygon));
+  index.ForceBuild();
+  int i = 0, num_edges = index.shape(0)->num_edges();
+  for (auto _ : state) {
+    S2ClosestEdgeQuery query(&index);
+    S2Point v0 = index.shape(0)->edge(i).v0;
+    S2Point test_point = (v0 + 1e-4 * S2::Ortho(v0)).Normalize();
+    S2ClosestEdgeQuery::PointTarget target(test_point);
+    query.GetDistance(&target);
+    if ((i += 10) >= num_edges) i = 0;
+  }
+}
+BENCHMARK(BM_VertexDistanceMutableIndexS2Polygon)
+->Apply(BenchmarkArgsSnapped<false>);
+
+// Measure the time to compute the distance from the polygon to one of its
+// vertices, using an EncodedS2ShapeIndex containing a snapped/unsnapped
+// EncodedS2LaxPolygonShape.
+static void BM_VertexDistanceEncodedIndexPolygon(benchmark::State& state) {
+  Encoder encoder;
+  {
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2LaxPolygonShape>(*GetBenchmarkPolygon(state)));
+    ABSL_CHECK(s2shapeutil::CompactEncodeTaggedShapes(index, &encoder));
+    index.Encode(&encoder);
+  }
+  Decoder decoder(encoder.base(), encoder.length());
+  EncodedS2ShapeIndex index;
+  ABSL_CHECK(
+      index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+  int i = 0, num_edges = index.shape(0)->num_edges();
+  for (auto _ : state) {
+    S2ClosestEdgeQuery query(&index);
+    S2Point v0 = index.shape(0)->edge(i).v0;
+    S2Point test_point = (v0 + 1e-4 * S2::Ortho(v0)).Normalize();
+    S2ClosestEdgeQuery::PointTarget target(test_point);
+    query.GetDistance(&target);
+    if ((i += 10) >= num_edges) {
+      // In theory we should stop benchmark timing for this, but ironically
+      // that throws off the benchmark results.
+      i = 0;
+      index.Minimize();
+    }
+  }
+}
+BENCHMARK(BM_VertexDistanceEncodedIndexPolygon)->Apply(BenchmarkArgs);
+
+// Measure the combined time to decode the snapped/unsnapped polygon, build an
+// S2ShapeIndex for it, and check whether the polygon contains one of its
+// vertices.
+static void BM_DecodePolygonBuildIndexContainsPointSnapped(
+    benchmark::State& state) {
+  Encoder encoder;
+  GetBenchmarkPolygon(state)->Encode(&encoder);
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    S2Polygon polygon;
+    ABSL_CHECK(polygon.Decode(&decoder));
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2Polygon::Shape>(&polygon));
+    S2ContainsPointQuery query(&index);
+    benchmark::DoNotOptimize(query.Contains(polygon.loop(0)->vertex(0)));
+  }
+}
+BENCHMARK(BM_DecodePolygonBuildIndexContainsPointSnapped)->Apply(BenchmarkArgs);
+
+// Measure the combined time to decode the snapped/unsnapped polygon and its
+// S2ShapeIndex, and check whether the polygon contains one of its vertices.
+static void BM_DecodeIndexAndPolygonContainsPointSnapped(
+    benchmark::State& state) {
+  Encoder encoder;
+  {
+    auto polygon = GetBenchmarkPolygon(state);
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2Polygon::Shape>(polygon));
+    ABSL_CHECK(s2shapeutil::CompactEncodeTaggedShapes(index, &encoder));
+    index.Encode(&encoder);
+  }
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    MutableS2ShapeIndex index;
+    ABSL_CHECK(
+        index.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder)));
+    S2ContainsPointQuery query(&index);
+    benchmark::DoNotOptimize(query.Contains(index.shape(0)->edge(0).v0));
+  }
+}
+BENCHMARK(BM_DecodeIndexAndPolygonContainsPointSnapped)->Apply(BenchmarkArgs);
+
+// Measure the combined time to initialize encoded versions of the
+// snapped/unsnapped polygon and its index, and check whether the polygon
+// contains one of its vertices.
+static void BM_EncodedIndexAndPolygonContainsPointSnapped(
+    benchmark::State& state) {
+  Encoder encoder;
+  {
+    MutableS2ShapeIndex index;
+    index.Add(make_unique<S2LaxPolygonShape>(*GetBenchmarkPolygon(state)));
+    ABSL_CHECK(s2shapeutil::CompactEncodeTaggedShapes(index, &encoder));
+    index.Encode(&encoder);
+  }
+  for (auto _ : state) {
+    Decoder decoder(encoder.base(), encoder.length());
+    EncodedS2ShapeIndex index;
+    ABSL_CHECK(
+        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+    S2ContainsPointQuery query(&index);
+    benchmark::DoNotOptimize(query.Contains(index.shape(0)->edge(0).v0));
+  }
+}
+BENCHMARK(BM_EncodedIndexAndPolygonContainsPointSnapped)->Apply(BenchmarkArgs);

@@ -20,14 +20,19 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/algorithm/container.h"
 #include "s2/base/log_severity.h"
+#include "absl/base/no_destructor.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -67,8 +72,10 @@ using std::fabs;
 using std::max;
 using std::min;
 using std::pow;
+using std::string;
 using std::vector;
 using ::testing::Eq;
+using ::testing::ElementsAre;
 
 TEST(S2Cell, TestFaces) {
   flat_hash_map<S2Point, int> edge_counts;
@@ -409,6 +416,47 @@ TEST(S2Cell, TestSubdivide) {
     EXPECT_LE(s->max_diag_aspect, S2::kMaxDiagAspect + 1e-15 * (1 << i));
   }
 }
+
+static constexpr int kMaxLevel = 11;
+
+static void ExpandChildren1(const S2Cell& cell) {
+  S2Cell children[4];
+  ABSL_CHECK(cell.Subdivide(children));
+  if (children[0].level() < kMaxLevel) {
+    for (int pos = 0; pos < 4; ++pos) {
+      ExpandChildren1(children[pos]);
+    }
+  }
+}
+
+static void ExpandChildren2(const S2Cell& cell) {
+  S2CellId id = cell.id().child_begin();
+  for (int pos = 0; pos < 4; ++pos, id = id.next()) {
+    S2Cell child(id);
+    if (child.level() < kMaxLevel) ExpandChildren2(child);
+  }
+}
+
+static void BM_Subdivide(benchmark::State& state) {
+  for (auto _ : state) {
+    ExpandChildren1(S2Cell::FromFace(0));
+  }
+
+  // Sum of 1 + 4 + 16 + ... 4**kMaxLevel.
+  const int num_cells = (pow(4, kMaxLevel + 1) - 1) / (4 - 1);
+  state.SetItemsProcessed(state.iterations() * num_cells);
+}
+BENCHMARK(BM_Subdivide);
+
+static void BM_Constructor(benchmark::State& state) {
+  for (auto _ : state) {
+    ExpandChildren2(S2Cell::FromFace(0));
+  }
+
+  const int num_cells = (pow(4, kMaxLevel + 1) - 1) / (4 - 1);
+  state.SetItemsProcessed(state.iterations() * num_cells);
+}
+BENCHMARK(BM_Constructor);
 
 TEST(S2Cell, CellVsLoopRectBound) {
   // This test verifies that the S2Cell and S2Loop bounds contain each other
@@ -922,4 +970,168 @@ TEST(S2Cell, GetIJCoordOfEdge) {
     }
   }
 }
+
+TEST(S2Cell, CellUnionBoundIncludesOnlySelf) {
+  S2Cell cell(S2CellId::FromToken("123456789"));
+  vector<S2CellId> cell_ids;
+  cell.GetCellUnionBound(&cell_ids);
+  EXPECT_THAT(cell_ids, ElementsAre(cell.id()));
+}
+
+// Precomputed data used in the benchmarks.
+static absl::NoDestructor<vector<S2Cell>> cells1, cells2;
+static absl::NoDestructor<vector<S2Point>> points1, points2;
+
+constexpr int kBatchSize = 5000;
+
+static void MakeBenchmarkData() {
+  const string seed_str =
+      StrCat("MAKE_BENCHMARK_DATA", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  if (!cells1->empty()) return;
+  cells1->reserve(kBatchSize);
+  cells2->reserve(kBatchSize);
+  points1->reserve(kBatchSize);
+  points2->reserve(kBatchSize);
+  for (int i = 0; i < kBatchSize; ++i) {
+    // Each test case consists of two random S2CellIds and two S2Points
+    // somewhere in the vicinity of the first S2CellId.
+    S2CellId cellid = s2random::CellId(bitgen);
+    cells1->emplace_back(cellid);
+    cells2->emplace_back(s2random::CellId(bitgen));
+    auto radius = S1Angle::Radians(2 * S2::kMaxDiag.GetValue(cellid.level()));
+    points1->push_back(
+        s2random::SamplePoint(bitgen, S2Cap(cellid.ToPoint(), radius)));
+    points2->push_back(
+        s2random::SamplePoint(bitgen, S2Cap(cellid.ToPoint(), radius)));
+  }
+}
+
+static void BM_GetDistanceToPoint(benchmark::State& state) {
+  MakeBenchmarkData();
+  while (state.KeepRunningBatch(kBatchSize)) {
+    for (int i = 0; i < kBatchSize; ++i) {
+      S1ChordAngle distance = (*cells1)[i].GetDistance((*points1)[i]);
+      benchmark::DoNotOptimize(distance);
+    }
+  }
+}
+BENCHMARK(BM_GetDistanceToPoint);
+
+static void BM_GetDistanceToEdge(benchmark::State& state) {
+  MakeBenchmarkData();
+  while (state.KeepRunningBatch(kBatchSize)) {
+    for (int i = 0; i < kBatchSize; ++i) {
+      S1ChordAngle distance =
+          (*cells1)[i].GetDistance((*points1)[i], (*points2)[i]);
+      benchmark::DoNotOptimize(distance);
+    }
+  }
+}
+BENCHMARK(BM_GetDistanceToEdge);
+
+static void BM_GetDistanceToCell(benchmark::State& state) {
+  MakeBenchmarkData();
+  while (state.KeepRunningBatch(kBatchSize)) {
+    for (int i = 0; i < kBatchSize; ++i) {
+      S1ChordAngle distance = (*cells1)[i].GetDistance((*cells2)[i]);
+      benchmark::DoNotOptimize(distance);
+    }
+  }
+}
+BENCHMARK(BM_GetDistanceToCell);
+
+static void BM_GetDistanceToCellSameFace(benchmark::State& state) {
+  const string seed_str = StrCat("GET_DISTANCE_TO_CELL_SAME_FACE",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  std::vector<S2Cell> cells;
+  cells.reserve(kBatchSize);
+  for (int i = 0; i < kBatchSize; ++i) {
+    // Make a cell id and move it to face 0.  We use levels 10-30 to avoid
+    // excessively large cells and avoid frequent self-intersections.
+    // Test the well-separated cell case.
+    int level = absl::Uniform(absl::IntervalClosedClosed, bitgen, 10, 30);
+    S2CellId cellid = s2random::CellId(bitgen, level);
+    cells.emplace_back(
+        S2CellId::FromFacePosLevel(0, cellid.pos(), cellid.level()));
+  }
+
+  int i = 0;
+  while (state.KeepRunningBatch(kBatchSize)) {
+    const S2Cell& cell1 = (cells)[i];
+    for (const S2Cell& cell2 : cells) {
+      S1ChordAngle distance = cell1.GetDistance(cell2);
+      benchmark::DoNotOptimize(distance);
+    }
+    if (++i == kBatchSize) i = 0;
+  }
+}
+BENCHMARK(BM_GetDistanceToCellSameFace);
+
+// Benchmark for distance comparison functions.
+//
+// The benchmark measures the time it takes to compare the distance between an
+// origin cell and some other cells, where the other cells are selected along
+// the space filling curve, so they all are relatively close to the origin cell.
+//
+// Takes one range parameter:
+//   * Fraction of cells less than distance threshold (0-100).  100 means use
+//     Infinity for the distance.
+template <bool (S2Cell::*DistanceFunc)(const S2Cell&, S1ChordAngle) const>
+static void BM_DistanceCompare(benchmark::State& state) {
+  const double quantile = state.range(0) / 100.0;
+
+  constexpr int kFace = 4;
+  // Note: (kPos + kNumCells) must not exceed 2**S2CellId::kPosBits.
+  constexpr uint64_t kPos = 0xB181D000000000;
+  constexpr int kLevel = S2CellId::kMaxLevel;
+  constexpr int kNumCells = 5000;
+
+  const S2Cell origin_cell = S2Cell::FromFacePosLevel(kFace, kPos, kLevel);
+  std::vector<S2Cell> other_cells;
+  other_cells.reserve(kNumCells);
+  std::vector<S1ChordAngle> distances;
+  distances.reserve(kNumCells * 2);
+  for (int i = 0; i < kNumCells; ++i) {
+    const S2Cell other_cell =
+        S2Cell::FromFacePosLevel(kFace, kPos + i, kLevel);
+    other_cells.push_back(other_cell);
+    distances.push_back(origin_cell.GetDistance(other_cells.back()));
+    distances.push_back(origin_cell.GetMaxDistance(other_cells.back()));
+  }
+
+  auto limit_it =
+      distances.begin() + static_cast<size_t>(quantile * distances.size());
+  std::nth_element(distances.begin(), limit_it, distances.end());
+  // We could make -1 a special case for Zero.
+  const S1ChordAngle limit =
+      limit_it != distances.end() ? *limit_it : S1ChordAngle::Infinity();
+
+  // Shuffle the order of the other cells to try to make the branches less
+  // predictable.
+  const string seed_str =
+      StrCat("DISTANCE_COMPARE", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  absl::c_shuffle(other_cells, bitgen);
+
+  while (state.KeepRunningBatch(other_cells.size())) {
+    for (const auto& other_cell : other_cells) {
+      bool result = (origin_cell.*DistanceFunc)(other_cell, limit);
+      benchmark::DoNotOptimize(result);
+    }
+  }
+  state.SetItemsProcessed(state.iterations() * other_cells.size());
+}
+BENCHMARK(BM_DistanceCompare<&S2Cell::IsDistanceLess>)
+  ->Arg(0)->Arg(10)->Arg(50)->Arg(90)->Arg(100);
+BENCHMARK(BM_DistanceCompare<&S2Cell::IsDistanceLessOrEqual>)
+  ->Arg(0)->Arg(10)->Arg(50)->Arg(90)->Arg(100);
+BENCHMARK(BM_DistanceCompare<&S2Cell::IsMaxDistanceLess>)
+  ->Arg(0)->Arg(10)->Arg(50)->Arg(90)->Arg(100);
+BENCHMARK(BM_DistanceCompare<&S2Cell::IsMaxDistanceLessOrEqual>)
+  ->Arg(0)->Arg(10)->Arg(50)->Arg(90)->Arg(100);
 

@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/types/span.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
@@ -126,7 +127,7 @@ class ClosedSetNormalizer {
   // itself must persist until the output of this class is no longer needed.
   // (To emphasize this requirement, a const reference is returned.)
   const std::vector<S2Builder::Graph>& Run(
-      const std::vector<S2Builder::Graph>& input, S2Error* error);
+      const std::vector<S2Builder::Graph>& input, S2Error* absl_nonnull error);
 
  private:
   S2Builder::Graph::Edge Advance(
@@ -134,7 +135,8 @@ class ClosedSetNormalizer {
   S2Builder::Graph::Edge AdvanceIncoming(
       const S2Builder::Graph& g,
       absl::Span<const S2Builder::Graph::EdgeId> in_edges, int* i) const;
-  void NormalizeEdges(absl::Span<const S2Builder::Graph> g, S2Error* error);
+  void NormalizeEdges(absl::Span<const S2Builder::Graph> g,
+                      S2Error* absl_nonnull error);
   void AddEdge(int new_dim, const S2Builder::Graph& g,
                S2Builder::Graph::EdgeId e);
   bool is_suppressed(S2Builder::Graph::VertexId v) const;
@@ -184,7 +186,7 @@ using LayerVector = std::vector<std::unique_ptr<S2Builder::Layer>>;
 // maximal polylines are constructed from undirected edges):
 //
 // bool ComputeUnion(const S2ShapeIndex& a, const S2ShapeIndex& b,
-//                   MutableS2ShapeIndex* index, S2Error* error) {
+//                   MutableS2ShapeIndex* index, S2Error* absl_nonnull error) {
 //   IndexedS2PolylineVectorLayer::Options polyline_options;
 //   polyline_options.set_edge_type(EdgeType::UNDIRECTED);
 //   polyline_options.set_polyline_type(Graph::PolylineType::WALK);

@@ -18,9 +18,8 @@
 
 #include "s2/util/coding/coder.h"
 
-#include <cassert>
-
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <tuple>
 #include <utility>

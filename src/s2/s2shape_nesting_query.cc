@@ -211,7 +211,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
   if (ABSL_VLOG_IS_ON(2)) {
     ABSL_LOG(INFO) << "Current parent set";
     for (int chain = 0; chain < num_chains; ++chain) {
-      ABSL_LOG(INFO) << "  " << absl::StrFormat("%2d", chain) << ": "
+      ABSL_LOG(INFO) << "  " << absl::StreamFormat("%2d", chain) << ": "
                      << parents[chain].ToString(8);
     }
   }
@@ -245,7 +245,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     if (ABSL_VLOG_IS_ON(2)) {
       ABSL_LOG(INFO) << "  Parent set now:";
       for (int chain = 0; chain < num_chains; ++chain) {
-        ABSL_LOG(INFO) << "  " << absl::StrFormat("%2d", chain) << ": "
+        ABSL_LOG(INFO) << "  " << absl::StreamFormat("%2d", chain) << ": "
                        << parents[chain].ToString(8);
       }
     }

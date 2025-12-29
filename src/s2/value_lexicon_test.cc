@@ -23,6 +23,7 @@
 #include <memory>
 #include <utility>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "s2/s2point.h"
@@ -123,3 +124,49 @@ TEST(ValueLexicon, MoveAssignmentOperator) {
   EXPECT_EQ(20, lex.value(1));
 }
 
+// A dense_hash_set of this size is slightly more than "typically" full.
+static constexpr int kMaxBenchIds = 600000;
+
+static void BM_AddInt64(benchmark::State& state) {
+  while (state.KeepRunningBatch(kMaxBenchIds)) {
+    ValueLexicon<int64_t> lex;
+    for (int i = 0; i < kMaxBenchIds; ++i) {
+      lex.Add(i);
+    }
+  }
+}
+BENCHMARK(BM_AddInt64);
+
+static void BM_AddS2Point(benchmark::State& state) {
+  while (state.KeepRunningBatch(kMaxBenchIds)) {
+    ValueLexicon<S2Point, S2PointHash> lex;
+    for (int i = 0; i < kMaxBenchIds; ++i) {
+      lex.Add(S2Point(i, 0, 0));
+    }
+  }
+}
+BENCHMARK(BM_AddS2Point);
+
+static void BM_AddS2PointPairs(benchmark::State& state) {
+  while (state.KeepRunningBatch(kMaxBenchIds)) {
+    ValueLexicon<S2Point, S2PointHash> lex;
+    for (int i = 0; i < kMaxBenchIds; ++i) {
+      lex.Add(S2Point(i, 0, 0));
+      lex.Add(S2Point(i, 0, 0));
+    }
+  }
+}
+BENCHMARK(BM_AddS2PointPairs);
+
+static void BM_FindS2Point(benchmark::State& state) {
+  ValueLexicon<S2Point, S2PointHash> lex;
+  for (int i = 0; i < kMaxBenchIds; ++i) {
+    lex.Add(S2Point(i, 0, 0));
+  }
+  while (state.KeepRunningBatch(kMaxBenchIds)) {
+    for (int i = 0; i < kMaxBenchIds; ++i) {
+      lex.Add(S2Point(i, 0, 0));
+    }
+  }
+}
+BENCHMARK(BM_FindS2Point);

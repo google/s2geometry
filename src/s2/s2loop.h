@@ -28,6 +28,7 @@
 
 #include "s2/testing/gtest_prod.h"
 #include "absl/base/macros.h"
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -40,6 +41,7 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop_measures.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2point_span.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2region.h"
@@ -95,6 +97,10 @@ class S2Loop final : public S2Region {
   // Decode() before it is used.
   S2Loop();
 
+  // S2Loop is copyable and movable.  The complexity of copying is linear in
+  // the number of vertices.
+  S2Loop(const S2Loop&);
+  S2Loop& operator=(const S2Loop&);
   S2Loop(S2Loop&&) noexcept;
   S2Loop& operator=(S2Loop&&) noexcept;
 
@@ -104,13 +110,13 @@ class S2Loop final : public S2Region {
   // Convenience constructor to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
   //
-  //   S2Loop* loop = new S2Loop(vertices, S2Debug::DISABLE);
+  //   S2Loop loop(vertices, S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
-  //   S2Loop* loop = new S2Loop;
-  //   loop->set_s2debug_override(S2Debug::DISABLE);
-  //   loop->Init(vertices);
+  //   S2Loop loop;
+  //   loop.set_s2debug_override(S2Debug::DISABLE);
+  //   loop.Init(vertices);
   //
   // The main reason to use this constructor is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
@@ -175,7 +181,7 @@ class S2Loop final : public S2Region {
   // appropriately.  Otherwise returns false and leaves "error" unchanged.
   //
   // REQUIRES: error != nullptr
-  bool FindValidationError(S2Error* error) const;
+  bool FindValidationError(S2Error* absl_nonnull error) const;
 
   int num_vertices() const { return num_vertices_; }
 
@@ -527,10 +533,6 @@ class S2Loop final : public S2Region {
   // So that test can access InitIndex().
   FRIEND_TEST(S2LoopTestBase, PointersCorrectAfterMove);
 
-  // Internal copy constructor used only by Clone() that makes a deep copy of
-  // its argument.
-  S2Loop(const S2Loop& src);
-
   // Returns true if this loop contains S2::Origin().
   bool contains_origin() const { return origin_inside_; }
 
@@ -556,7 +558,7 @@ class S2Loop final : public S2Region {
   // building the S2ShapeIndex (i.e., self-intersection tests).  This is used
   // by the S2Polygon implementation, which uses its own index to check for
   // loop self-intersections.
-  bool FindValidationErrorNoIndex(S2Error* error) const;
+  bool FindValidationErrorNoIndex(S2Error* absl_nonnull error) const;
 
   // Internal implementation of the Decode method above.
   bool DecodeInternal(Decoder* decoder);
@@ -639,7 +641,7 @@ class S2Loop final : public S2Region {
   // would be somewhat more expensive (due to division by `sizeof(S2Point) ==
   // 24`, although this is typically implemented with a multiply and shift).
   int num_vertices_ = 0;
-  std::unique_ptr<S2Point[]> vertices_;
+  s2internal::UniqueS2PointArray vertices_;
 
   S2Debug s2debug_override_ = S2Debug::ALLOW;
   bool origin_inside_ = false;  // Does the loop contain S2::Origin()?
@@ -663,8 +665,6 @@ class S2Loop final : public S2Region {
 
   // Spatial index for this loop.
   MutableS2ShapeIndex index_;
-
-  void operator=(const S2Loop&) = delete;
 };
 
 

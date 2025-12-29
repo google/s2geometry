@@ -25,9 +25,11 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/base/macros.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
@@ -45,6 +47,7 @@
 #include "s2/s2polyline.h"  // TODO(user,b/207351837): Remove.
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
+#include "s2/util/gtl/value_or_die.h"
 
 class MutableS2ShapeIndex;
 class S2LaxPolygonShape;
@@ -59,11 +62,24 @@ namespace s2textformat {
 // Returns an S2Point corresponding to the given a latitude-longitude
 // coordinate in degrees.  Example of the input format:
 //     "-20:150"
-S2Point MakePointOrDie(absl::string_view str);
+absl::StatusOr<S2Point> MakePoint(absl::string_view str);
 
-// As above, but do not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakePoint(absl::string_view str, S2Point* point);
+ABSL_DEPRECATE_AND_INLINE()
+inline S2Point MakePointOrDie(absl::string_view str) {
+  return gtl::ValueOrDie(MakePoint(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakePoint(absl::string_view str, S2Point* point) {
+  // clang-inliner only supports one return, so it's written in this slightly
+  // awkward way.  The natural way would be:
+  // `ASSIGN_OR_RETURN(*point, MakePoint(str), false); return true;`.
+  absl::StatusOr<S2Point> point_or = MakePoint(str);
+  const bool ok = point_or.ok();
+  if (ok) *point = *std::move(point_or);
+  return ok;
+}
 
 // Parses a string of one or more latitude-longitude coordinates in degrees,
 // and return the corresponding vector of S2LatLng points.
@@ -71,36 +87,77 @@ S2Point MakePointOrDie(absl::string_view str);
 //     ""                            // no points
 //     "-20:150"                     // one point
 //     "-20:150, -20:151, -19:150"   // three points
-std::vector<S2LatLng> ParseLatLngsOrDie(absl::string_view str);
+absl::StatusOr<std::vector<S2LatLng>> ParseLatLngs(absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool ParseLatLngs(absl::string_view str,
-                                std::vector<S2LatLng>* latlngs);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::vector<S2LatLng> ParseLatLngsOrDie(absl::string_view str) {
+  return gtl::ValueOrDie(ParseLatLngs(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool ParseLatLngs(absl::string_view str,
+                                       std::vector<S2LatLng>* latlngs) {
+  absl::StatusOr<std::vector<S2LatLng>> latlngs_or = ParseLatLngs(str);
+  const bool ok = latlngs_or.ok();
+  if (ok) *latlngs = *std::move(latlngs_or);
+  return ok;
+}
 
 // Parses a string in the same format as ParseLatLngs, and return the
 // corresponding vector of S2Point values.
-std::vector<S2Point> ParsePointsOrDie(absl::string_view str);
+absl::StatusOr<std::vector<S2Point>> ParsePoints(absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool ParsePoints(absl::string_view str,
-                               std::vector<S2Point>* vertices);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::vector<S2Point> ParsePointsOrDie(absl::string_view str) {
+  return gtl::ValueOrDie(ParsePoints(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool ParsePoints(absl::string_view str,
+                                      std::vector<S2Point>* vertices) {
+  absl::StatusOr<std::vector<S2Point>> vertices_or = ParsePoints(str);
+  const bool ok = vertices_or.ok();
+  if (ok) *vertices = *std::move(vertices_or);
+  return ok;
+}
 
 // Given a string in the same format as ParseLatLngs, returns a single S2LatLng.
-S2LatLng MakeLatLngOrDie(absl::string_view str);
+absl::StatusOr<S2LatLng> MakeLatLng(absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeLatLng(absl::string_view str, S2LatLng* latlng);
+ABSL_DEPRECATE_AND_INLINE()
+inline S2LatLng MakeLatLngOrDie(absl::string_view str) {
+  return gtl::ValueOrDie(MakeLatLng(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeLatLng(absl::string_view str, S2LatLng* latlng) {
+  absl::StatusOr<S2LatLng> latlng_or = MakeLatLng(str);
+  const bool ok = latlng_or.ok();
+  if (ok) *latlng = *std::move(latlng_or);
+  return ok;
+}
 
 // Given a string in the same format as ParseLatLngs, returns the minimal
 // bounding S2LatLngRect that contains the coordinates.
-S2LatLngRect MakeLatLngRectOrDie(absl::string_view str);
+absl::StatusOr<S2LatLngRect> MakeLatLngRect(absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeLatLngRect(absl::string_view str, S2LatLngRect* rect);
+ABSL_DEPRECATE_AND_INLINE()
+inline S2LatLngRect MakeLatLngRectOrDie(absl::string_view str) {
+  return gtl::ValueOrDie(MakeLatLngRect(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeLatLngRect(absl::string_view str,
+                                         S2LatLngRect* rect) {
+  absl::StatusOr<S2LatLngRect> rect_or = MakeLatLngRect(str);
+  const bool ok = rect_or.ok();
+  if (ok) *rect = *std::move(rect_or);
+  return ok;
+}
 
 // Parses an S2CellId in the format "f/dd..d" where "f" is a digit in the
 // range [0-5] representing the S2CellId face, and "dd..d" is a string of
@@ -111,53 +168,110 @@ S2LatLngRect MakeLatLngRectOrDie(absl::string_view str);
 // S2CellId::FromFace(3).child(0).child(2).
 //
 // This function is a wrapper for S2CellId::FromDebugString().
-S2CellId MakeCellIdOrDie(absl::string_view str);
+absl::StatusOr<S2CellId> MakeCellId(absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeCellId(absl::string_view str, S2CellId* cell_id);
+ABSL_DEPRECATE_AND_INLINE()
+inline S2CellId MakeCellIdOrDie(absl::string_view str) {
+  return gtl::ValueOrDie(MakeCellId(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeCellId(absl::string_view str, S2CellId* cell_id) {
+  absl::StatusOr<S2CellId> cell_id_or = MakeCellId(str);
+  const bool ok = cell_id_or.ok();
+  if (ok) *cell_id = *std::move(cell_id_or);
+  return ok;
+}
 
 // Parses a comma-separated list of S2CellIds in the format above, and returns
 // the corresponding S2CellUnion.  (Note that S2CellUnions are automatically
 // normalized by sorting, removing duplicates, and replacing groups of 4 child
 // cells by their parent cell.)
-S2CellUnion MakeCellUnionOrDie(absl::string_view str);
+absl::StatusOr<S2CellUnion> MakeCellUnion(absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeCellUnion(absl::string_view str,
-                                 S2CellUnion* cell_union);
+ABSL_DEPRECATE_AND_INLINE()
+inline S2CellUnion MakeCellUnionOrDie(absl::string_view str) {
+  return gtl::ValueOrDie(MakeCellUnion(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeCellUnion(absl::string_view str,
+                                        S2CellUnion* cell_union) {
+  absl::StatusOr<S2CellUnion> cell_union_or = MakeCellUnion(str);
+  const bool ok = cell_union_or.ok();
+  if (ok) *cell_union = *std::move(cell_union_or);
+  return ok;
+}
 
 // Given a string of latitude-longitude coordinates in degrees,
 // returns a newly allocated loop.  Example of the input format:
 //     "-20:150, 10:-120, 0.123:-170.652"
 // The strings "empty" or "full" create an empty or full loop respectively.
-std::unique_ptr<S2Loop> MakeLoopOrDie(absl::string_view str,
-                                      S2Debug debug_override = S2Debug::ALLOW);
-
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeLoop(absl::string_view str,
-                            std::unique_ptr<S2Loop>* loop,
-                            S2Debug debug_override = S2Debug::ALLOW);
-
-// Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
-std::unique_ptr<S2Polyline> MakePolylineOrDie(
+absl::StatusOr<std::unique_ptr<S2Loop>> MakeLoop(
     absl::string_view str, S2Debug debug_override = S2Debug::ALLOW);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakePolyline(absl::string_view str,
-                                std::unique_ptr<S2Polyline>* polyline,
-                                S2Debug debug_override = S2Debug::ALLOW);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::unique_ptr<S2Loop> MakeLoopOrDie(
+    absl::string_view str, S2Debug debug_override = S2Debug::ALLOW) {
+  return gtl::ValueOrDie(MakeLoop(str, debug_override));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeLoop(absl::string_view str,
+                                   std::unique_ptr<S2Loop>* loop,
+                                   S2Debug debug_override = S2Debug::ALLOW) {
+  absl::StatusOr<std::unique_ptr<S2Loop>> loop_or =
+      MakeLoop(str, debug_override);
+  const bool ok = loop_or.ok();
+  if (ok) *loop = *std::move(loop_or);
+  return ok;
+}
+
+// Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
+absl::StatusOr<std::unique_ptr<S2Polyline>> MakePolyline(
+    absl::string_view str, S2Debug debug_override = S2Debug::ALLOW);
+
+ABSL_DEPRECATE_AND_INLINE()
+inline std::unique_ptr<S2Polyline> MakePolylineOrDie(
+    absl::string_view str, S2Debug debug_override = S2Debug::ALLOW) {
+  return gtl::ValueOrDie(MakePolyline(str, debug_override));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakePolyline(
+    absl::string_view str, std::unique_ptr<S2Polyline>* polyline,
+    S2Debug debug_override = S2Debug::ALLOW) {
+  absl::StatusOr<std::unique_ptr<S2Polyline>> polyline_or =
+      MakePolyline(str, debug_override);
+  const bool ok = polyline_or.ok();
+  if (ok) *polyline = *std::move(polyline_or);
+  return ok;
+}
 
 // Like MakePolyline, but returns an S2LaxPolylineShape instead.
-std::unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(absl::string_view str);
+absl::StatusOr<std::unique_ptr<S2LaxPolylineShape>> MakeLaxPolyline(
+    absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeLaxPolyline(
-    absl::string_view str, std::unique_ptr<S2LaxPolylineShape>* lax_polyline);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(
+    absl::string_view str) {
+  return gtl::ValueOrDie(MakeLaxPolyline(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeLaxPolyline(
+    absl::string_view str, std::unique_ptr<S2LaxPolylineShape>* lax_polyline) {
+  absl::StatusOr<std::unique_ptr<S2LaxPolylineShape>> lax_polyline_or =
+      MakeLaxPolyline(str);
+  const bool ok = lax_polyline_or.ok();
+  if (ok) *lax_polyline = *std::move(lax_polyline_or);
+  return ok;
+}
 
 // Given a sequence of loops separated by semicolons, returns a newly
 // allocated polygon.  Loops are automatically normalized by inverting them
@@ -172,34 +286,72 @@ std::unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(absl::string_view str);
 //     ""       // the empty polygon (consisting of no loops)
 //     "empty"  // the empty polygon (consisting of no loops)
 //     "full"   // the full polygon (consisting of one full loop).
-std::unique_ptr<S2Polygon> MakePolygonOrDie(
+absl::StatusOr<std::unique_ptr<S2Polygon>> MakePolygon(
     absl::string_view str, S2Debug debug_override = S2Debug::ALLOW);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakePolygon(absl::string_view str,
-                               std::unique_ptr<S2Polygon>* polygon,
-                               S2Debug debug_override = S2Debug::ALLOW);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::unique_ptr<S2Polygon> MakePolygonOrDie(
+    absl::string_view str, S2Debug debug_override = S2Debug::ALLOW) {
+  return gtl::ValueOrDie(MakePolygon(str, debug_override));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakePolygon(absl::string_view str,
+                                      std::unique_ptr<S2Polygon>* polygon,
+                                      S2Debug debug_override = S2Debug::ALLOW) {
+  absl::StatusOr<std::unique_ptr<S2Polygon>> polygon_or =
+      MakePolygon(str, debug_override);
+  const bool ok = polygon_or.ok();
+  if (ok) *polygon = *std::move(polygon_or);
+  return ok;
+}
 
 // Like MakePolygon(), except that it does not normalize loops (i.e., it
 // gives you exactly what you asked for).
-std::unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(absl::string_view str);
+absl::StatusOr<std::unique_ptr<S2Polygon>> MakeVerbatimPolygon(
+    absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeVerbatimPolygon(absl::string_view str,
-                                       std::unique_ptr<S2Polygon>* polygon);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(
+    absl::string_view str) {
+  return gtl::ValueOrDie(MakeVerbatimPolygon(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeVerbatimPolygon(
+    absl::string_view str, std::unique_ptr<S2Polygon>* polygon) {
+  absl::StatusOr<std::unique_ptr<S2Polygon>> polygon_or =
+      MakeVerbatimPolygon(str);
+  const bool ok = polygon_or.ok();
+  if (ok) *polygon = *std::move(polygon_or);
+  return ok;
+}
 
 // Parses a string in the same format as MakePolygon, except that loops must
 // be oriented so that the interior of the loop is always on the left, and
 // polygons with degeneracies are supported.  As with MakePolygon, "full" and
 // denotes the full polygon and "" or "empty" denote the empty polygon.
-std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(absl::string_view str);
+absl::StatusOr<std::unique_ptr<S2LaxPolygonShape>> MakeLaxPolygon(
+    absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeLaxPolygon(
-    absl::string_view str, std::unique_ptr<S2LaxPolygonShape>* lax_polygon);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(
+    absl::string_view str) {
+  return gtl::ValueOrDie(MakeLaxPolygon(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeLaxPolygon(
+    absl::string_view str, std::unique_ptr<S2LaxPolygonShape>* lax_polygon) {
+  absl::StatusOr<std::unique_ptr<S2LaxPolygonShape>> lax_polygon_or =
+      MakeLaxPolygon(str);
+  const bool ok = lax_polygon_or.ok();
+  if (ok) *lax_polygon = *std::move(lax_polygon_or);
+  return ok;
+}
 
 // Returns a MutableS2ShapeIndex containing the points, polylines, and loops
 // (in the form of one polygon for each group of loops) described by the
@@ -225,12 +377,25 @@ std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(absl::string_view str);
 //
 // CAVEAT: Because whitespace is ignored, empty polygons must be specified
 //         as the string "empty" rather than as the empty string ("").
-std::unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(absl::string_view str);
+absl::StatusOr<std::unique_ptr<MutableS2ShapeIndex>> MakeIndex(
+    absl::string_view str);
 
-// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
-// conversion is successful.
-[[nodiscard]] bool MakeIndex(absl::string_view str,
-                             std::unique_ptr<MutableS2ShapeIndex>* index);
+ABSL_DEPRECATE_AND_INLINE()
+inline std::unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(
+    absl::string_view str) {
+  return gtl::ValueOrDie(MakeIndex(str));
+}
+
+// As above, but returns a success boolean.
+ABSL_DEPRECATE_AND_INLINE()
+[[nodiscard]] inline bool MakeIndex(
+    absl::string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
+  absl::StatusOr<std::unique_ptr<MutableS2ShapeIndex>> index_or =
+      MakeIndex(str);
+  const bool ok = index_or.ok();
+  if (ok) *index = *std::move(index_or);
+  return ok;
+}
 
 // Convert an S2Point, S2LatLng, S2LatLngRect, S2CellId, S2CellUnion, loop,
 // polyline, or polygon to the string format above.

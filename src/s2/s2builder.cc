@@ -79,6 +79,7 @@
 #include <vector>
 
 #include "s2/base/log_severity.h"
+#include "absl/base/nullability.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -347,7 +348,7 @@ void S2Builder::set_label(Label label) {
 }
 
 bool S2Builder::IsFullPolygonUnspecified(const S2Builder::Graph& g,
-                                         S2Error* error) {
+                                         S2Error* absl_nonnull error) {
   *error =
       S2Error(S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED,
               "A degenerate polygon was found, but no predicate was specified "
@@ -357,9 +358,9 @@ bool S2Builder::IsFullPolygonUnspecified(const S2Builder::Graph& g,
 }
 
 S2Builder::IsFullPolygonPredicate S2Builder::IsFullPolygon(bool is_full) {
-  return [is_full](const S2Builder::Graph& g, S2Error* error) {
-      return is_full;
-    };
+  return [is_full](const S2Builder::Graph& g, S2Error* absl_nonnull error) {
+    return is_full;
+  };
 }
 
 void S2Builder::StartLayer(unique_ptr<Layer> layer) {
@@ -517,12 +518,7 @@ class VertexIdEdgeVectorShape final : public S2Shape {
 };
 }  // namespace
 
-bool S2Builder::Build(S2Error* error) {
-  // ABSL_CHECK rather than ABSL_DCHECK because this is friendlier than crashing
-  // on the "error->Clear()" call below.  It would be easy to allow (error ==
-  // nullptr) by declaring a local "tmp_error", but it seems better to make
-  // clients think about error handling.
-  ABSL_CHECK(error != nullptr);
+bool S2Builder::Build(S2Error* absl_nonnull error) {
   error_ = error;
   *error_ = S2Error::Ok();
 

@@ -24,7 +24,6 @@
 #include "s2/s1angle.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
-#include "s2/s2loop.h"
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
@@ -36,27 +35,19 @@ namespace S2 {
 // the correctness of the s2 comparison methods, those are assumed to be
 // correct.
 
-using S2::LatLngEquals;
-using S2::PointApproxEquals;
-using S2::PointEquals;
-using S2::PolygonApproxEquals;
-using S2::PolygonBoundaryApproxEquals;
-using S2::PolygonBoundaryEquals;
-using S2::PolygonBoundaryNear;
-using S2::PolygonEquals;
-using S2::PolylineApproxEquals;
-using S2::PolylineEquals;
-using s2textformat::MakeLatLngOrDie;
-using s2textformat::MakeLatLngRectOrDie;
-using s2textformat::MakeLoopOrDie;
-using s2textformat::MakePointOrDie;
-using s2textformat::MakePolygonOrDie;
-using s2textformat::MakePolylineOrDie;
+using ::s2textformat::MakeLatLngOrDie;
+using ::s2textformat::MakeLatLngRectOrDie;
+using ::s2textformat::MakeLoopOrDie;
+using ::s2textformat::MakePointOrDie;
+using ::s2textformat::MakePolygonOrDie;
+using ::s2textformat::MakePolylineOrDie;
 using std::string;
+using ::testing::MatchesRegex;
 using ::testing::Not;
+using ::testing::StringMatchResultListener;
 
 TEST(S2testmatchersTest, PointEquals) {
-  auto expected = MakePointOrDie("10:10");
+  S2Point expected = MakePointOrDie("10:10");
 
   // As object.
   EXPECT_THAT(s2textformat::MakePointOrDie("10:10"), PointEquals(expected));
@@ -68,14 +59,14 @@ TEST(S2testmatchersTest, PointEquals) {
   EXPECT_THAT("10.01:10", Not(PointEquals("10:10")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PointMatcher m("10:10", S1Angle::Zero());
   m.MatchAndExplain("10.01:10", &listener);
   EXPECT_EQ("angle in degrees: 0.0100000", listener.str());
 }
 
 TEST(S2testmatchersTest, PointApproxEquals) {
-  auto expected = MakePointOrDie("10:10");
+  S2Point expected = MakePointOrDie("10:10");
 
   // As object.
   EXPECT_THAT(MakePointOrDie("10:10"),
@@ -90,7 +81,7 @@ TEST(S2testmatchersTest, PointApproxEquals) {
 
   // Explain.
   {
-    ::testing::StringMatchResultListener listener;
+    StringMatchResultListener listener;
     S2PointMatcher m("11:10", S1Angle::Radians(0.01));
     m.MatchAndExplain("10:10", &listener);
     EXPECT_EQ("angle in degrees: 1.0000000", listener.str());
@@ -101,7 +92,7 @@ TEST(S2testmatchersTest, PointApproxEquals) {
   EXPECT_THAT(default_point,
               Not(PointApproxEquals("10:10", S1Angle::Radians(1e-10))));
   {
-    ::testing::StringMatchResultListener listener;
+    StringMatchResultListener listener;
     S2PointMatcher m("10:10", S1Angle::Radians(0.01));
     m.MatchAndExplain(default_point, &listener);
     EXPECT_EQ("point is uninitialized or almost zero", listener.str());
@@ -117,8 +108,8 @@ TEST(S2testmatchersTest, PointApproxEquals) {
 }
 
 TEST(S2testmatchersTest, PolylineEquals) {
-  auto expected = MakePolylineOrDie("10:10,20:20");
-  auto value = MakePolylineOrDie("10:10,20:20");
+  std::unique_ptr<S2Polyline> expected = MakePolylineOrDie("10:10,20:20");
+  std::unique_ptr<S2Polyline> value = MakePolylineOrDie("10:10,20:20");
 
   // As object.
   EXPECT_THAT(*value, PolylineEquals(*expected));
@@ -130,7 +121,7 @@ TEST(S2testmatchersTest, PolylineEquals) {
   EXPECT_THAT("10:10,5:5", Not(PolylineEquals("10:10,20:20")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PolylineMatcher m("10:10,20:20",
                       S2PolylineMatcher::Options(
                           S2PolylineMatcher::Options::EQUALS, S1Angle::Zero()));
@@ -139,8 +130,8 @@ TEST(S2testmatchersTest, PolylineEquals) {
 }
 
 TEST(S2testmatchersTest, PolylineApproxEquals) {
-  auto expected = MakePolylineOrDie("10:10,20:20");
-  auto value = MakePolylineOrDie("10:10,20:20");
+  std::unique_ptr<S2Polyline> expected = MakePolylineOrDie("10:10,20:20");
+  std::unique_ptr<S2Polyline> value = MakePolylineOrDie("10:10,20:20");
 
   // As object.
   EXPECT_THAT(*value, PolylineApproxEquals(*expected, S1Angle::Radians(1e-10)));
@@ -153,7 +144,7 @@ TEST(S2testmatchersTest, PolylineApproxEquals) {
                                                     S1Angle::Radians(1e-10))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PolylineMatcher m(
       "10:10,20:20",
       S2PolylineMatcher::Options(S2PolylineMatcher::Options::APPROX_EQUALS,
@@ -163,9 +154,28 @@ TEST(S2testmatchersTest, PolylineApproxEquals) {
             listener.str());
 }
 
+TEST(S2testmatchersTest, PolylineIdenticalTo) {
+  auto expected = MakePolylineOrDie("10:10,20:20");
+  auto value = MakePolylineOrDie("10:10,20:20");
+
+  // As object.
+  EXPECT_THAT(*value, PolylineIdenticalTo(*expected));
+
+  // Negation.
+  EXPECT_THAT(*MakePolylineOrDie("10:10,20:21"),
+              Not(PolylineIdenticalTo(*expected)));
+
+  // Explain.
+  ::testing::StringMatchResultListener listener;
+  S2PolylineIdenticalToMatcher m(*expected);
+  m.MatchAndExplain(*MakePolylineOrDie("10:10,20:21"), &listener);
+  EXPECT_THAT(listener.str(),
+              MatchesRegex("whose vertex\\(1\\) .* doesn't match .*"));
+}
+
 TEST(S2testmatchersTest, PolygonEquals) {
-  auto expected = MakePolygonOrDie("10:10,10:0,0:0");
-  auto value = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> expected = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> value = MakePolygonOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value, PolygonEquals(*expected));
@@ -176,7 +186,7 @@ TEST(S2testmatchersTest, PolygonEquals) {
   EXPECT_THAT("10:10,10:0,0:0", Not(PolygonEquals("10:10,10:0,0:1")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PolygonMatcher m("10:10,10:0,0:0",
                      S2PolygonMatcher::Options(
                          S2PolygonMatcher::Options::EQUALS, S1Angle::Zero()));
@@ -185,8 +195,8 @@ TEST(S2testmatchersTest, PolygonEquals) {
 }
 
 TEST(S2testmatchersTest, PolygonApproxEquals) {
-  auto expected = MakePolygonOrDie("10:10,10:0,0:0");
-  auto value = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> expected = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> value = MakePolygonOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value, PolygonApproxEquals(*expected, S1Angle::Radians(1e-10)));
@@ -199,7 +209,7 @@ TEST(S2testmatchersTest, PolygonApproxEquals) {
                                     "10:10,10:0,0:1", S1Angle::Degrees(0.1))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PolygonMatcher m(
       "10:10,10:0,0:0",
       S2PolygonMatcher::Options(S2PolygonMatcher::Options::APPROX_EQUALS,
@@ -210,8 +220,8 @@ TEST(S2testmatchersTest, PolygonApproxEquals) {
 }
 
 TEST(S2testmatchersTest, PolygonBoundaryEquals) {
-  auto expected = MakePolygonOrDie("10:10,10:0,0:0");
-  auto value = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> expected = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> value = MakePolygonOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value, PolygonBoundaryEquals(*expected));
@@ -222,7 +232,7 @@ TEST(S2testmatchersTest, PolygonBoundaryEquals) {
   EXPECT_THAT("10:10,10:0,0:0", Not(PolygonBoundaryEquals("10:10,10:0,0:1")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PolygonMatcher m(
       "10:10,10:0,0:0",
       S2PolygonMatcher::Options(S2PolygonMatcher::Options::BOUNDARY_EQUALS,
@@ -232,8 +242,8 @@ TEST(S2testmatchersTest, PolygonBoundaryEquals) {
 }
 
 TEST(S2testmatchersTest, PolygonBoundaryApproxEquals) {
-  auto expected = MakePolygonOrDie("10:10,10:0,0:0");
-  auto value = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> expected = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> value = MakePolygonOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value,
@@ -247,7 +257,7 @@ TEST(S2testmatchersTest, PolygonBoundaryApproxEquals) {
                                     "10:10,10:0,0:1", S1Angle::Degrees(0.1))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PolygonMatcher m("10:10,10:0,0:0",
                      S2PolygonMatcher::Options(
                          S2PolygonMatcher::Options::BOUNDARY_APPROX_EQUALS,
@@ -258,8 +268,8 @@ TEST(S2testmatchersTest, PolygonBoundaryApproxEquals) {
 }
 
 TEST(S2testmatchersTest, PolygonBoundaryNear) {
-  auto expected = MakePolygonOrDie("10:10,10:0,0:0");
-  auto value = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> expected = MakePolygonOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Polygon> value = MakePolygonOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value, PolygonBoundaryNear(*expected, S1Angle::Radians(1e-10)));
@@ -272,7 +282,7 @@ TEST(S2testmatchersTest, PolygonBoundaryNear) {
                                     "10:10,10:0,0:1", S1Angle::Degrees(0.1))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2PolygonMatcher m(
       "10:10,10:0,0:0",
       S2PolygonMatcher::Options(S2PolygonMatcher::Options::BOUNDARY_NEAR,
@@ -283,8 +293,8 @@ TEST(S2testmatchersTest, PolygonBoundaryNear) {
 }
 
 TEST(S2testmatchersTest, LoopEquals) {
-  auto expected = MakeLoopOrDie("10:10,10:0,0:0");
-  auto value = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> expected = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> value = MakeLoopOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value, LoopEquals(*expected));
@@ -295,7 +305,7 @@ TEST(S2testmatchersTest, LoopEquals) {
   EXPECT_THAT("10:10,10:0,0:0", Not(LoopEquals("10:10,10:0,0:1")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LoopMatcher m(
       "10:10,10:0,0:0",
       S2LoopMatcher::Options(S2LoopMatcher::Options::EQUALS, S1Angle::Zero()));
@@ -304,8 +314,8 @@ TEST(S2testmatchersTest, LoopEquals) {
 }
 
 TEST(S2testmatchersTest, LoopBoundaryEquals) {
-  auto expected = MakeLoopOrDie("10:10,10:0,0:0");
-  auto value = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> expected = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> value = MakeLoopOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value, LoopBoundaryEquals(*expected));
@@ -316,7 +326,7 @@ TEST(S2testmatchersTest, LoopBoundaryEquals) {
   EXPECT_THAT("10:10,10:0,0:0", Not(LoopBoundaryEquals("10:10,10:0,0:1")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LoopMatcher m("10:10,10:0,0:0", S2LoopMatcher::Options(
                                         S2LoopMatcher::Options::BOUNDARY_EQUALS,
                                         S1Angle::Zero()));
@@ -326,8 +336,8 @@ TEST(S2testmatchersTest, LoopBoundaryEquals) {
 
 TEST(S2testmatchersTest, LoopBoundaryEqualsRotatedVertices) {
   string expected_str = "10:10,10:0,0:0";
-  auto expected = MakeLoopOrDie(expected_str);
-  auto value = MakeLoopOrDie("10:0,0:0,10:10");
+  std::unique_ptr<S2Loop> expected = MakeLoopOrDie(expected_str);
+  std::unique_ptr<S2Loop> value = MakeLoopOrDie("10:0,0:0,10:10");
 
   // As object.
   EXPECT_THAT(*value, LoopBoundaryEquals(*expected));
@@ -338,17 +348,17 @@ TEST(S2testmatchersTest, LoopBoundaryEqualsRotatedVertices) {
   EXPECT_THAT("10:10,10:0,0:0", Not(LoopBoundaryEquals("10:10,10:0,0:1")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
-  S2LoopMatcher m(
-      "10:10,10:0,0:0",
-      S2LoopMatcher::Options(S2LoopMatcher::Options::EQUALS, S1Angle::Zero()));
+  StringMatchResultListener listener;
+  S2LoopMatcher m("10:10,10:0,0:0", S2LoopMatcher::Options(
+                                        S2LoopMatcher::Options::BOUNDARY_EQUALS,
+                                        S1Angle::Zero()));
   m.MatchAndExplain("10:10,10:0,0:1", &listener);
   EXPECT_EQ("S2Loops don't match", listener.str());
 }
 
 TEST(S2testmatchersTest, LoopBoundaryApproxEquals) {
-  auto expected = MakeLoopOrDie("10:10,10:0,0:0");
-  auto value = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> expected = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> value = MakeLoopOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value,
@@ -362,7 +372,7 @@ TEST(S2testmatchersTest, LoopBoundaryApproxEquals) {
                                     "10:10,10:0,0:1", S1Angle::Degrees(0.1))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LoopMatcher m(
       "10:10,10:0,0:0",
       S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_APPROX_EQUALS,
@@ -373,8 +383,8 @@ TEST(S2testmatchersTest, LoopBoundaryApproxEquals) {
 }
 
 TEST(S2testmatchersTest, LoopBoundaryNear) {
-  auto expected = MakeLoopOrDie("10:10,10:0,0:0");
-  auto value = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> expected = MakeLoopOrDie("10:10,10:0,0:0");
+  std::unique_ptr<S2Loop> value = MakeLoopOrDie("10:10,10:0,0:0");
 
   // As object.
   EXPECT_THAT(*value, LoopBoundaryNear(*expected, S1Angle::Radians(1e-10)));
@@ -387,7 +397,7 @@ TEST(S2testmatchersTest, LoopBoundaryNear) {
               Not(LoopBoundaryNear("10:10,10:0,0:1", S1Angle::Degrees(0.1))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LoopMatcher m("10:10,10:0,0:0",
                   S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_NEAR,
                                          S1Angle::Degrees(0.1)));
@@ -396,9 +406,48 @@ TEST(S2testmatchersTest, LoopBoundaryNear) {
             listener.str());
 }
 
+TEST(S2testmatchersTest, LoopIdenticalTo) {
+  auto expected = MakeLoopOrDie("10:10,10:0,0:0");
+  auto value = MakeLoopOrDie("10:10,10:0,0:0");
+
+  // As object.
+  EXPECT_THAT(*value, LoopIdenticalTo(*expected));
+
+  // Negation.
+  EXPECT_THAT(*MakeLoopOrDie("10:10,10:0,0:1"),
+              Not(LoopIdenticalTo(*expected)));
+
+  // Explain.
+  ::testing::StringMatchResultListener listener;
+  S2LoopIdenticalToMatcher m(*expected);
+  m.MatchAndExplain(*MakeLoopOrDie("10:10,10:0,0:1"), &listener);
+  EXPECT_THAT(listener.str(),
+              MatchesRegex("whose vertex\\(2\\) .* doesn't match .*"));
+}
+
+TEST(S2testmatchersTest, PolygonIdenticalTo) {
+  auto expected = MakePolygonOrDie("10:10,10:0,0:0");
+  auto value = MakePolygonOrDie("10:10,10:0,0:0");
+
+  // As object.
+  EXPECT_THAT(*value, PolygonIdenticalTo(*expected));
+
+  // Negation.
+  EXPECT_THAT(*MakePolygonOrDie("10:10,10:0,0:1"),
+              Not(PolygonIdenticalTo(*expected)));
+
+  // Explain.
+  ::testing::StringMatchResultListener listener;
+  S2PolygonIdenticalToMatcher m(*expected);
+  m.MatchAndExplain(*MakePolygonOrDie("10:10,10:0,0:1"), &listener);
+  EXPECT_THAT(
+      listener.str(),
+      MatchesRegex("whose vertex\\(2\\) .* doesn't match .* in loop 0"));
+}
+
 TEST(S2testmatchersTest, LatLngRectEquals) {
-  auto expected = MakeLatLngRectOrDie("0:0,10:10");
-  auto value = MakeLatLngRectOrDie("0:0,10:10");
+  S2LatLngRect expected = MakeLatLngRectOrDie("0:0,10:10");
+  S2LatLngRect value = MakeLatLngRectOrDie("0:0,10:10");
 
   // As object.
   EXPECT_THAT(value, LatLngRectEquals(expected));
@@ -410,7 +459,7 @@ TEST(S2testmatchersTest, LatLngRectEquals) {
   EXPECT_THAT("0:0,10:10", Not(LatLngRectEquals("0:0,11:10")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LatLngRectMatcher m(
       "0:0,10:10", S2LatLngRectMatcher::Options(
                        S2LatLngRectMatcher::Options::EQUALS, S1Angle::Zero()));
@@ -419,8 +468,8 @@ TEST(S2testmatchersTest, LatLngRectEquals) {
 }
 
 TEST(S2testmatchersTest, LatLngRectApproxEquals) {
-  auto expected = MakeLatLngRectOrDie("0:0,10:10");
-  auto value = MakeLatLngRectOrDie("0:0,10:10");
+  S2LatLngRect expected = MakeLatLngRectOrDie("0:0,10:10");
+  S2LatLngRect value = MakeLatLngRectOrDie("0:0,10:10");
 
   // As object.
   EXPECT_THAT(value, LatLngRectApproxEquals(expected, S1Angle::Degrees(0.1)));
@@ -434,7 +483,7 @@ TEST(S2testmatchersTest, LatLngRectApproxEquals) {
               Not(LatLngRectApproxEquals("0:0,11:10", S1Angle::Degrees(0.1))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LatLngRectMatcher m(
       "0:0,10:10",
       S2LatLngRectMatcher::Options(S2LatLngRectMatcher::Options::APPROX_EQUALS,
@@ -445,10 +494,10 @@ TEST(S2testmatchersTest, LatLngRectApproxEquals) {
 }
 
 TEST(S2testmatchersTest, LatLngRectApproxEquals2) {
-  auto expected = MakeLatLngRectOrDie("0:0,10:10");
-  auto value = MakeLatLngRectOrDie("0:0,10:10");
+  S2LatLngRect expected = MakeLatLngRectOrDie("0:0,10:10");
+  S2LatLngRect value = MakeLatLngRectOrDie("0:0,10:10");
 
-  auto tolerance = S2LatLng::FromDegrees(0.1, 0.2);
+  S2LatLng tolerance = S2LatLng::FromDegrees(0.1, 0.2);
 
   // As object.
   EXPECT_THAT(value, LatLngRectApproxEquals(expected, tolerance));
@@ -460,7 +509,7 @@ TEST(S2testmatchersTest, LatLngRectApproxEquals2) {
   EXPECT_THAT("0:0,10:10", Not(LatLngRectApproxEquals("0:0,11:10", tolerance)));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LatLngRectMatcher m(
       "0:0,10:10",
       S2LatLngRectMatcher::Options(
@@ -473,8 +522,8 @@ TEST(S2testmatchersTest, LatLngRectApproxEquals2) {
 }
 
 TEST(S2testmatchersTest, LatLngEquals) {
-  auto expected = MakeLatLngOrDie("10:10");
-  auto value = MakeLatLngOrDie("10:10");
+  S2LatLng expected = MakeLatLngOrDie("10:10");
+  S2LatLng value = MakeLatLngOrDie("10:10");
 
   // As object.
   EXPECT_THAT(value, LatLngEquals(expected));
@@ -486,7 +535,7 @@ TEST(S2testmatchersTest, LatLngEquals) {
   EXPECT_THAT("10:10", Not(LatLngEquals("11:10")));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LatLngMatcher m("10:10",
                     S2LatLngMatcher::Options(S2LatLngMatcher::Options::EQUALS,
                                              S1Angle::Zero()));
@@ -495,8 +544,8 @@ TEST(S2testmatchersTest, LatLngEquals) {
 }
 
 TEST(S2testmatchersTest, LatLngApproxEquals) {
-  auto expected = MakeLatLngOrDie("10:10");
-  auto value = MakeLatLngOrDie("10:10");
+  S2LatLng expected = MakeLatLngOrDie("10:10");
+  S2LatLng value = MakeLatLngOrDie("10:10");
 
   // As object.
   EXPECT_THAT(value, LatLngApproxEquals(expected, S1Angle::Degrees(0.1)));
@@ -511,7 +560,7 @@ TEST(S2testmatchersTest, LatLngApproxEquals) {
   EXPECT_THAT("10:10", Not(LatLngApproxEquals("11:10", S1Angle::Degrees(0.1))));
 
   // Explain.
-  ::testing::StringMatchResultListener listener;
+  StringMatchResultListener listener;
   S2LatLngMatcher m(
       "10:10", S2LatLngMatcher::Options(S2LatLngMatcher::Options::APPROX_EQUALS,
                                         S1Angle::Degrees(0.1)));

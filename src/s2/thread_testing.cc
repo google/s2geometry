@@ -17,10 +17,10 @@
 
 #include "s2/thread_testing.h"
 
-#include <functional>
 #include <memory>
 #include <thread>
 
+#include "absl/functional/function_ref.h"
 #include "absl/log/absl_check.h"
 #include "absl/synchronization/mutex.h"
 
@@ -31,7 +31,7 @@ namespace s2testing {
 
 class ReaderThreadPool {
  public:
-  ReaderThreadPool(const std::function<void ()>& callback, int num_threads)
+  ReaderThreadPool(absl::FunctionRef<void ()> callback, int num_threads)
       : threads_(make_unique<std::thread[]>(num_threads)),
         num_threads_(num_threads) {
     for (int i = 0; i < num_threads_; ++i) {
@@ -67,8 +67,11 @@ void ReaderWriterTest::ReaderLoop() {
 }
 
 void ReaderWriterTest::Run(int num_readers, int iters) {
-  ReaderThreadPool pool(std::bind(&ReaderWriterTest::ReaderLoop, this),
-                        num_readers);
+  // `reader_loop` must be a variable and not a temp expression since
+  // `FunctionRef` does not extent lifetime (`const std::function&`
+  // would).
+  auto reader_loop = [this]() { ReaderLoop(); };
+  ReaderThreadPool pool(reader_loop, num_readers);
   lock_.lock();
   for (int iter = 0; iter < iters; ++iter) {
     // Loop invariant: lock_ is held and num_readers_left_ == 0.
