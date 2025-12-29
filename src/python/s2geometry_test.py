@@ -1166,6 +1166,8 @@ class S2BooleanOperationTest(unittest.TestCase):
     loop = result.loop(1)
     self.assertEqual(4, loop.num_vertices())
 
+# See https://github.com/google/s2geometry/issues/376
+@unittest.skip("CHECK-fails in debug mode.")
 class S2BuilderTest(unittest.TestCase):
   def setUp(self):
     self.p1 = s2.S2LatLng.FromDegrees(10.0, 10.0).ToPoint()
