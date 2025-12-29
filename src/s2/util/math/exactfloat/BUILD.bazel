@@ -1,18 +1,23 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 cc_library(
     name = "exactfloat",
     srcs = ["exactfloat.cc"],
     hdrs = ["exactfloat.h"],
     deps = [
-        "//s2/base:logging",
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/log:log",
+        "@abseil-cpp//absl/log:absl_log",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:str_format",
     ] + select({
         "//:use_openssl_setting": ["@openssl//:crypto"],
-        "//conditions:default": ["@boringssl//:crypto"],
+        "//conditions:default": [
+            "@abseil-cpp//absl/container:fixed_array",
+            "@abseil-cpp//absl/numeric:bits",
+            "@boringssl//:crypto",
+        ],
     }),
 )
 
@@ -23,6 +28,8 @@ cc_test(
         ":exactfloat",
         "//s2/testing:test_main",
         "//s2/util/math:vector",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/base:no_destructor",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/log:absl_log",
         "@abseil-cpp//absl/random",
