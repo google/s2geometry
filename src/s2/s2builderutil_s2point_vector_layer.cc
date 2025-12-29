@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -55,7 +56,7 @@ S2PointVectorLayer::S2PointVectorLayer(vector<S2Point>* points,
       label_set_lexicon_(label_set_lexicon),
       options_(options) {}
 
-void S2PointVectorLayer::Build(const Graph& g, S2Error* error) {
+void S2PointVectorLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   Graph::LabelFetcher fetcher(g, EdgeType::DIRECTED);
 
   vector<Label> labels;  // Temporary storage for labels.

@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <iomanip>
 #include <memory>
 #include <random>
@@ -27,6 +28,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -39,11 +41,15 @@
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/status/status.h"
+#include "absl/status/status_matchers.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 
 #include "s2/base/casts.h"
+#include "s2/gmock_matchers.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -57,6 +63,7 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
@@ -71,6 +78,10 @@ using absl::flat_hash_map;
 using absl::flat_hash_set;
 using absl::StrCat;
 using absl::string_view;
+using ::absl_testing::IsOkAndHolds;
+using ::S2::LoopIdenticalTo;
+using ::s2internal::MakeS2PointArrayForOverwrite;
+using ::s2internal::UniqueS2PointArray;
 using ::s2textformat::MakeLoopOrDie;
 using std::fabs;
 using std::make_unique;
@@ -79,6 +90,45 @@ using std::min;
 using std::string;
 using std::unique_ptr;
 using std::vector;
+
+// Benchmark performance depends on a huge range of parameters, and it is
+// impractical to test all the possible combinations.  Instead, each benchmark
+// typically tests a range of values for *one* parameter (e.g., num_vertices),
+// and for the other parameters it either uses a default value or computes an
+// average over some distribution of values.
+//
+// For example, most benchmarks are affected by the scale of the geometry
+// (e.g., large loops are more likely to intersect multiple faces, and small
+// loops are more likely to invoke s2pred::ExpensiveSign).  The default loop
+// size can be controlled with the --default_radius_km flag.
+//
+// Similarly, most benchmarks are affected by the actual position of the loops
+// on the sphere (e.g., whether the loop contains S2::Origin(), whether it
+// intersects multiple faces, whether the loop is entirely contained by a
+// relatively small S2Cell, etc).  This is handled by averaging over a
+// collection of loops with random positions.  The number of loops is
+// controlled with --num_loop_samples, and --s2_random_seed can be used to
+// generate different collections of loops.
+//
+// Performance quirks can be investigated by setting --num_loop_samples=1 and
+// profiling the code with various random seeds.  For example:
+//
+// s2loop_test --benchmarks='ContainsPoint/8$' --num_loop_samples=1
+//    --s2_random_seed=14 --benchmark_min_time=15 --cpu_profile ~/tmp/s2.prof
+
+ABSL_FLAG(int32_t, num_loop_samples, 16,
+          "Benchmarks: number of random loops or loop pairs (in order to "
+          "average over various loop positions on the sphere)");
+ABSL_FLAG(int32_t, default_num_vertices, 4096,
+          "Benchmarks: default number of vertices for loops");
+// A loop with a 10km radius and 4096 vertices has an edge length of 15 meters.
+ABSL_FLAG(double, default_radius_km, 10.0,
+          "Benchmarks: default radius for loops");
+ABSL_FLAG(double, default_nested_gap_multiple, 5.0,
+          "Benchmarks: desired distance between nested loops, expressed "
+          "as a multiple of the edge length");
+ABSL_FLAG(double, default_crossing_radius_ratio, 10.0,
+          "Benchmarks: desired ratio between the radii of crossing loops");
 
 class S2LoopTestBase : public testing::Test {
  protected:
@@ -278,11 +328,11 @@ TEST_F(S2LoopTestBase, GetRectBound) {
                    S2LatLng::FromDegrees(-80, 180)), kRectError));
 
   // Create a loop that contains the complement of the "arctic_80" loop.
-  unique_ptr<S2Loop> arctic_80_inv(arctic_80_->Clone());
-  arctic_80_inv->Invert();
+  S2Loop arctic_80_inv(*arctic_80_);
+  arctic_80_inv.Invert();
   // The highest latitude of each edge is attained at its midpoint.
-  S2Point mid = 0.5 * (arctic_80_inv->vertex(0) + arctic_80_inv->vertex(1));
-  EXPECT_NEAR(arctic_80_inv->GetRectBound().lat_hi().radians(),
+  S2Point mid = 0.5 * (arctic_80_inv.vertex(0) + arctic_80_inv.vertex(1));
+  EXPECT_NEAR(arctic_80_inv.GetRectBound().lat_hi().radians(),
               S2LatLng(mid).lat().radians(), kRectError.lat().radians());
 
   EXPECT_TRUE(south_hemi_->GetRectBound().lng().is_full());
@@ -290,13 +340,12 @@ TEST_F(S2LoopTestBase, GetRectBound) {
       R1Interval(-M_PI_2, 0), kRectError.lat().radians()));
 }
 
-static void Rotate(unique_ptr<S2Loop>* ptr) {
-  S2Loop* loop = ptr->get();
+static void Rotate(S2Loop* loop) {
   vector<S2Point> vertices;
   for (int i = 1; i <= loop->num_vertices(); ++i) {
     vertices.push_back(loop->vertex(i));
   }
-  *ptr = make_unique<S2Loop>(vertices);
+  *loop = S2Loop(std::move(vertices));
 }
 
 TEST_F(S2LoopTestBase, AreaConsistentWithCurvature) {
@@ -406,13 +455,13 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
 // rotated, and that the sign is inverted when the vertices are reversed.
 static void CheckCurvatureInvariants(const S2Loop& loop) {
   double expected = loop.GetCurvature();
-  unique_ptr<S2Loop> loop_copy(loop.Clone());
+  S2Loop loop_copy = loop;
   for (int i = 0; i < loop.num_vertices(); ++i) {
-    loop_copy->Invert();
-    EXPECT_EQ(-expected, loop_copy->GetCurvature());
-    loop_copy->Invert();
+    loop_copy.Invert();
+    EXPECT_EQ(-expected, loop_copy.GetCurvature());
+    loop_copy.Invert();
     Rotate(&loop_copy);
-    EXPECT_EQ(expected, loop_copy->GetCurvature());
+    EXPECT_EQ(expected, loop_copy.GetCurvature());
   }
 }
 
@@ -472,15 +521,15 @@ TEST_F(S2LoopTestBase, GetCurvature) {
 static void CheckNormalizeAndContains(const S2Loop& loop) {
   S2Point p = s2textformat::MakePointOrDie("40:40");
 
-  unique_ptr<S2Loop> flip(loop.Clone());
-  flip->Invert();
+  S2Loop flip = loop;
+  flip.Invert();
   EXPECT_TRUE(loop.IsNormalized() ^ loop.Contains(p));
-  EXPECT_TRUE(flip->IsNormalized() ^ flip->Contains(p));
+  EXPECT_TRUE(flip.IsNormalized() ^ flip.Contains(p));
 
-  EXPECT_TRUE(loop.IsNormalized() ^ flip->IsNormalized());
+  EXPECT_TRUE(loop.IsNormalized() ^ flip.IsNormalized());
 
-  flip->Normalize();
-  EXPECT_FALSE(flip->Contains(p));
+  flip.Normalize();
+  EXPECT_FALSE(flip.Contains(p));
 }
 
 TEST_F(S2LoopTestBase, NormalizedCompatibleWithContains) {
@@ -497,19 +546,19 @@ TEST_F(S2LoopTestBase, Contains) {
   EXPECT_TRUE(candy_cane_->Contains(S2LatLng::FromDegrees(5, 71).ToPoint()));
 
   // Create copies of these loops so that we can change the vertex order.
-  unique_ptr<S2Loop> north_copy(north_hemi_->Clone());
-  unique_ptr<S2Loop> south_copy(south_hemi_->Clone());
-  unique_ptr<S2Loop> west_copy(west_hemi_->Clone());
-  unique_ptr<S2Loop> east_copy(east_hemi_->Clone());
+  S2Loop north_copy = *north_hemi_;
+  S2Loop south_copy = *south_hemi_;
+  S2Loop west_copy = *west_hemi_;
+  S2Loop east_copy = *east_hemi_;
   for (int i = 0; i < 4; ++i) {
-    EXPECT_TRUE(north_copy->Contains(S2Point(0, 0, 1)));
-    EXPECT_FALSE(north_copy->Contains(S2Point(0, 0, -1)));
-    EXPECT_FALSE(south_copy->Contains(S2Point(0, 0, 1)));
-    EXPECT_TRUE(south_copy->Contains(S2Point(0, 0, -1)));
-    EXPECT_FALSE(west_copy->Contains(S2Point(0, 1, 0)));
-    EXPECT_TRUE(west_copy->Contains(S2Point(0, -1, 0)));
-    EXPECT_TRUE(east_copy->Contains(S2Point(0, 1, 0)));
-    EXPECT_FALSE(east_copy->Contains(S2Point(0, -1, 0)));
+    EXPECT_TRUE(north_copy.Contains(S2Point(0, 0, 1)));
+    EXPECT_FALSE(north_copy.Contains(S2Point(0, 0, -1)));
+    EXPECT_FALSE(south_copy.Contains(S2Point(0, 0, 1)));
+    EXPECT_TRUE(south_copy.Contains(S2Point(0, 0, -1)));
+    EXPECT_FALSE(west_copy.Contains(S2Point(0, 1, 0)));
+    EXPECT_TRUE(west_copy.Contains(S2Point(0, -1, 0)));
+    EXPECT_TRUE(east_copy.Contains(S2Point(0, 1, 0)));
+    EXPECT_FALSE(east_copy.Contains(S2Point(0, -1, 0)));
     Rotate(&north_copy);
     Rotate(&south_copy);
     Rotate(&east_copy);
@@ -641,9 +690,9 @@ static void TestOneDisjointPair(const S2Loop& a, const S2Loop& b) {
 static void TestOneCoveringPair(const S2Loop& a, const S2Loop& b) {
   EXPECT_EQ(a.is_full(), a.Contains(b));
   EXPECT_EQ(b.is_full(), b.Contains(a));
-  unique_ptr<S2Loop> a1(a.Clone());
-  a1->Invert();
-  bool complementary = a1->BoundaryEquals(b);
+  S2Loop a1 = a;
+  a1.Invert();
+  bool complementary = a1.BoundaryEquals(b);
   EXPECT_EQ(!complementary, a.Intersects(b));
   EXPECT_EQ(!complementary, b.Intersects(a));
 }
@@ -660,43 +709,43 @@ static void TestOneOverlappingPair(const S2Loop& a, const S2Loop& b) {
 // Given a pair of loops where A contains B, test various identities
 // involving A, B, and their complements.
 static void TestNestedPair(const S2Loop& a, const S2Loop& b) {
-  unique_ptr<S2Loop> a1(a.Clone());
-  unique_ptr<S2Loop> b1(b.Clone());
-  a1->Invert();
-  b1->Invert();
+  S2Loop a1 = a;
+  S2Loop b1 = b;
+  a1.Invert();
+  b1.Invert();
   TestOneNestedPair(a, b);
-  TestOneNestedPair(*b1, *a1);
-  TestOneDisjointPair(*a1, b);
-  TestOneCoveringPair(a, *b1);
+  TestOneNestedPair(b1, a1);
+  TestOneDisjointPair(a1, b);
+  TestOneCoveringPair(a, b1);
 }
 
 // Given a pair of disjoint loops A and B, test various identities
 // involving A, B, and their complements.
 static void TestDisjointPair(const S2Loop& a, const S2Loop& b) {
-  unique_ptr<S2Loop> a1(a.Clone());
-  a1->Invert();
-  TestNestedPair(*a1, b);
+  S2Loop a1 = a;
+  a1.Invert();
+  TestNestedPair(a1, b);
 }
 
 // Given loops A and B whose union covers the sphere, test various identities
 // involving A, B, and their complements.
 static void TestCoveringPair(const S2Loop& a, const S2Loop& b) {
-  unique_ptr<S2Loop> b1(b.Clone());
-  b1->Invert();
-  TestNestedPair(a, *b1);
+  S2Loop b1 = b;
+  b1.Invert();
+  TestNestedPair(a, b1);
 }
 
 // Given loops A and B such that both A and its complement intersect both B
 // and its complement, test various identities involving these four loops.
 static void TestOverlappingPair(const S2Loop& a, const S2Loop& b) {
-  unique_ptr<S2Loop> a1(a.Clone());
-  unique_ptr<S2Loop> b1(b.Clone());
-  a1->Invert();
-  b1->Invert();
+  S2Loop a1 = a;
+  S2Loop b1 = b;
+  a1.Invert();
+  b1.Invert();
   TestOneOverlappingPair(a, b);
-  TestOneOverlappingPair(*a1, *b1);
-  TestOneOverlappingPair(*a1, b);
-  TestOneOverlappingPair(a, *b1);
+  TestOneOverlappingPair(a1, b1);
+  TestOneOverlappingPair(a1, b);
+  TestOneOverlappingPair(a, b1);
 }
 
 enum RelationFlags {
@@ -1002,66 +1051,119 @@ TEST(S2Loop, BoundaryNear) {
   TestNear(t1, t2, 0.5 * degree, false);
 }
 
-static void CheckIdentical(const S2Loop& loop, const S2Loop& loop2) {
-  EXPECT_EQ(loop.depth(), loop2.depth());
-  EXPECT_EQ(loop.num_vertices(), loop2.num_vertices());
-  for (int i = 0; i < loop.num_vertices(); ++i) {
-    EXPECT_EQ(loop.vertex(i), loop2.vertex(i));
-  }
-  EXPECT_EQ(loop.is_empty(), loop2.is_empty());
-  EXPECT_EQ(loop.is_full(), loop2.is_full());
-  EXPECT_EQ(loop.depth(), loop2.depth());
-  EXPECT_EQ(loop.IsNormalized(), loop2.IsNormalized());
-  EXPECT_EQ(loop.Contains(S2::Origin()), loop2.Contains(S2::Origin()));
-  EXPECT_EQ(loop.GetRectBound(), loop2.GetRectBound());
-}
-
-static void TestEncodeDecode(const S2Loop& loop) {
+static absl::StatusOr<S2Loop> EncodeDecode(const S2Loop& loop) {
   Encoder encoder;
   loop.Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
   S2Loop loop2;
   loop2.set_s2debug_override(loop.s2debug_override());
-  ASSERT_TRUE(loop2.Decode(&decoder));
-  CheckIdentical(loop, loop2);
+  if (!loop2.Decode(&decoder)) {
+    return absl::InternalError("Decode failed");
+  }
+  return loop2;
 }
 
-TEST(S2Loop, EncodeDecode) {
+TEST(S2Loop, EncodeDecodeEmpty) {
+  S2Loop empty(S2Loop::kEmpty());
+  EXPECT_THAT(EncodeDecode(empty), IsOkAndHolds(LoopIdenticalTo(empty)));
+}
+
+TEST(S2Loop, EncodeDecodeFull) {
+  S2Loop full(S2Loop::kFull());
+  EXPECT_THAT(EncodeDecode(full), IsOkAndHolds(LoopIdenticalTo(full)));
+}
+
+TEST(S2Loop, EncodeDecodeUninitialized) {
+  S2Loop uninitialized;
+  EXPECT_THAT(EncodeDecode(uninitialized),
+              IsOkAndHolds(LoopIdenticalTo(uninitialized)));
+}
+
+TEST(S2Loop, EncodeDecodeFourVertices) {
   unique_ptr<S2Loop> l(MakeLoopOrDie("30:20, 40:20, 39:43, 33:35"));
   l->set_depth(3);
-  TestEncodeDecode(*l);
-
-  S2Loop empty(S2Loop::kEmpty());
-  TestEncodeDecode(empty);
-  S2Loop full(S2Loop::kFull());
-  TestEncodeDecode(full);
-
-  S2Loop uninitialized;
-  TestEncodeDecode(uninitialized);
+  EXPECT_THAT(EncodeDecode(*l), IsOkAndHolds(LoopIdenticalTo(*l)));
 }
 
-TEST(S2Loop, Moveable) {
-  // We'll need a couple identical copies of a reference loop to compare.
-  auto loop_factory = []() {
-    unique_ptr<S2Loop> loop = MakeLoopOrDie("30:20, 40:20, 39:43, 33:35");
-    loop->set_depth(3);
-    return loop;
-  };
+// Returns a reference loop for copy/move tests.
+std::unique_ptr<S2Loop> MakeLoopWithNonDefaultFields() {
+  unique_ptr<S2Loop> loop = MakeLoopOrDie("30:20, 40:20, 39:43, 33:35");
+  // Set fields to non-default values so we can test that they are copied.
+  loop->set_depth(3);
+  loop->set_s2debug_override(S2Debug::DISABLE);
+  return loop;
+}
 
-  // Check for move-constructability.
-  {
-    unique_ptr<S2Loop> loop = loop_factory();
-    S2Loop a(std::move(*loop));
-    CheckIdentical(a, *loop_factory());
-  }
+TEST_F(S2LoopTestBase, CloneResultIdenticalToSource) {
+  unique_ptr<S2Loop> loop = MakeLoopWithNonDefaultFields();
+  unique_ptr<S2Loop> cloned(loop->Clone());
+  EXPECT_THAT(*cloned, LoopIdenticalTo(*loop));
+}
 
-  // Check for move-assignability.
-  {
-    unique_ptr<S2Loop> loop = loop_factory();
-    S2Loop a;
-    a = std::move(*loop);
-    CheckIdentical(a, *loop_factory());
-  }
+TEST_F(S2LoopTestBase, CopyConstructionResultIdenticalToSource) {
+  unique_ptr<S2Loop> loop = MakeLoopWithNonDefaultFields();
+  S2Loop copied(*loop);
+  EXPECT_THAT(copied, LoopIdenticalTo(*loop));
+}
+
+TEST_F(S2LoopTestBase, CopyAssignmentResultIdenticalToSource) {
+  unique_ptr<S2Loop> loop = MakeLoopWithNonDefaultFields();
+  S2Loop copied;
+  copied = *loop;
+  EXPECT_THAT(copied, LoopIdenticalTo(*loop));
+}
+
+TEST_F(S2LoopTestBase, CopyAssignmentToSelfIsNoOp) {
+  unique_ptr<S2Loop> loop_orig = MakeLoopWithNonDefaultFields();
+  S2Loop loop(*loop_orig);
+  loop = loop;
+  EXPECT_THAT(loop, LoopIdenticalTo(*loop_orig));
+}
+
+TEST(S2Loop, CopyConstructionFromZeroVerticesIsIdenticalToSource) {
+  // A default-constructed loop has zero vertices, and is not valid, but
+  // we should still be able to copy it.  To do so, we will need to disable
+  // validity checks.
+  S2Loop zero_vertex_loop;
+  zero_vertex_loop.set_s2debug_override(S2Debug::DISABLE);
+  S2Loop copy_constructed(zero_vertex_loop);
+  EXPECT_THAT(copy_constructed, LoopIdenticalTo(zero_vertex_loop));
+}
+
+TEST(S2Loop, CopyAssignmentFromZeroVerticesIsIdenticalToSource) {
+  S2Loop zero_vertex_loop;
+  zero_vertex_loop.set_s2debug_override(S2Debug::DISABLE);
+  S2Loop copy_assigned;
+  copy_assigned = zero_vertex_loop;
+  EXPECT_THAT(copy_assigned, LoopIdenticalTo(zero_vertex_loop));
+}
+
+TEST(S2Loop, CopyConstructionFromEmptyIsIdenticalToSource) {
+  S2Loop empty(S2Loop::kEmpty());
+  S2Loop copy_constructed(empty);
+  EXPECT_THAT(copy_constructed, LoopIdenticalTo(empty));
+}
+
+TEST(S2Loop, CopyAssignmentFromEmptyIsIdenticalToSource) {
+  S2Loop empty(S2Loop::kEmpty());
+  S2Loop copy_assigned;
+  copy_assigned = empty;
+  EXPECT_THAT(copy_assigned, LoopIdenticalTo(empty));
+}
+
+TEST_F(S2LoopTestBase, MoveConstructionResultIdenticalToSource) {
+  unique_ptr<S2Loop> loop_orig = MakeLoopWithNonDefaultFields();
+  S2Loop loop = *loop_orig;
+  S2Loop moved(std::move(loop));
+  EXPECT_THAT(moved, LoopIdenticalTo(*loop_orig));
+}
+
+TEST_F(S2LoopTestBase, MoveAssignmentResultIdenticalToSource) {
+  unique_ptr<S2Loop> loop_orig = MakeLoopWithNonDefaultFields();
+  S2Loop loop = *loop_orig;
+  S2Loop moved;
+  moved = std::move(loop);
+  EXPECT_THAT(moved, LoopIdenticalTo(*loop_orig));
 }
 
 static void TestEmptyFullSnapped(const S2Loop& loop, int level) {
@@ -1117,14 +1219,14 @@ TEST_F(S2LoopTestBase, FourVertexCompressedLoopRequires36Bytes) {
 }
 
 TEST_F(S2LoopTestBase, CompressedEncodedLoopDecodesApproxEqual) {
-  unique_ptr<S2Loop> loop(snapped_loop_a_->Clone());
-  loop->set_depth(3);
+  S2Loop loop = *snapped_loop_a_;
+  loop.set_depth(3);
 
   Encoder encoder;
-  TestEncodeCompressed(*loop, S2CellId::kMaxLevel, &encoder);
+  TestEncodeCompressed(loop, S2CellId::kMaxLevel, &encoder);
   S2Loop decoded_loop;
   TestDecodeCompressed(encoder, S2CellId::kMaxLevel, &decoded_loop);
-  CheckIdentical(*loop, decoded_loop);
+  EXPECT_THAT(decoded_loop, LoopIdenticalTo(loop));
 }
 
 // This test checks that S2Loops created directly from S2Cells behave
@@ -1355,3 +1457,628 @@ TEST(S2LoopOwningShape, Init) {
   shape.Init(make_unique<S2Loop>(S2Loop::kEmpty()));
 }
 
+static S1Angle GetDefaultRadius() {
+  return S2Testing::KmToAngle(absl::GetFlag(FLAGS_default_radius_km));
+}
+
+// Benchmark construction of regular loops, *including* index building (which
+// is normally done lazily).
+static void BM_Constructor(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  const string seed_str =
+      StrCat("BM_CONSTRUCTOR", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  vector<vector<S2Point>> vertex_arrays;
+  for (int i = 0; i < absl::GetFlag(FLAGS_num_loop_samples); ++i) {
+    vertex_arrays.push_back(S2Testing::MakeRegularPoints(
+        s2random::Point(bitgen), GetDefaultRadius(), num_vertices));
+  }
+  while (state.KeepRunningBatch(vertex_arrays.size())) {
+    for (absl::Span<const S2Point> vertices : vertex_arrays) {
+      S2Loop loop(vertices);
+      loop.ForceBuildIndex();
+      benchmark::DoNotOptimize(loop);
+    }
+  }
+}
+BENCHMARK(BM_Constructor)->Arg(4)->Range(8, 262144);
+
+// This serves as a baseline for the copy benchmarks below.
+static void BM_AllocCopyVertices(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  std::unique_ptr<S2Loop> src_loop = S2Loop::MakeRegularLoop(
+      S2Point(1, 0, 0), S2Testing::KmToAngle(10), num_vertices);
+  src_loop->ForceBuildIndex();
+
+  UniqueS2PointArray dest_loop;
+  for (auto s : state) {
+    // Note that `make_unique` (and `make_unique_for_overwrite`) would
+    // zero-initialize `S2Point` because the `Vector3` default constructor
+    // zero-initializes.  We use `MakeS2PointArrayForOverwrite` to avoid
+    // zero-initialization, as `Clone` does.
+    dest_loop = MakeS2PointArrayForOverwrite(num_vertices);
+    std::memcpy(dest_loop.get(), src_loop->vertices_span().data(),
+                num_vertices * sizeof(dest_loop[0]));
+    benchmark::DoNotOptimize(dest_loop);
+  }
+  state.SetItemsProcessed(state.iterations() * num_vertices);
+}
+// Using 128Mi (~134M) vertices gives a vertex spacing of ~1 meter.  This is
+// likely the largest loop we would ever need.  The largest decodable loop
+// is controlled by `FLAGS_s2polygon_decode_max_num_vertices`, which defaults
+// to 50M.  The copy benchmarks are not sensitive to the position of the
+// loop on the sphere, so we don't use `FLAGS_num_loop_samples` here.
+BENCHMARK(BM_AllocCopyVertices)->Range(4, 128 << 20);
+
+static void BM_Clone(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  std::unique_ptr<S2Loop> src_loop = S2Loop::MakeRegularLoop(
+      S2Point(1, 0, 0), S2Testing::KmToAngle(10), num_vertices);
+  src_loop->ForceBuildIndex();
+
+  for (auto s : state) {
+    unique_ptr<S2Loop> dest_loop(src_loop->Clone());
+    benchmark::DoNotOptimize(dest_loop);
+  }
+  state.SetItemsProcessed(state.iterations() * num_vertices);
+}
+BENCHMARK(BM_Clone)->Range(4, 128 << 20);
+
+static void BM_CopyConstruct(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  std::unique_ptr<S2Loop> src_loop = S2Loop::MakeRegularLoop(
+      S2Point(1, 0, 0), S2Testing::KmToAngle(10), num_vertices);
+  src_loop->ForceBuildIndex();
+  for (auto s : state) {
+    S2Loop dest_loop(*src_loop);
+    benchmark::DoNotOptimize(dest_loop);
+  }
+  state.SetItemsProcessed(state.iterations() * num_vertices);
+}
+BENCHMARK(BM_CopyConstruct)->Range(4, 128 << 20);
+
+static void BM_CopyAssign(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  std::unique_ptr<S2Loop> src_loop = S2Loop::MakeRegularLoop(
+      S2Point(1, 0, 0), S2Testing::KmToAngle(10), num_vertices);
+  src_loop->ForceBuildIndex();
+  S2Loop dest_loop;
+  for (auto s : state) {
+    dest_loop = *src_loop;
+    benchmark::DoNotOptimize(dest_loop);
+  }
+  state.SetItemsProcessed(state.iterations() * num_vertices);
+}
+BENCHMARK(BM_CopyAssign)->Range(4, 128 << 20);
+
+static void BM_MoveAssign(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  std::unique_ptr<S2Loop> src_loop = S2Loop::MakeRegularLoop(
+      S2Point(1, 0, 0), S2Testing::KmToAngle(10), num_vertices);
+  src_loop->ForceBuildIndex();
+
+  S2Loop dest_loop;
+  for (auto s : state) {
+    dest_loop = std::move(*src_loop);
+    benchmark::DoNotOptimize(dest_loop);
+
+    *src_loop = std::move(dest_loop);
+    benchmark::DoNotOptimize(*src_loop);
+  }
+  // Each iteration does two moves.
+  state.SetItemsProcessed(state.iterations() * num_vertices * 2);
+}
+BENCHMARK(BM_MoveAssign)->Range(4, 128 << 20);
+
+// Returns "FLAGS_num_loop_samples" regular loops, where each loop has
+// "num_vertices" vertices and is positioned randomly on the sphere,
+// using "bitgen" as the source of randomness.  Force-builds the index to
+// take this code path out of the benchmarks.
+static vector<unique_ptr<S2Loop>> GetRegularLoops(absl::BitGenRef bitgen,
+                                                  S1Angle radius,
+                                                  int num_vertices) {
+  const int num_loops = absl::GetFlag(FLAGS_num_loop_samples);
+  vector<unique_ptr<S2Loop>> loops;
+  loops.reserve(num_loops);
+  for (int i = 0; i < num_loops; ++i) {
+    loops.push_back(
+        S2Loop::MakeRegularLoop(s2random::Point(bitgen), radius, num_vertices));
+    loops.back()->ForceBuildIndex();
+  }
+  return loops;
+}
+
+// Benchmark IsValid() on regular loops.
+static void BM_IsValid(benchmark::State& state) {
+  const string seed_str =
+      StrCat("BM_IS_VALID", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int num_vertices = state.range(0);
+  vector<unique_ptr<S2Loop>> loops =
+      GetRegularLoops(bitgen, GetDefaultRadius(), num_vertices);
+  ABSL_VLOG(1) << "Starting BM_IsValid";
+  while (state.KeepRunningBatch(loops.size())) {
+    for (const auto& loop : loops) {
+      bool valid = loop->IsValid();
+      benchmark::DoNotOptimize(valid);
+    }
+  }
+}
+BENCHMARK(BM_IsValid)
+  ->Arg(4)
+  ->Arg(16)
+  ->Arg(64)
+  ->Arg(256)
+  ->Arg(2048)
+  ->Arg(32768);
+
+static void BM_GetArea(benchmark::State& state) {
+  const string seed_str =
+      StrCat("BM_GET_AREA", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  vector<unique_ptr<S2Loop>> loops =
+      GetRegularLoops(bitgen, GetDefaultRadius(), state.range(0));
+  while (state.KeepRunningBatch(loops.size())) {
+    for (const auto& loop : loops) {
+      double area = loop->GetArea();
+      benchmark::DoNotOptimize(area);
+    }
+  }
+}
+BENCHMARK(BM_GetArea)->Arg(256);
+
+// Benchmark ContainsPoint() on regular loops.  The query points for a loop are
+// chosen so that they all lie in the loop's bounding rectangle (to avoid the
+// quick-rejection code path).
+static void BM_ContainsPoint(benchmark::State& state) {
+  const string seed_str =
+      StrCat("BM_CONTAINS_POINT", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  const int num_vertices = state.range(0);
+  vector<unique_ptr<S2Loop>> loops =
+      GetRegularLoops(bitgen, GetDefaultRadius(), num_vertices);
+  vector<vector<S2Point>> queries(loops.size());
+  constexpr int kNumQueriesPerLoop = 100;
+  for (int i = 0; i < loops.size(); ++i) {
+    for (int j = 0; j < kNumQueriesPerLoop; ++j) {
+      queries[i].push_back(
+          s2random::SamplePoint(bitgen, loops[i]->GetRectBound()));
+    }
+  }
+  int iquery = 0;
+  while (state.KeepRunningBatch(loops.size())) {
+    for (size_t iloop = 0; iloop < loops.size(); ++iloop) {
+      const S2Point& query = queries[iloop][iquery];
+      bool contains = loops[iloop]->Contains(query);
+      benchmark::DoNotOptimize(contains);
+    }
+    if (++iquery == kNumQueriesPerLoop) iquery = 0;
+  }
+}
+BENCHMARK(BM_ContainsPoint)->Arg(4)->Arg(8)->Arg(16)->Arg(32)
+->Arg(64)->Arg(128)->Arg(256)->Arg(512)->Arg(1024)->Range(2048, 1 << 18);
+
+// Benchmark construction of a loop followed by N calls to Contains(S2Point),
+// with lazy indexing.  "should_contain" says whether the chosen query point
+// should be contained by the loop.  If "decode" is true, then Decode()
+// rather than Init() is used to construct the loop.
+static void BenchmarkConstructAndContains(benchmark::State& state,
+                                          int num_vertices, int num_calls,
+                                          bool should_contain, bool decode) {
+  const string seed_str =
+      StrCat("BM_CONSTRUCT_AND_CONTAINS", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  // Build a regular loop either around the query point or its antipode,
+  // depending on whether "should_contain" is true or false.
+  S2Point query = s2random::Point(bitgen);
+  vector<S2Point> vertices = S2Testing::MakeRegularPoints(
+      should_contain ? query : -query, GetDefaultRadius(), num_vertices);
+  S2Loop test_loop(vertices);
+  Encoder encoder;
+  test_loop.Encode(&encoder);
+  while (state.KeepRunningBatch(num_calls)) {
+    S2Loop loop;
+    if (decode) {
+      Decoder decoder(encoder.base(), encoder.length());
+      ABSL_CHECK(loop.Decode(&decoder));
+    } else {
+      loop.Init(vertices);
+    }
+    for (int call = 0; call < num_calls; ++call) {
+      ABSL_CHECK_EQ(should_contain, loop.Contains(query));
+    }
+  }
+}
+
+static void BM_ConstructAndContainsTrue(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  const int num_calls = state.range(1);
+  BenchmarkConstructAndContains(state, num_vertices, num_calls,
+                                true /*should_contain*/, false /*decode*/);
+}
+BENCHMARK(BM_ConstructAndContainsTrue)
+->RangePair(1024, 1024, 1, 1<<15);
+
+static void BM_ConstructAndContainsFalse(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  const int num_calls = state.range(1);
+  BenchmarkConstructAndContains(state, num_vertices, num_calls,
+                                false /*should_contain*/, false /*decode*/);
+}
+BENCHMARK(BM_ConstructAndContainsFalse)
+->RangePair(1024, 1024, 1, 1<<15);
+
+static void BM_DecodeAndContainsTrue(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  const int num_calls = state.range(1);
+  BenchmarkConstructAndContains(state, num_vertices, num_calls,
+                                true /*should_contain*/, true /*decode*/);
+}
+BENCHMARK(BM_DecodeAndContainsTrue)
+->RangePair(1024, 1024, 1, 1<<15);
+
+static void BM_DecodeAndContainsFalse(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  const int num_calls = state.range(1);
+  BenchmarkConstructAndContains(state, num_vertices, num_calls,
+                                false /*should_contain*/, true /*decode*/);
+}
+BENCHMARK(BM_DecodeAndContainsFalse)
+->RangePair(1024, 1024, 1, 1<<15);
+
+// Generate "FLAGS_num_loop_samples" pairs of nested loops and append them to
+// "outer_loops" and "inner_loops".  All loops have "num_vertices" vertices.
+// Each outer loop has the given "outer_radius".  Each inner loop is inset by
+// a small distance ("gap") from the outer loop which is approximately equal
+// to "gap_edge_multiple" times the edge length of the outer loop.  (This
+// allows better testing of spatial indexing, which becomes less effective at
+// pruning intersection candidates as the loops get closer together.)  Loops
+// are otherwise positioned randomly (but repeatably) on the sphere.
+//
+// Caveats: the gap is actually measured to the incircle of the outer loop,
+// and the gap is clamped if necessary to prevent the inner loop from becoming
+// vanishingly small.  (Rule of thumb: to obtain a "gap_edge_multiple" of "m",
+// the loops must have approximately 7*m vertices or more.)
+static void GetNestedLoopPairs(absl::BitGenRef bitgen,  //
+                               S1Angle outer_radius, double gap_edge_multiple,
+                               int num_vertices,
+                               vector<unique_ptr<S2Loop>>* outer_loops,
+                               vector<unique_ptr<S2Loop>>* inner_loops) {
+  // The inner loop is inscribed within the incircle (maximum inscribed
+  // circle) of the outer loop.
+  S1Angle incircle_radius = outer_radius * cos(M_PI / num_vertices);
+  S1Angle edge_len = outer_radius * (2 * M_PI / num_vertices);
+
+  // If the edge count is too small, it may not be possible to inset the inner
+  // loop by the given multiple of the edge length.  We handle this by
+  // clamping "inner_radius" to be at least 1% of "outer_radius".
+  S1Angle inner_radius = max(incircle_radius - gap_edge_multiple * edge_len,
+                             0.01 * incircle_radius);
+
+  for (int i = 0; i < absl::GetFlag(FLAGS_num_loop_samples); ++i) {
+    // Generate two loops with the same center but with random different
+    // orientations.
+    Matrix3x3_d frame = s2random::Frame(bitgen);
+    outer_loops->push_back(
+        S2Loop::MakeRegularLoop(frame, outer_radius, num_vertices));
+    inner_loops->push_back(S2Loop::MakeRegularLoop(
+        s2random::FrameAt(bitgen, frame.Col(2)), inner_radius, num_vertices));
+    outer_loops->back()->ForceBuildIndex();
+    inner_loops->back()->ForceBuildIndex();
+  }
+}
+
+// Generate "FLAGS_num_loop_samples" pairs of loops whose boundaries cross
+// each other and append them to "a_loops" and "b_loops".  All loops have
+// "num_vertices" vertices.  The "a_loops" all have radius "a_radius" and
+// similarly for the "b_loops".  Loops are otherwise positioned randomly (but
+// repeatably) on the sphere.
+static void GetCrossingLoopPairs(absl::BitGenRef bitgen,  //
+                                 S1Angle a_radius, S1Angle b_radius,
+                                 int num_vertices,
+                                 vector<unique_ptr<S2Loop>>* a_loops,
+                                 vector<unique_ptr<S2Loop>>* b_loops) {
+  // The edges of each loop are bounded by two circles, one circumscribed
+  // around the loop (the circumcircle), and the other inscribed within the
+  // loop (the incircle).  Our strategy is to place the smaller loop such that
+  // its incircle crosses both circles of the larger loop.
+  S1Angle max_radius = max(a_radius, b_radius);
+  S1Angle min_radius = min(a_radius, b_radius);
+
+  // Check that the smaller loop is big enough that its incircle can span the
+  // gap between the incircle and circumcircle of the larger loop.
+  double incircle_factor = cos(M_PI / num_vertices);
+  ABSL_CHECK_GT(min_radius * incircle_factor,
+                max_radius * (1 - incircle_factor));
+
+  // Compute the range of distances between the two loop centers such that the
+  // incircle of the smaller loop crosses both circles of the larger loop.
+  S1Angle min_dist = max_radius - incircle_factor * min_radius;
+  S1Angle max_dist = incircle_factor * (min_radius + max_radius);
+
+  // Now generate pairs of loops whose centers are separated by distances in
+  // the given range.  Loop orientations are chosen randomly.
+  for (int i = 0; i < absl::GetFlag(FLAGS_num_loop_samples); ++i) {
+    Matrix3x3_d frame = s2random::Frame(bitgen);
+    a_loops->push_back(S2Loop::MakeRegularLoop(frame, a_radius, num_vertices));
+    S2Point b_center = S2::GetPointOnLine(
+        frame.Col(2), s2random::Point(bitgen),
+        S1Angle::Radians(
+            absl::Uniform(bitgen, min_dist.radians(), max_dist.radians())));
+    b_loops->push_back(S2Loop::MakeRegularLoop(
+        s2random::FrameAt(bitgen, b_center), b_radius, num_vertices));
+    a_loops->back()->ForceBuildIndex();
+    b_loops->back()->ForceBuildIndex();
+  }
+}
+
+// Generate "FLAGS_num_loop_samples" pairs of disjoint loops and append them
+// to "outer_loops" and "inner_loops".  The disjoint pairs are constructed so
+// that it is impossible to determine the relationship between the two loops
+// based solely on their bounds (they could be nested, crossing, or disjoint).
+// Each "outer loop" looks somewhat like the outline of the letter "C": it
+// consists of two nested loops (the "outside shell" and the "inside shell")
+// which each have a single edge removed and are then joined together to form
+// a single loop.  The "inner loop" is then nested within the inside shell of
+// the outer loop.
+//
+// The outer loop has "num_vertices" vertices split between its outside and
+// inside shells.  The radius of the outside shell is "outer_radius", while
+// the radius of the inside shell is (0.9 * outer_radius).
+//
+// The inner loop has "num_vertices" vertices, and is separated from the
+// inside shell of the outer loop by a small distance ("gap") which is
+// approximately equal to "gap_edge_multiple" times the edge length of the
+// inside shell.  (See GetNestedLoopPairs for details.)
+static void GetDisjointLoopPairs(absl::BitGenRef bitgen, S1Angle outer_radius,
+                                 double gap_edge_multiple, int num_vertices,
+                                 vector<unique_ptr<S2Loop>>* outer_loops,
+                                 vector<unique_ptr<S2Loop>>* inner_loops) {
+  // Compute the radius of the inside shell of the outer loop, the edge length
+  // of the inside shell, and finally the incircle radius of the inside shell
+  // (this is the maximum possible radius of the inner loop).
+  S1Angle outer_inside_radius = 0.9 * outer_radius * cos(2*M_PI / num_vertices);
+  S1Angle edge_len = outer_inside_radius * (M_PI / num_vertices);
+  S1Angle incircle_radius = outer_inside_radius * cos(2*M_PI / num_vertices);
+
+  // See comments in GetNestedLoopPairs().
+  S1Angle inner_radius = max(incircle_radius - gap_edge_multiple * edge_len,
+                             0.01 * incircle_radius);
+  for (int i = 0; i < absl::GetFlag(FLAGS_num_loop_samples); ++i) {
+    Matrix3x3_d frame = s2random::Frame(bitgen);
+    // Join together the outside and inside shells to form the outer loop.
+    vector<S2Point> vertices;
+    unique_ptr<S2Loop> outer_outside(
+        S2Loop::MakeRegularLoop(frame, outer_radius, max(4, num_vertices / 2)));
+    unique_ptr<S2Loop> outer_inside(S2Loop::MakeRegularLoop(
+        frame, outer_inside_radius, max(4, num_vertices / 2)));
+    S2Testing::AppendLoopVertices(*outer_inside, &vertices);
+    std::reverse(vertices.begin(), vertices.end());
+    S2Testing::AppendLoopVertices(*outer_outside, &vertices);
+    outer_loops->emplace_back(new S2Loop(vertices));
+    // Now construct the inner loop with the same center but a different
+    // random orientation.
+    inner_loops->push_back(S2Loop::MakeRegularLoop(
+        s2random::FrameAt(bitgen, frame.Col(2)), inner_radius, num_vertices));
+    outer_loops->back()->ForceBuildIndex();
+    inner_loops->back()->ForceBuildIndex();
+  }
+}
+
+// Given an S2Loop loop relation method (e.g., Intersects, CompareBoundary)
+// and a collection of loop pairs for which this method returns a known result
+// ("expected_result"), benchmark the method and then delete all the loops.
+template <class T>
+static void BenchmarkLoopRelation(benchmark::State& state,
+                                  T (S2Loop::*method)(const S2Loop& b) const,
+                                  T expected_result,
+                                  vector<unique_ptr<S2Loop>>* a_loops,
+                                  vector<unique_ptr<S2Loop>>* b_loops) {
+  ABSL_CHECK_EQ(a_loops->size(), b_loops->size());
+  while (state.KeepRunningBatch(a_loops->size())) {
+    for (size_t i = 0; i < a_loops->size(); ++i) {
+      const S2Loop& a = *(*a_loops)[i];
+      const S2Loop& b = *(*b_loops)[i];
+      ABSL_CHECK_EQ(expected_result, (a.*method)(b));
+    }
+  }
+}
+
+// Benchmark the given S2Loop loop relation method (e.g., Intersects) on a
+// collection of loop pairs where one loop contains the other loop (i.e.,
+// nested loops).  Verify that the method always returns "expected_result".
+template <class T>
+static void BenchmarkRelationContains(benchmark::State& state,
+                                      T (S2Loop::*method)(const S2Loop& b)
+                                          const,
+                                      T expected_result, int num_vertices) {
+  const string seed_str = StrCat("BENCHMARK_RELATION_CONTAINS",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  vector<unique_ptr<S2Loop>> a_loops, b_loops;
+  GetNestedLoopPairs(bitgen, GetDefaultRadius(),
+                     absl::GetFlag(FLAGS_default_nested_gap_multiple),
+                     num_vertices, &a_loops, &b_loops);
+  BenchmarkLoopRelation(state, method, expected_result, &a_loops, &b_loops);
+}
+
+// Benchmark the given S2Loop loop relation method (e.g., Intersects) on a
+// collection of disjoint loop pairs.  Verify that the method always returns
+// "expected_result".
+template <class T>
+static void BenchmarkRelationDisjoint(benchmark::State& state,
+                                      T (S2Loop::*method)(const S2Loop& b)
+                                          const,
+                                      T expected_result, int num_vertices) {
+  const string seed_str = StrCat("BENCHMARK_RELATION_DISJOINT",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  vector<unique_ptr<S2Loop>> a_loops, b_loops;
+  GetDisjointLoopPairs(bitgen, GetDefaultRadius(),
+                       absl::GetFlag(FLAGS_default_nested_gap_multiple),
+                       num_vertices, &a_loops, &b_loops);
+  BenchmarkLoopRelation(state, method, expected_result, &a_loops, &b_loops);
+}
+
+// Benchmark the given S2Loop loop relation method (e.g., Intersects) on a
+// collection of loop pairs where the loop boundaries cross each other.
+// Verify that the method always returns "expected_result".
+template <class T>
+static void BenchmarkRelationCrosses(benchmark::State& state,
+                                     T (S2Loop::*method)(const S2Loop& b) const,
+                                     T expected_result, int num_vertices) {
+  const string seed_str =
+      StrCat("BENCHMARK_RELATION_CROSSES", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  vector<unique_ptr<S2Loop>> a_loops, b_loops;
+  S1Angle a_radius = GetDefaultRadius();
+  S1Angle b_radius =
+      a_radius * absl::GetFlag(FLAGS_default_crossing_radius_ratio);
+  GetCrossingLoopPairs(bitgen, a_radius, b_radius, num_vertices, &a_loops,
+                       &b_loops);
+  BenchmarkLoopRelation(state, method, expected_result, &a_loops, &b_loops);
+}
+
+// The loop relation methods (Contains, Intersects, CompareBoundary) scale
+// similarly with the number of vertices.  So to save time, we only benchmark
+// CompareBoundary() on a full range of vertex counts; for Contains() and
+// Intersects() we just run a single test using FLAGS_default_num_vertices.
+
+// Benchmark CompareBoundary() where one loop contains the other.
+static void BM_CompareBoundaryContains(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationContains(state, &S2Loop::CompareBoundary, 1, num_vertices);
+}
+BENCHMARK(BM_CompareBoundaryContains)->Range(8, 32768);
+
+// Benchmark CompareBoundary() where the loops are disjoint.
+static void BM_CompareBoundaryDisjoint(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationDisjoint(state, &S2Loop::CompareBoundary, -1, num_vertices);
+}
+BENCHMARK(BM_CompareBoundaryDisjoint)->Range(8, 32768);
+
+// Benchmark CompareBoundary() where the loops cross each other.
+static void BM_CompareBoundaryCrosses(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationCrosses(state, &S2Loop::CompareBoundary, 0, num_vertices);
+}
+BENCHMARK(BM_CompareBoundaryCrosses)->Range(8, 32768);
+
+// Benchmark Contains() where one loop contains the other.
+static void BM_ContainsContains(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationContains(state, &S2Loop::Contains, true, num_vertices);
+}
+BENCHMARK(BM_ContainsContains)->Arg(absl::GetFlag(FLAGS_default_num_vertices));
+
+// Benchmark Contains() where the loops are disjoint.
+static void BM_ContainsDisjoint(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationDisjoint(state, &S2Loop::Contains, false, num_vertices);
+}
+BENCHMARK(BM_ContainsDisjoint)->Arg(absl::GetFlag(FLAGS_default_num_vertices));
+
+// Benchmark Contains() where the loops cross each other.
+static void BM_ContainsCrosses(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationCrosses(state, &S2Loop::Contains, false, num_vertices);
+}
+BENCHMARK(BM_ContainsCrosses)->Arg(absl::GetFlag(FLAGS_default_num_vertices));
+
+// Benchmark Intersects() where one loop contains the other loop.
+static void BM_IntersectsContains(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationContains(state, &S2Loop::Intersects, true, num_vertices);
+}
+BENCHMARK(BM_IntersectsContains)
+    ->Arg(absl::GetFlag(FLAGS_default_num_vertices));
+
+// Benchmark Intersects() where the loops are disjoint.
+static void BM_IntersectsDisjoint(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationDisjoint(state, &S2Loop::Intersects, false, num_vertices);
+}
+BENCHMARK(BM_IntersectsDisjoint)
+    ->Arg(absl::GetFlag(FLAGS_default_num_vertices));
+
+// Benchmark Intersects() where the loops cross each other.
+static void BM_IntersectsCrosses(benchmark::State& state) {
+  const int num_vertices = state.range(0);
+  BenchmarkRelationCrosses(state, &S2Loop::Intersects, true, num_vertices);
+}
+BENCHMARK(BM_IntersectsCrosses)->Arg(absl::GetFlag(FLAGS_default_num_vertices));
+
+// Benchmark Contains() on nested loops as a function of the loop radius.
+// Performance degrades on very small loops because s2pred::ExpensiveSign() is
+// invoked more often.
+static void BM_ContainsVsRadiusMeters(benchmark::State& state) {
+  const int meters = state.range(0);
+  const string seed_str = StrCat("BM_CONTAINS_VS_RADIUS_METERS",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  vector<unique_ptr<S2Loop>> a_loops, b_loops;
+  GetNestedLoopPairs(bitgen, S2Testing::MetersToAngle(meters),
+                     absl::GetFlag(FLAGS_default_nested_gap_multiple),
+                     absl::GetFlag(FLAGS_default_num_vertices), &a_loops,
+                     &b_loops);
+  BenchmarkLoopRelation(state, &S2Loop::Contains, true, &a_loops, &b_loops);
+}
+BENCHMARK(BM_ContainsVsRadiusMeters)
+->Arg(1)->Arg(8)->Arg(64)->Arg(1024)->Arg(65536);
+
+// Benchmark Contains() on nested loops as a function of the distance between
+// the loops (expressed as a multiple of the loop edge length).  Performance
+// degrades as the loops get very close together because spatial indexing is
+// not as effective at pruning the intersection candidates.
+static void BM_ContainsVsEdgeGapMultiple(benchmark::State& state) {
+  const int edge_gap_multiple = state.range(0);
+  const string seed_str = StrCat("BM_CONTAINS_VS_EDGE_GAP_MULTIPLE",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  vector<unique_ptr<S2Loop>> a_loops, b_loops;
+  GetNestedLoopPairs(bitgen, GetDefaultRadius(), edge_gap_multiple,
+                     absl::GetFlag(FLAGS_default_num_vertices), &a_loops,
+                     &b_loops);
+  BenchmarkLoopRelation(state, &S2Loop::Contains, true, &a_loops, &b_loops);
+}
+BENCHMARK(BM_ContainsVsEdgeGapMultiple)
+->Arg(0)->Arg(1)->Arg(8)->Arg(64);
+
+// Benchmark Intersects() on crossing loops as a function of the relative
+// sizes of the two loops (e.g., one loop radius much larger than the other).
+// Performance of spatial indexing can degrade when one loop is much larger
+// than the other.
+static void BM_IntersectsCrossesVsLogRadiusRatio(benchmark::State& state) {
+  const int log_radius_ratio = state.range(0);
+  vector<unique_ptr<S2Loop>> a_loops, b_loops;
+  S1Angle a_radius = GetDefaultRadius();
+  S1Angle b_radius = a_radius * pow(2.0, log_radius_ratio);
+  const string seed_str = StrCat("BM_INTERSECTS_CROSSES_VS_LOG_RADIUS_RATIO",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  GetCrossingLoopPairs(bitgen, a_radius, b_radius,
+                       absl::GetFlag(FLAGS_default_num_vertices), &a_loops,
+                       &b_loops);
+  BenchmarkLoopRelation(state, &S2Loop::Intersects, true, &a_loops, &b_loops);
+}
+BENCHMARK(BM_IntersectsCrossesVsLogRadiusRatio)
+->Arg(-10)->Arg(-5)->Arg(0)->Arg(5)->Arg(10);

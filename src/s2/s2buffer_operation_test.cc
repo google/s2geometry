@@ -24,12 +24,15 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/base/call_once.h"
+#include "absl/base/nullability.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -38,8 +41,10 @@
 #include "absl/random/random.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "s2/base/malloc_extension.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -593,7 +598,7 @@ class TestBufferPolyline {
     S2Point x = S2::GetPointOnRay(
         p, dir, expect_contained ? buffer_radius_ - max_error_ : max_error_);
     if (!PointBufferingUncertain(x, expect_contained)) {
-      EXPECT_EQ(MakeS2ContainsPointQuery(&output_).Contains(x),
+      EXPECT_EQ(S2ContainsPointQuery(&output_).Contains(x),
                 expect_contained);
     }
   }
@@ -715,5 +720,85 @@ TEST(S2BufferOperation, ZigZagPolyline) {
     }
   }
 }
+
+void BM_BufferPoints(benchmark::State& state) {
+  const string seed_str =
+      StrCat("BUFFER_POINTS", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  int num_points = state.range(0);
+  S1Angle buffer_radius = S2Testing::MetersToAngle(100);
+  for (auto _ : state) {
+    S2LaxPolygonShape output;
+    S2BufferOperation op(make_unique<s2builderutil::LaxPolygonLayer>(&output),
+                         S2BufferOperation::Options{buffer_radius});
+    for (int i = 0; i < num_points; ++i) {
+      op.AddPoint(s2random::Point(bitgen));
+    }
+    S2Error error;
+    ABSL_CHECK(op.Build(&error)) << error;
+  }
+}
+BENCHMARK(BM_BufferPoints)->Arg(1)->Arg(10)->Arg(1000);
+
+void BenchmarkBufferLoop(benchmark::State& state,
+                         S2PointLoopSpan loop, S1Angle buffer_radius) {
+  for (auto _ : state) {
+    S2LaxPolygonShape output;
+    S2BufferOperation op(make_unique<s2builderutil::LaxPolygonLayer>(&output),
+                         S2BufferOperation::Options{buffer_radius});
+    op.AddLoop(loop);
+    S2Error error;
+    ABSL_CHECK(op.Build(&error)) << error;
+  }
+}
+
+void BM_BufferConvexLoop(benchmark::State& state) {
+  auto loop = S2Testing::MakeRegularPoints(
+      S2Point(1, 0, 0), S2Testing::MetersToAngle(1000), state.range(0));
+  S1Angle buffer_radius = S2Testing::MetersToAngle(state.range(1));
+  BenchmarkBufferLoop(state, loop, buffer_radius);
+}
+BENCHMARK(BM_BufferConvexLoop)
+->ArgPair(10, 10)->ArgPair(1000, 10)->ArgPair(1000, 1000);
+
+void BM_BufferConcaveLoop(benchmark::State& state) {
+  auto loop = S2Testing::MakeRegularPoints(
+      S2Point(1, 0, 0), S2Testing::MetersToAngle(1000), state.range(0));
+  std::reverse(loop.begin(), loop.end());
+  S1Angle buffer_radius = S2Testing::MetersToAngle(state.range(1));
+  BenchmarkBufferLoop(state, loop, buffer_radius);
+}
+BENCHMARK(BM_BufferConcaveLoop)
+->ArgPair(10, 10)->ArgPair(1000, 10)->ArgPair(1000, 100);
+
+void BenchmarkBufferFractal(
+    benchmark::State& state, int num_edges, S1Angle nominal_radius,
+    double dimension, S1Angle buffer_radius) {
+  const string seed_str =
+      StrCat("BUFFER_FRACTAL", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(num_edges);
+  fractal.set_fractal_dimension(dimension);
+  auto loop = fractal.MakeLoop(s2random::Frame(bitgen), nominal_radius);
+  S2PointLoopSpan loop_span(&loop->vertex(0), loop->num_vertices());
+  BenchmarkBufferLoop(state, loop_span, buffer_radius);
+}
+
+void BM_BufferLoDimFractal(benchmark::State& state) {
+  BenchmarkBufferFractal(
+      state, state.range(0), S1Angle::Degrees(10), 1.05, S1Angle::Degrees(0.1));
+}
+BENCHMARK(BM_BufferLoDimFractal)
+->Arg(3 * 16)->Arg(3 * 1024);
+
+void BM_BufferHiDimFractal(benchmark::State& state) {
+  BenchmarkBufferFractal(
+      state, state.range(0), S1Angle::Degrees(10), 1.5, S1Angle::Degrees(0.1));
+}
+BENCHMARK(BM_BufferHiDimFractal)
+->Arg(3 * 16)->Arg(3 * 1024);
 
 }  // namespace

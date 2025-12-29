@@ -42,6 +42,14 @@ class S2RegionIntersection final : public S2Region {
   // Create a region representing the intersection of the given regions.
   explicit S2RegionIntersection(std::vector<std::unique_ptr<S2Region>> regions);
 
+  // S2RegionIntersection is copyable and movable, however copying may be
+  // expensive if the contained regions are expensive to copy (e.g.
+  // S2Polygons with many vertices).
+  S2RegionIntersection(const S2RegionIntersection&);
+  S2RegionIntersection& operator=(const S2RegionIntersection&);
+  S2RegionIntersection(S2RegionIntersection&&) noexcept;
+  S2RegionIntersection& operator=(S2RegionIntersection&&) noexcept;
+
   ~S2RegionIntersection() override = default;
 
   // Initialize region by taking ownership of the given regions.
@@ -67,13 +75,7 @@ class S2RegionIntersection final : public S2Region {
   bool MayIntersect(const S2Cell& cell) const override;
 
  private:
-  // Internal copy constructor used only by Clone() that makes a deep copy of
-  // its argument.
-  S2RegionIntersection(const S2RegionIntersection& src);
-
   std::vector<std::unique_ptr<S2Region>> regions_;
-
-  void operator=(const S2RegionIntersection&) = delete;
 };
 
 #endif  // S2_S2REGION_INTERSECTION_H_

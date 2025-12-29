@@ -22,6 +22,7 @@
 #include <cmath>
 #include <new>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
@@ -42,6 +43,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
 #include "s2/s2predicates.h"
+#include "s2/s2region.h"
 
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
@@ -70,11 +72,14 @@ S2Cell::S2Cell(S2CellId id) {
 
 S2Point S2Cell::GetEdgeRaw(int k) const {
   switch (k & 3) {
-    case 0:  return S2::GetVNorm(face_, uv_[1][0]);   // Bottom
-    case 1:  return S2::GetUNorm(face_, uv_[0][1]);   // Right
-    case 2:  return -S2::GetVNorm(face_, uv_[1][1]);  // Top
-    default: return -S2::GetUNorm(face_, uv_[0][0]);  // Left
+    // clang-format off
+    case 0: return  S2::GetVNorm(face_, uv_[1][0]);  // Bottom
+    case 1: return  S2::GetUNorm(face_, uv_[0][1]);  // Right
+    case 2: return -S2::GetVNorm(face_, uv_[1][1]);  // Top
+    case 3: return -S2::GetUNorm(face_, uv_[0][0]);  // Left
+    // clang-format on
   }
+  ABSL_UNREACHABLE();
 }
 
 bool S2Cell::Subdivide(S2Cell children[4]) const {
@@ -147,7 +152,7 @@ double S2Cell::ExactArea() const {
   return S2::Area(v0, v1, v2) + S2::Area(v0, v2, v3);
 }
 
-S2Cell* S2Cell::Clone() const {
+S2Region* S2Cell::Clone() const {
   return new S2Cell(*this);
 }
 
@@ -233,6 +238,7 @@ S2LatLngRect S2Cell::GetRectBound() const {
 
   S2LatLngRect bound;
   switch (face_) {
+    // clang-format off
     case 0:
       bound = S2LatLngRect(R1Interval(-M_PI_4, M_PI_4),
                            S1Interval(-M_PI_4, M_PI_4));
@@ -253,10 +259,12 @@ S2LatLngRect S2Cell::GetRectBound() const {
       bound = S2LatLngRect(R1Interval(-M_PI_4, M_PI_4),
                            S1Interval(-3*M_PI_4, -M_PI_4));
       break;
-    default:
+    case 5:
       bound = S2LatLngRect(R1Interval(-M_PI_2, -kPoleMinLat),
                            S1Interval::Full());
       break;
+    default: ABSL_UNREACHABLE();
+    // clang-format on
   }
   // Finally, we expand the bound to account for the error when a point P is
   // converted to an S2LatLng to test for containment.  (The bound should be
@@ -269,7 +277,7 @@ S2LatLngRect S2Cell::GetRectBound() const {
 }
 
 void S2Cell::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
-  GetCapBound().GetCellUnionBound(cell_ids);
+  *cell_ids = {id_};
 }
 
 bool S2Cell::MayIntersect(const S2Cell& cell) const {
@@ -626,8 +634,6 @@ bool S2Cell::IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
     return false;
   }
 
-  S1ChordAngle min_dist = S1ChordAngle::Infinity();
-
   if (face_ == target.face_) {
     // See `GetDistance(const S2Cell&)` for comments on the implementation.
     int ai = FindFurthestEdge(*this, target);
@@ -639,14 +645,13 @@ bool S2Cell::IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
     const S2Point va2 = GetVertex(ai + 1);
     const S2Point vb1 = target.GetVertex(bi);
     const S2Point vb2 = target.GetVertex(bi + 1);
-    return (S2::UpdateMinDistance(va1, vb1, vb2, &min_dist) &&
-            min_dist < limit) ||
-           (S2::UpdateMinDistance(va2, vb1, vb2, &min_dist) &&
-            min_dist < limit) ||
-           (S2::UpdateMinInteriorDistance(vb1, va1, va2, &min_dist) &&
-            min_dist < limit) ||
-           (S2::UpdateMinInteriorDistance(vb2, va1, va2, &min_dist) &&
-            min_dist < limit);
+    // Note we don't need to check `dist`, if `UpdateMinDistance` returns
+    // `true`, the distance was updated, so is less than `limit`.
+    S1ChordAngle dist = limit;
+    return S2::UpdateMinDistance(va1, vb1, vb2, &dist) ||
+           S2::UpdateMinDistance(va2, vb1, vb2, &dist) ||
+           S2::UpdateMinInteriorDistance(vb1, va1, va2, &dist) ||
+           S2::UpdateMinInteriorDistance(vb2, va1, va2, &dist);
   }
 
   // Otherwise, the minimum distance always occurs between a vertex of one
@@ -657,15 +662,11 @@ bool S2Cell::IsDistanceLess(const S2Cell& target, S1ChordAngle limit) const {
     va[i] = GetVertex(i);
     vb[i] = target.GetVertex(i);
   }
+  S1ChordAngle dist = limit;
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
-      if (S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &min_dist) &&
-          min_dist < limit) {
-        return true;
-      }
-      if (S2::UpdateMinInteriorDistance(vb[i], va[j], va[(j + 1) & 3],
-                                        &min_dist) &&
-          min_dist < limit) {
+      if (S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &dist) ||
+          S2::UpdateMinInteriorDistance(vb[i], va[j], va[(j + 1) & 3], &dist)) {
         return true;
       }
     }

@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -71,7 +72,7 @@ struct PolygonDegeneracy {
 // If the graph edges cannot be assembled into loops, the result is undefined.
 // (An error may or may not be returned.)
 std::vector<PolygonDegeneracy> FindPolygonDegeneracies(
-    const S2Builder::Graph& g, S2Error* error);
+    const S2Builder::Graph& g, S2Error* absl_nonnull error);
 
 // Given a graph representing a polygon, returns true the graph consists
 // entirely of degenerate edges and/or sibling pairs.  Such a graph represents

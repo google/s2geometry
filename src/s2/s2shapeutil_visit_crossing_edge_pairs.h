@@ -18,8 +18,8 @@
 #ifndef S2_S2SHAPEUTIL_VISIT_CROSSING_EDGE_PAIRS_H_
 #define S2_S2SHAPEUTIL_VISIT_CROSSING_EDGE_PAIRS_H_
 
-#include <functional>
-
+#include "absl/base/nullability.h"
+#include "absl/functional/function_ref.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2crossing_edge_query.h"
 #include "s2/s2error.h"
@@ -37,8 +37,8 @@ namespace s2shapeutil {
 // "is_interior" indicates that the crossing is at a point interior to both
 // edges (i.e., not at a vertex).  (The calling function already has this
 // information and it is moderately expensive to recompute.)
-using EdgePairVisitor = std::function<
-  bool (const ShapeEdge& a, const ShapeEdge& b, bool is_interior)>;
+using EdgePairVisitor = absl::FunctionRef<bool(
+    const ShapeEdge& a, const ShapeEdge& b, bool is_interior)>;
 
 // Visits all pairs of crossing edges in the given S2ShapeIndex, terminating
 // early if the given EdgePairVisitor function returns false (in which case
@@ -47,15 +47,15 @@ using EdgePairVisitor = std::function<
 //
 // CAVEAT: Crossings may be visited more than once.
 bool VisitCrossingEdgePairs(const S2ShapeIndex& index, CrossingType type,
-                            const EdgePairVisitor& visitor);
+                            EdgePairVisitor visitor);
 
 // Like the above, but visits all pairs of crossing edges where one edge comes
 // from each S2ShapeIndex.
 //
 // CAVEAT: Crossings may be visited more than once.
 bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
-                            const S2ShapeIndex& b_index,
-                            CrossingType type, const EdgePairVisitor& visitor);
+                            const S2ShapeIndex& b_index, CrossingType type,
+                            EdgePairVisitor visitor);
 
 // Given an S2ShapeIndex containing a single polygonal shape (e.g., an
 // S2Polygon or S2Loop), return true if any loop has a self-intersection
@@ -68,7 +68,8 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
 //
 // TODO(ericv): Add an option to support S2LaxPolygonShape rules (i.e.,
 // duplicate vertices and edges are allowed, but loop crossings are not).
-bool FindSelfIntersection(const S2ShapeIndex& index, S2Error* error);
+bool FindSelfIntersection(const S2ShapeIndex& index,
+                          S2Error* absl_nonnull error);
 
 }  // namespace s2shapeutil
 

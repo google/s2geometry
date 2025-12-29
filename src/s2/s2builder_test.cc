@@ -23,12 +23,15 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
+#include "absl/base/nullability.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -768,7 +771,7 @@ class GraphPersistenceLayer : public S2Builder::Layer {
     return graph_options_;
   }
 
-  void Build(const S2Builder::Graph& g, S2Error* error) override {
+  void Build(const S2Builder::Graph& g, S2Error* absl_nonnull error) override {
     // Verify that all graphs built so far are unchanged.
     for (int i = 0; i < graphs_->size(); ++i) {
       ExpectGraphsEqual((*clones_)[i]->graph(), (*graphs_)[i]);
@@ -1106,7 +1109,7 @@ class InputEdgeIdCheckingLayer : public S2Builder::Layer {
       : expected_(expected), graph_options_(graph_options) {
   }
   GraphOptions graph_options() const override { return graph_options_; }
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   string ToString(const pair<string, vector<int>>& p) {
@@ -1125,7 +1128,8 @@ class InputEdgeIdCheckingLayer : public S2Builder::Layer {
   GraphOptions graph_options_;
 };
 
-void InputEdgeIdCheckingLayer::Build(const Graph& g, S2Error* error) {
+void InputEdgeIdCheckingLayer::Build(const Graph& g,
+                                     S2Error* absl_nonnull error) {
   EdgeInputEdgeIds actual;
   for (Graph::EdgeId e = 0; e < g.num_edges(); ++e) {
     string edge = s2textformat::ToString(
@@ -1804,7 +1808,7 @@ TEST(S2Builder, SnappingTinyLoopRegression) {
   builder.StartLayer(make_unique<S2PolygonLayer>(&polygon, polygon_options));
   builder.AddLoop(*loop);
   builder.AddIsFullPolygonPredicate(
-      [](const S2Builder::Graph&, S2Error*) { return false; });
+      [](const S2Builder::Graph&, S2Error* absl_nonnull) { return false; });
 
   S2Error error;
   builder.Build(&error);
@@ -1814,5 +1818,54 @@ TEST(S2Builder, SnappingTinyLoopRegression) {
   EXPECT_EQ(0, polylines.size());
   EXPECT_EQ(1, polygon.num_loops());
 }
+
+static void BM_NearlyParallelCrossingEdges(benchmark::State& state) {
+  // Given two benchmark arguments p0 and p1, constructs a polyline with p0
+  // edges that goes back and forth repeatedly between two disc-shaped areas
+  // spaced 100 meters apart and 100 microns in radius.  The vertices are
+  // randomly located within the two discs which creates a large number of
+  // self-intersections (approximately 0.25 * p0 ** 2).  This benchmark uses
+  // split_crossing_edges() which adds a new vertex at each intersection, and
+  // since the lines are very close together many lines snap to nearby
+  // intersection points in addition to their own.  S2Builder also adds extra
+  // vertices to ensure that edges are well-separated from non-incident
+  // vertices (see SnapFunction::min_edge_vertex_separation()).
+  //
+  // With 1000 input edges there are ~250,000 intersection points.  Using a 1
+  // micron snap radius each edge snaps to ~4,500 of these intersection points
+  // and so the output has 4.5 million edges.  Using a 10 micron snap radius
+  // each edge snaps to ~45,000 intersection points and the output has about
+  // 45 million edges.
+  const string seed_str = StrCat("BM_NEARLY_PARALLEL_CROSSING_EDGES",
+                                 absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  const int num_edges = state.range(0);
+  const int snap_radius_microns = state.range(1);
+  const auto snap_radius = S2Testing::MetersToAngle(snap_radius_microns / 1e6);
+  const auto edge_length = S2Testing::MetersToAngle(100);
+  const auto perturb_radius = S2Testing::MetersToAngle(0.0001);  // 100 microns
+  S2Point a = s2random::Point(bitgen);
+  S2Point b = S2::GetPointOnLine(a, s2random::Point(bitgen), edge_length);
+  vector<S2Point> vertices;
+  for (int i = 0; i <= num_edges; i += 2) {
+    vertices.push_back(s2random::SamplePoint(bitgen, S2Cap(a, perturb_radius)));
+    vertices.push_back(s2random::SamplePoint(bitgen, S2Cap(b, perturb_radius)));
+  }
+  S2Polyline input(vertices);
+  S2Builder::Options options{IdentitySnapFunction{snap_radius}};
+  options.set_split_crossing_edges(true);
+  S2Polyline output;
+  for (auto _ : state) {
+    S2Builder builder(options);
+    builder.StartLayer(make_unique<S2PolylineLayer>(&output));
+    builder.AddPolyline(input);
+    S2Error error;
+    if (!builder.Build(&error)) ABSL_LOG(ERROR) << error;
+  }
+  ABSL_LOG(INFO) << "Output num_vertices=" << output.num_vertices();
+}
+BENCHMARK(BM_NearlyParallelCrossingEdges)
+->ArgPair(100, 1)->ArgPair(1000, 0)->ArgPair(1000, 1);
 
 }  // namespace

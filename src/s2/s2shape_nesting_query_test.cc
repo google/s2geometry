@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -523,3 +524,51 @@ INSTANTIATE_TEST_SUITE_P(
         {32, 32 / 3, true},
     }));
 
+static void BM_ShapeNestingQueryButtonLoop(benchmark::State& state) {
+  const int num_edges = state.range(0);
+
+  MutableS2ShapeIndex index;
+  int id = index.Add(
+      RingShape(num_edges, {{S2LatLng::FromDegrees(0.5, 0.5), 2.0},
+                            {S2LatLng::FromDegrees(1.0, 0.5), 0.25},
+                            {S2LatLng::FromDegrees(0.0, 0.5), 0.25},
+                            {S2LatLng::FromDegrees(0.5, 1.0), 0.25},
+                            {S2LatLng::FromDegrees(0.5, 0.0), 0.25}}));
+  index.ForceBuild();  // Ensure index is constructed fully outside benchmark.
+
+  S2ShapeNestingQuery query(&index);
+  for (auto _ : state) {
+    vector<S2ShapeNestingQuery::ChainRelation> relations =
+        query.ComputeShapeNesting(id);
+    benchmark::DoNotOptimize(relations);
+  }
+}
+BENCHMARK(BM_ShapeNestingQueryButtonLoop)
+    ->Arg(16)
+    ->Arg(64)
+    ->Arg(1024)
+    ->Arg(32768)
+    ->Arg(1048576);
+
+static void BM_ShapeNestingQueryChainScaling(benchmark::State& state) {
+  const int kChainDepth = state.range(0);
+  constexpr int kNumEdges = 16;
+
+  // Build nested rings of specified depth.
+  vector<RingSpec> rings;
+  for (int i = 0; i < kChainDepth; ++i) {
+    rings.push_back(RingSpec{S2LatLng::FromDegrees(0.0, 0.0), 2.0 / (i + 1)});
+  }
+
+  MutableS2ShapeIndex index;
+  int id = index.Add(RingShape(kNumEdges, rings));
+  index.ForceBuild();  // Ensure index is constructed fully outside benchmark.
+
+  S2ShapeNestingQuery query(&index);
+  for (auto _ : state) {
+    vector<S2ShapeNestingQuery::ChainRelation> relations =
+        query.ComputeShapeNesting(id);
+    benchmark::DoNotOptimize(relations);
+  }
+}
+BENCHMARK(BM_ShapeNestingQueryChainScaling)->DenseRange(3, 20, 1);

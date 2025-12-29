@@ -26,18 +26,19 @@
 #include <memory>
 #include <queue>
 #include <stack>
-#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
+#include "absl/algorithm/container.h"
+#include "absl/base/nullability.h"
 #include "absl/container/fixed_array.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
-#include "absl/utility/utility.h"
+#include "absl/types/span.h"
 
 #include "s2/base/casts.h"
 #include "s2/mutable_s2shape_index.h"
@@ -109,6 +110,18 @@ ABSL_FLAG(int32_t, s2polygon_decode_max_num_loops, 10000000,
 static const unsigned char kCurrentUncompressedEncodingVersionNumber = 1;
 static const unsigned char kCurrentCompressedEncodingVersionNumber = 4;
 
+namespace {
+std::vector<std::unique_ptr<S2Loop>> CopyLoops(
+    absl::Span<const std::unique_ptr<S2Loop>> loops) {
+  std::vector<std::unique_ptr<S2Loop>> copied_loops;
+  copied_loops.reserve(loops.size());
+  for (const std::unique_ptr<S2Loop>& loop : loops) {
+    copied_loops.push_back(std::make_unique<S2Loop>(*loop));
+  }
+  return copied_loops;
+}
+}  // namespace
+
 S2Polygon::S2Polygon() = default;
 
 S2Polygon::S2Polygon(vector<unique_ptr<S2Loop>> loops, S2Debug override)
@@ -123,6 +136,34 @@ S2Polygon::S2Polygon(unique_ptr<S2Loop> loop, S2Debug override)
 
 S2Polygon::S2Polygon(const S2Cell& cell) : s2debug_override_(S2Debug::ALLOW) {
   Init(make_unique<S2Loop>(cell));
+}
+
+S2Polygon::S2Polygon(const S2Polygon& src)
+    : loops_(CopyLoops(src.loops_)),
+      s2debug_override_(src.s2debug_override_),
+      // As with `operator=`, we don't copy
+      // `error_inconsistent_loop_orientations_`, since this is not a property
+      // of the polygon but only of the way the polygon was constructed.
+      num_vertices_(src.num_vertices_),
+      unindexed_contains_calls_(0),
+      bound_(src.bound_),
+      subregion_bound_(src.subregion_bound_) {
+  InitIndex();  // TODO(b/466969293): Copy the index efficiently.
+}
+
+S2Polygon& S2Polygon::operator=(const S2Polygon& src) {
+  if (this == &src) return *this;
+  ClearLoops();  // Also clears index_.
+  loops_ = CopyLoops(src.loops_);
+  s2debug_override_ = src.s2debug_override_;
+  // Don't copy error_inconsistent_loop_orientations_, since this is not a
+  // property of the polygon but only of the way the polygon was constructed.
+  num_vertices_ = src.num_vertices();
+  unindexed_contains_calls_.store(0, std::memory_order_relaxed);
+  bound_ = src.bound_;
+  subregion_bound_ = src.subregion_bound_;
+  InitIndex();  // TODO(b/466969293): Copy the index efficiently.
+  return *this;
 }
 
 S2Polygon::S2Polygon(S2Polygon&& b) noexcept
@@ -181,26 +222,7 @@ void S2Polygon::set_s2debug_override(S2Debug override) {
 
 S2Debug S2Polygon::s2debug_override() const { return s2debug_override_; }
 
-void S2Polygon::Copy(const S2Polygon& src) {
-  ClearLoops();
-  for (int i = 0; i < src.num_loops(); ++i) {
-    loops_.emplace_back(src.loop(i)->Clone());
-  }
-  s2debug_override_ = src.s2debug_override_;
-  // Don't copy error_inconsistent_loop_orientations_, since this is not a
-  // property of the polygon but only of the way the polygon was constructed.
-  num_vertices_ = src.num_vertices();
-  unindexed_contains_calls_.store(0, std::memory_order_relaxed);
-  bound_ = src.bound_;
-  subregion_bound_ = src.subregion_bound_;
-  InitIndex();  // TODO(ericv): Copy the index efficiently.
-}
-
-S2Polygon* S2Polygon::Clone() const {
-  S2Polygon* result = new S2Polygon;
-  result->Copy(*this);
-  return result;
-}
+S2Polygon* S2Polygon::Clone() const { return new S2Polygon(*this); }
 
 vector<unique_ptr<S2Loop>> S2Polygon::Release() {
   // Reset the polygon to be empty.
@@ -230,7 +252,7 @@ bool S2Polygon::IsValid() const {
   return true;
 }
 
-bool S2Polygon::FindValidationError(S2Error* error) const {
+bool S2Polygon::FindValidationError(S2Error* absl_nonnull error) const {
   // S2LegacyValidQuery doesn't have access to the loop depth information via
   // the S2Shape API, so we'll validate it manually.  We just have to check
   // that the depth values are non-negative, and that we don't skip depths.
@@ -475,7 +497,7 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
         origin_loop = loop(i);
       }
     }
-    if (contained_origin.count(origin_loop) != polygon_contains_origin) {
+    if (contained_origin.contains(origin_loop) != polygon_contains_origin) {
       Invert();
     }
   }
@@ -483,7 +505,7 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
   // Each original loop L should have been inverted if and only if it now
   // represents a hole.
   for (size_t i = 0; i < loops_.size(); ++i) {
-    if ((contained_origin.count(loop(i)) != loop(i)->contains_origin()) !=
+    if ((contained_origin.contains(loop(i)) != loop(i)->contains_origin()) !=
         loop(i)->is_hole()) {
       // There is no point in saving the loop index, because the error is a
       // property of the entire set of loops.  In general there is no way to
@@ -644,11 +666,11 @@ bool S2Polygon::Intersects(const S2Polygon& b) const {
 S2Cap S2Polygon::GetCapBound() const { return bound_.GetCapBound(); }
 
 void S2Polygon::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
-  return MakeS2ShapeIndexRegion(&index_).GetCellUnionBound(cell_ids);
+  return S2ShapeIndexRegion(&index_).GetCellUnionBound(cell_ids);
 }
 
 bool S2Polygon::Contains(const S2Cell& target) const {
-  return MakeS2ShapeIndexRegion(&index_).Contains(target);
+  return S2ShapeIndexRegion(&index_).Contains(target);
 }
 
 bool S2Polygon::ApproxContains(const S2Polygon& b, S1Angle tolerance) const {
@@ -676,7 +698,7 @@ bool S2Polygon::ApproxEquals(const S2Polygon& b, S1Angle tolerance) const {
 }
 
 bool S2Polygon::MayIntersect(const S2Cell& target) const {
-  return MakeS2ShapeIndexRegion(&index_).MayIntersect(target);
+  return S2ShapeIndexRegion(&index_).MayIntersect(target);
 }
 
 bool S2Polygon::Contains(const S2Point& p) const {
@@ -703,7 +725,7 @@ bool S2Polygon::Contains(const S2Point& p) const {
     return inside;
   }
   // Otherwise we look up the S2ShapeIndex cell containing this point.
-  return MakeS2ContainsPointQuery(&index_).Contains(p);
+  return S2ContainsPointQuery(&index_).Contains(p);
 }
 
 void S2Polygon::Encode(Encoder* const encoder,
@@ -907,14 +929,14 @@ void S2Polygon::Invert() {
 }
 
 void S2Polygon::InitToComplement(const S2Polygon& a) {
-  Copy(a);
+  *this = a;
   Invert();
 }
 
 bool S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
                                 const S2Builder::SnapFunction& snap_function,
                                 const S2Polygon& a, const S2Polygon& b,
-                                S2Error* error) {
+                                S2Error* absl_nonnull error) {
   S2BooleanOperation::Options options;
   options.set_snap_function(snap_function);
   S2BooleanOperation op(op_type, make_unique<S2PolygonLayer>(this), options);
@@ -948,7 +970,7 @@ void S2Polygon::InitToIntersection(
 
 bool S2Polygon::InitToIntersection(const S2Polygon& a, const S2Polygon& b,
                                    const S2Builder::SnapFunction& snap_function,
-                                   S2Error* error) {
+                                   S2Error* absl_nonnull error) {
   if (!a.bound_.Intersects(b.bound_)) {
     InitNested({});
     return true;  // Success.
@@ -968,7 +990,7 @@ void S2Polygon::InitToUnion(const S2Polygon& a, const S2Polygon& b,
 
 bool S2Polygon::InitToUnion(const S2Polygon& a, const S2Polygon& b,
                             const S2Builder::SnapFunction& snap_function,
-                            S2Error* error) {
+                            S2Error* absl_nonnull error) {
   return InitToOperation(S2BooleanOperation::OpType::UNION, snap_function, a, b,
                          error);
 }
@@ -984,7 +1006,7 @@ void S2Polygon::InitToDifference(const S2Polygon& a, const S2Polygon& b,
 
 bool S2Polygon::InitToDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function,
-                                 S2Error* error) {
+                                 S2Error* absl_nonnull error) {
   return InitToOperation(S2BooleanOperation::OpType::DIFFERENCE, snap_function,
                          a, b, error);
 }
@@ -1004,7 +1026,7 @@ void S2Polygon::InitToSymmetricDifference(
 
 bool S2Polygon::InitToSymmetricDifference(
     const S2Polygon& a, const S2Polygon& b,
-    const S2Builder::SnapFunction& snap_function, S2Error* error) {
+    const S2Builder::SnapFunction& snap_function, S2Error* absl_nonnull error) {
   return InitToOperation(S2BooleanOperation::OpType::SYMMETRIC_DIFFERENCE,
                          snap_function, a, b, error);
 }
@@ -1376,10 +1398,9 @@ bool S2Polygon::IsNormalized() const {
       }
       last_parent = parent;
     }
-    int count = 0;
-    for (int j = 0; j < child->num_vertices(); ++j) {
-      if (vertices.count(child->vertex(j)) > 0) ++count;
-    }
+    int count = absl::c_count_if(
+        child->vertices_span(),
+        [&](const S2Point& v) { return vertices.contains(v); });
     if (count > 1) return false;
   }
   return true;

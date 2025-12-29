@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_format.h"
@@ -90,7 +91,7 @@ inline static void GetShapeEdges(const S2ShapeIndex& index,
 // crossing edges (of the given CrossingType).
 static bool VisitCrossings(const ShapeEdgeVector& shape_edges,
                            CrossingType type, bool need_adjacent,
-                           const EdgePairVisitor& visitor) {
+                           EdgePairVisitor visitor) {
   const int min_crossing_sign = (type == CrossingType::INTERIOR) ? 1 : 0;
   int num_edges = shape_edges.size();
   for (int i = 0; i + 1 < num_edges; ++i) {
@@ -126,9 +127,8 @@ static bool VisitCrossings(const ShapeEdgeVector& shape_edges,
 // optionally be ignored (even if the two edges belong to different edge
 // chains).  This option exists for the benefit of FindSelfIntersection(),
 // which does not need such edge pairs (see below).
-static bool VisitCrossings(
-    const S2ShapeIndex& index, CrossingType type, bool need_adjacent,
-    const EdgePairVisitor& visitor) {
+static bool VisitCrossings(const S2ShapeIndex& index, CrossingType type,
+                           bool need_adjacent, EdgePairVisitor visitor) {
   // TODO(b/262264880): Use brute force if the total number of edges is small
   // enough (using a larger threshold if the S2ShapeIndex is not constructed
   // yet).
@@ -144,7 +144,7 @@ static bool VisitCrossings(
 }
 
 bool VisitCrossingEdgePairs(const S2ShapeIndex& index, CrossingType type,
-                            const EdgePairVisitor& visitor) {
+                            EdgePairVisitor visitor) {
   const bool need_adjacent = (type == CrossingType::ALL);
   return VisitCrossings(index, type, need_adjacent, visitor);
 }
@@ -162,11 +162,13 @@ class IndexCrosser {
   // affects how arguments are passed to the visitor, since for example
   // A.Contains(B) is not the same as B.Contains(A).
   IndexCrosser(const S2ShapeIndex& a_index, const S2ShapeIndex& b_index,
-               CrossingType type, const EdgePairVisitor& visitor, bool swapped)
-      : a_index_(a_index), b_index_(b_index), visitor_(visitor),
+               CrossingType type, EdgePairVisitor visitor, bool swapped)
+      : a_index_(a_index),
+        b_index_(b_index),
+        visitor_(visitor),
         min_crossing_sign_(type == CrossingType::INTERIOR ? 1 : 0),
-        swapped_(swapped), b_query_(&b_index_) {
-  }
+        swapped_(swapped),
+        b_query_(&b_index_) {}
 
   // Given two iterators positioned such that ai->id().Contains(bi->id()),
   // visits all crossings between edges of A and B that intersect a->id().
@@ -199,7 +201,7 @@ class IndexCrosser {
 
   const S2ShapeIndex& a_index_;
   const S2ShapeIndex& b_index_;
-  const EdgePairVisitor& visitor_;
+  const EdgePairVisitor visitor_;
   const int min_crossing_sign_;
   const bool swapped_;
 
@@ -331,8 +333,8 @@ bool IndexCrosser::VisitCrossings(
 }
 
 bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
-                            const S2ShapeIndex& b_index,
-                            CrossingType type, const EdgePairVisitor& visitor) {
+                            const S2ShapeIndex& b_index, CrossingType type,
+                            EdgePairVisitor visitor) {
   // We look for S2CellId ranges where the indexes of A and B overlap, and
   // then test those edges for crossings.
 
@@ -381,8 +383,8 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
 // a multi-loop polygon, adds a prefix indicating which loop is affected.
 static void InitLoopError(S2Error::Code code,
                           const absl::FormatSpec<int, int>& format,
-                          ChainPosition ap, ChainPosition bp,
-                          bool is_polygon, S2Error* error) {
+                          ChainPosition ap, ChainPosition bp, bool is_polygon,
+                          S2Error* absl_nonnull error) {
   *error = S2Error(code, absl::StrFormat(format, ap.offset, bp.offset));
   if (is_polygon) {
     *error = S2Error(
@@ -392,9 +394,9 @@ static void InitLoopError(S2Error::Code code,
 
 // Given two loop edges that cross (including at a shared vertex), return true
 // if there is a crossing error and set "error" to a human-readable message.
-static bool FindCrossingError(const S2Shape& shape,
-                              const ShapeEdge& a, const ShapeEdge& b,
-                              bool is_interior, S2Error* error) {
+static bool FindCrossingError(const S2Shape& shape, const ShapeEdge& a,
+                              const ShapeEdge& b, bool is_interior,
+                              S2Error* absl_nonnull error) {
   bool is_polygon = shape.num_chains() > 1;
   S2Shape::ChainPosition ap = shape.chain_position(a.id().edge_id);
   S2Shape::ChainPosition bp = shape.chain_position(b.id().edge_id);
@@ -455,7 +457,8 @@ static bool FindCrossingError(const S2Shape& shape,
   return false;
 }
 
-bool FindSelfIntersection(const S2ShapeIndex& index, S2Error* error) {
+bool FindSelfIntersection(const S2ShapeIndex& index,
+                          S2Error* absl_nonnull error) {
   if (index.num_shape_ids() == 0) return false;
   ABSL_DCHECK_EQ(1, index.num_shape_ids());
   const S2Shape& shape = *index.shape(0);

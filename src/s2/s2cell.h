@@ -98,6 +98,32 @@ class S2Cell final : public S2Region {
   int orientation() const { return orientation_; }
   bool is_leaf() const { return level_ == S2CellId::kMaxLevel; }
 
+  friend bool operator==(const S2Cell& x, const S2Cell& y);
+#if defined(__cpp_impl_three_way_comparison) && \
+    __cpp_impl_three_way_comparison >= 201907L
+  // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+  friend auto operator<=>(const S2Cell& x, const S2Cell& y) {
+    // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+    return x.id() <=> y.id();
+  }
+#else
+  friend bool operator!=(const S2Cell& x, const S2Cell& y) {
+    return x.id() != y.id();
+  }
+  friend bool operator<(const S2Cell& x, const S2Cell& y) {
+    return x.id() < y.id();
+  }
+  friend bool operator>(const S2Cell& x, const S2Cell& y) {
+    return x.id() > y.id();
+  }
+  friend bool operator<=(const S2Cell& x, const S2Cell& y) {
+    return x.id() <= y.id();
+  }
+  friend bool operator>=(const S2Cell& x, const S2Cell& y) {
+    return x.id() >= y.id();
+  }
+#endif
+
   // These are equivalent to the S2CellId methods, but have a more efficient
   // implementation since the level has been precomputed.
   int GetSizeIJ() const;
@@ -167,7 +193,7 @@ class S2Cell final : public S2Region {
   // can be used with exact predicates to determine spatial relationships to the
   // cell exactly.
   //
-  // GetEdge() normalizes it's return value and thus may no longer be exact.
+  // GetEdge() normalizes its return value and thus may no longer be exact.
   //
   // For convenience, the argument is reduced modulo 4 to the range [0..3].
   S2Point GetEdge(int k) const { return GetEdgeRaw(k).Normalize(); }
@@ -263,7 +289,6 @@ class S2Cell final : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  S2Cell* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
   void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
@@ -292,6 +317,10 @@ class S2Cell final : public S2Region {
   bool Decode(Decoder* decoder);
 
  private:
+  // Implements the S2Region interface.  Note that the copy constructor should
+  // be used instead.
+  S2Region* Clone() const override;
+
   // Returns the latitude or longitude of the cell vertex given by (i,j),
   // where "i" and "j" are either 0 or 1.
   double GetLatitude(int i, int j) const;
@@ -316,26 +345,6 @@ class S2Cell final : public S2Region {
 
 inline bool operator==(const S2Cell& x, const S2Cell& y) {
   return x.id() == y.id();
-}
-
-inline bool operator!=(const S2Cell& x, const S2Cell& y) {
-  return x.id() != y.id();
-}
-
-inline bool operator<(const S2Cell& x, const S2Cell& y) {
-  return x.id() < y.id();
-}
-
-inline bool operator>(const S2Cell& x, const S2Cell& y) {
-  return x.id() > y.id();
-}
-
-inline bool operator<=(const S2Cell& x, const S2Cell& y) {
-  return x.id() <= y.id();
-}
-
-inline bool operator>=(const S2Cell& x, const S2Cell& y) {
-  return x.id() >= y.id();
 }
 
 inline int S2Cell::GetSizeIJ() const {

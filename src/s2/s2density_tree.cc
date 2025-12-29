@@ -197,16 +197,14 @@ class Node {
 bool S2DensityTree::InitToShapeDensity(const S2ShapeIndex& index,
                                        const ShapeWeightFunction& weight_fn,
                                        int64_t approximate_size_bytes,
-                                       int max_level, S2Error* error) {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+                                       int max_level,
+                                       S2Error* absl_nonnull error) {
   *error = S2Error::Ok();
 
   IndexCellWeightFunction index_cell_weight_fn(&index, weight_fn);
-
-  TreeEncoder encoder;
-  BreadthFirstTreeBuilder builder(approximate_size_bytes, max_level, encoder);
+  BreadthFirstTreeBuilder builder(approximate_size_bytes, max_level);
   return builder.Build(
-      [&](const S2CellId cell_id, S2Error* error) {
+      [&](const S2CellId cell_id, S2Error* absl_nonnull error) {
         return index_cell_weight_fn.WeighCell(cell_id, error);
       },
       this, error);
@@ -214,7 +212,8 @@ bool S2DensityTree::InitToShapeDensity(const S2ShapeIndex& index,
 
 bool S2DensityTree::InitToVertexDensity(const S2ShapeIndex& index,
                                         int64_t approximate_size_bytes,
-                                        int max_level, S2Error* error) {
+                                        int max_level,
+                                        S2Error* absl_nonnull error) {
   return InitToShapeDensity(
       index,
       [&](const S2Shape& shape) {
@@ -235,8 +234,8 @@ bool S2DensityTree::InitToVertexDensity(const S2ShapeIndex& index,
 
 bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
                                      int64_t approximate_size_bytes,
-                                     int max_level, S2Error* error) {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+                                     int max_level,
+                                     S2Error* absl_nonnull error) {
   *error = S2Error::Ok();
 
   vector<DecodedPath> cell_paths;
@@ -245,10 +244,9 @@ bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
     cell_paths.emplace_back(tree);
   }
 
-  TreeEncoder encoder;
-  BreadthFirstTreeBuilder builder(approximate_size_bytes, max_level, encoder);
+  BreadthFirstTreeBuilder builder(approximate_size_bytes, max_level);
   return builder.Build(
-      [&](S2CellId cell_id, S2Error* error) -> int64_t {
+      [&](S2CellId cell_id, S2Error* absl_nonnull error) -> int64_t {
         int64_t sum = 0;
         bool contained = true;
 
@@ -270,8 +268,8 @@ bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
 }
 
 bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
-                                     int max_level, S2Error* error) {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+                                     int max_level,
+                                     S2Error* absl_nonnull error) {
   *error = S2Error::Ok();
 
   TreeEncoder encoder;
@@ -298,8 +296,7 @@ bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
 }
 
 bool S2DensityTree::VisitCells(const CellVisitor& visitor_fn,
-                               S2Error* error) const {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+                               S2Error* absl_nonnull error) const {
   *error = S2Error::Ok();
 
   for (int face = 0; face < decoded_faces_.size(); ++face) {
@@ -318,7 +315,7 @@ bool S2DensityTree::VisitCells(const CellVisitor& visitor_fn,
 
 bool S2DensityTree::VisitRecursive(const CellVisitor& visitor_fn,
                                    S2CellId cell_id, int64_t position,
-                                   S2Error* error) const {
+                                   S2Error* absl_nonnull error) const {
   Decoder decoder(encoded_.data(), encoded_.size());
   decoder.skip(position);
 
@@ -354,8 +351,7 @@ bool S2DensityTree::VisitRecursive(const CellVisitor& visitor_fn,
 
 int64_t S2DensityTree::GetCellWeight(const S2CellId cell_id,
                                      DecodedPath* cell_path,
-                                     S2Error* error) const {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+                                     S2Error* absl_nonnull error) const {
   *error = S2Error::Ok();
 
   const Cell* cell = cell_path->GetCell(cell_id, error);
@@ -368,8 +364,7 @@ int64_t S2DensityTree::GetCellWeight(const S2CellId cell_id,
 
 int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
                                            DecodedPath* cell_path,
-                                           S2Error* error) const {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+                                           S2Error* absl_nonnull error) const {
   *error = S2Error::Ok();
   ABSL_DCHECK(cell_path != nullptr) << "decoder must be non-nullptr";
 
@@ -389,7 +384,7 @@ int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
 int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
                                            const Cell& cell,
                                            DecodedPath* cell_path,
-                                           S2Error* error) const {
+                                           S2Error* absl_nonnull error) const {
   double scale = 1.0;
   Node node(cell_id, &cell, cell_path);
 
@@ -408,9 +403,8 @@ int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
   return MathUtil::Round<int64_t>(scale * node.weight());
 }
 
-vector<S2CellUnion> S2DensityTree::GetPartitioning(int64_t max_weight,
-                                                   S2Error* error) const {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
+vector<S2CellUnion> S2DensityTree::GetPartitioning(
+    int64_t max_weight, S2Error* absl_nonnull error) const {
   *error = S2Error::Ok();
 
   // Sample cells at 1/16th of the desired size. This yields a more efficient
@@ -506,7 +500,8 @@ vector<S2CellUnion> S2DensityTree::GetPartitioning(int64_t max_weight,
   return partitioning;
 }
 
-btree_map<S2CellId, int64_t> S2DensityTree::Decode(S2Error* error) const {
+btree_map<S2CellId, int64_t> S2DensityTree::Decode(
+    S2Error* absl_nonnull error) const {
   btree_map<S2CellId, int64_t> weights;
 
   VisitCells(
@@ -542,7 +537,7 @@ void S2DensityTree::Encode(Encoder* encoder) const {
 // IndexCellWeightFunction ///////////////////////////////////
 
 int64_t S2DensityTree::IndexCellWeightFunction::WeighCell(
-    const S2CellId cell_id, S2Error*) {
+    const S2CellId cell_id, S2Error* absl_nonnull) {
   int64_t sum = 0;
   bool all_contained = true;
 
@@ -564,7 +559,7 @@ int64_t S2DensityTree::IndexCellWeightFunction::WeighCell(
 
 bool S2DensityTree::BreadthFirstTreeBuilder::Build(
     const CellWeightFunction& weight_fn, S2DensityTree* tree,
-    S2Error* error) const {
+    S2Error* absl_nonnull error) {
   vector<std::pair<S2CellId, S2CellId>> ranges{{
       S2CellId::Begin(S2CellId::kMaxLevel),
       S2CellId::End(S2CellId::kMaxLevel),
@@ -627,7 +622,8 @@ bool S2DensityTree::BreadthFirstTreeBuilder::Build(
 
 // Cell ///////////////////////////////////////////
 
-bool S2DensityTree::Cell::Decode(Decoder& decoder, S2Error* error) {
+bool S2DensityTree::Cell::Decode(Decoder& decoder,
+                                 S2Error* absl_nonnull error) {
   uint64_t bits;
   if (!decoder.get_varint64(&bits)) {
     *error = S2Error::Internal(absl::StrCat(
@@ -688,7 +684,7 @@ void S2DensityTree::Cell::Clear() {
 }
 
 bool S2DensityTree::Cell::DecodeAt(const S2DensityTree* tree, uint64_t pos,
-                                   S2Error* error) {
+                                   S2Error* absl_nonnull error) {
   Decoder decoder(tree->encoded_.data(), tree->encoded_.size());
   decoder.skip(pos);
   return Decode(decoder, error);
@@ -787,7 +783,7 @@ void S2DensityTree::TreeEncoder::Clear() {
 
 // static
 bool S2DensityTree::DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
-                                 S2Error* error) {
+                                 S2Error* absl_nonnull error) {
   // Verify the version string.  Check the available length first because
   // Decoder::getn() does not check bounds for us.
   if (decoder->avail() < kVersion.size()) {
@@ -850,7 +846,7 @@ bool S2DensityTree::DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
 }
 
 const S2DensityTree::Cell* S2DensityTree::DecodedPath::GetCell(
-    const S2CellId cell_id, S2Error* error) {
+    const S2CellId cell_id, S2Error* absl_nonnull error) {
   // If the new cell is on a different face, load the new face and reset the
   // cell stack before proceeding.
   if (last_.face() != cell_id.face()) {
@@ -865,7 +861,8 @@ const S2DensityTree::Cell* S2DensityTree::DecodedPath::GetCell(
   return LoadCell(cell_id, error);
 }
 
-void S2DensityTree::DecodedPath::LoadFace(int face, S2Error* error) {
+void S2DensityTree::DecodedPath::LoadFace(int face,
+                                          S2Error* absl_nonnull error) {
   S2DensityTree::Cell* cell = &stack_[0];
 
   const int64_t offset = tree_->decoded_faces_[face];
@@ -877,7 +874,7 @@ void S2DensityTree::DecodedPath::LoadFace(int face, S2Error* error) {
 }
 
 const S2DensityTree::Cell* S2DensityTree::DecodedPath::LoadCell(
-    S2CellId cell_id, S2Error* error) {
+    S2CellId cell_id, S2Error* absl_nonnull error) {
   const int start_level = last_.GetCommonAncestorLevel(cell_id);
   const int cell_level = cell_id.level();
 
@@ -970,7 +967,6 @@ S2CellUnion S2DensityTree::Leaves(S2Error* absl_nonnull error) const {
 S2DensityTree S2DensityTree::Dilate(const S2DensityTree& tree, S1Angle radius,
                                     int max_level_diff,
                                     S2Error* absl_nonnull error) {
-  ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
   *error = S2Error::Ok();
 
   // Get the leaves of the density tree as an S2CellUnion.

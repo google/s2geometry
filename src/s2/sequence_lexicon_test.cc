@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 
@@ -115,3 +116,41 @@ TEST(SequenceLexicon, MoveAssignmentOperator) {
   ExpectSequence(Seq{7, 8}, lex.sequence(1));
 }
 
+// A dense_hash_set of this size is slightly more than "typically" full.
+static constexpr int kMaxBenchIds = 600000;
+
+static void BM_AddInt32Sequence(benchmark::State& state) {
+  const int size = state.range(0);
+  vector<int32_t> values(size);
+  while (state.KeepRunningBatch(kMaxBenchIds)) {
+    SequenceLexicon<int32_t> lex;
+    for (int i = 0; i < kMaxBenchIds; ++i) {
+      for (int j = 0; j < size; ++j) {
+        values[j] = i + j;
+      }
+      lex.Add(values.begin(), values.end());
+    }
+  }
+}
+BENCHMARK(BM_AddInt32Sequence)->Arg(1)->Arg(2)->Arg(10);
+
+static void BM_FindInt32Sequence(benchmark::State& state) {
+  const int size = state.range(0);
+  vector<int32_t> values(size);
+  SequenceLexicon<int32_t> lex;
+  for (int i = 0; i < kMaxBenchIds; ++i) {
+    for (int j = 0; j < size; ++j) {
+      values[j] = i + j;
+    }
+    lex.Add(values.begin(), values.end());
+  }
+  while (state.KeepRunningBatch(kMaxBenchIds)) {
+    for (int i = 0; i < kMaxBenchIds; ++i) {
+      for (int j = 0; j < size; ++j) {
+        values[j] = i + j;
+      }
+      lex.Add(values.begin(), values.end());
+    }
+  }
+}
+BENCHMARK(BM_FindInt32Sequence)->Arg(1)->Arg(2)->Arg(10);

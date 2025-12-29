@@ -182,7 +182,6 @@ class S2Cap final : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  S2Cap* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
   void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const override;
@@ -218,6 +217,10 @@ class S2Cap final : public S2Region {
                     S1Angle max_error = S1Angle::Radians(1e-14)) const;
 
  private:
+  // Implements the S2Region interface.  Note that the copy constructor should
+  // be used instead.
+  S2Region* Clone() const override;
+
   // Here are some useful relationships between the cap height (h), the cap
   // radius (r), the maximum chord length from the cap's center (d), and the
   // radius of cap's base (a).

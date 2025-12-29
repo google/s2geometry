@@ -20,10 +20,12 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -80,6 +82,40 @@ TEST(S2CellUnion, DefaultConstructor) {
   vector<S2CellId> ids;
   S2CellUnion empty(ids);
   EXPECT_TRUE(empty.empty());
+}
+
+TEST(S2CellUnion, CopyableConstructable) {
+  S2CellUnion cell_union({S2CellId::FromFace(0)});
+  ASSERT_EQ(cell_union.size(), 1);
+
+  S2CellUnion copy(cell_union);
+  EXPECT_THAT(copy, Eq(cell_union));
+}
+
+TEST(S2CellUnion, CopyableAssignable) {
+  S2CellUnion cell_union({S2CellId::FromFace(0)});
+  ASSERT_EQ(cell_union.size(), 1);
+
+  S2CellUnion copy;
+  copy = cell_union;
+  EXPECT_THAT(copy, Eq(cell_union));
+}
+
+TEST(S2CellUnion, MoveConstructable) {
+  S2CellUnion cell_union({S2CellId::FromFace(0)});
+  ASSERT_EQ(cell_union.size(), 1);
+
+  S2CellUnion moved_to(std::move(cell_union));
+  EXPECT_THAT(moved_to, Eq(S2CellUnion({S2CellId::FromFace(0)})));
+}
+
+TEST(S2CellUnion, MoveAssignable) {
+  S2CellUnion cell_union({S2CellId::FromFace(0)});
+  ASSERT_EQ(cell_union.size(), 1);
+
+  S2CellUnion moved_to;
+  moved_to = std::move(cell_union);
+  EXPECT_THAT(moved_to, Eq(S2CellUnion({S2CellId::FromFace(0)})));
 }
 
 TEST(S2CellUnion, S2CellIdConstructor) {
@@ -877,3 +913,30 @@ TEST(S2CellUnion, IteratorWorks) {
   EXPECT_THAT(iter.done(), IsFalse());
   EXPECT_THAT(iter.id(), Eq(S2CellId::FromFace(0)));
 }
+
+TEST(S2CellUnion, S2CoderWorks) {
+  S2CellUnion cell_union({S2CellId::FromFace(3)});
+
+  S2Error error;
+  auto decoded = s2coding::RoundTrip(S2CellUnion::Coder(), cell_union, error);
+  EXPECT_EQ(cell_union, decoded);
+}
+
+static void BM_InitFromBeginEnd(benchmark::State& state) {
+  // Check random ranges of leaf cells.
+  const string seed_str =
+      StrCat("INIT_FROM_BEGIN_END", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  S2CellUnion cell_union;
+  for (auto s : state) {
+    state.PauseTiming();
+    S2CellId x = s2random::CellId(bitgen, S2CellId::kMaxLevel);
+    S2CellId y = s2random::CellId(bitgen, S2CellId::kMaxLevel);
+    using std::swap;
+    if (x > y) swap(x, y);
+    state.ResumeTiming();
+    cell_union.InitFromMinMax(x, y);
+  }
+}
+BENCHMARK(BM_InitFromBeginEnd);

@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
 #include "absl/container/fixed_array.h"
@@ -302,5 +303,43 @@ TEST_F(S2PointCompressionTest, FirstPointOnFaceEdge) {
   ABSL_CHECK(result[0] == points[0].xyz);
   ABSL_CHECK(result[1] == points[1].xyz);
 }
+
+void BM_S2EncodePointsCompressed(benchmark::State& state) {
+  const int num_points = state.range(0);
+  // Level doesn't affect speed much.
+  int level = absl::GetFlag(FLAGS_s2point_compression_bm_level);
+  // Random points aren't that representative, use points from a polygon.
+  const vector<S2Point> points = MakeRegularPoints(
+      num_points, absl::GetFlag(FLAGS_s2point_compression_bm_radius_km), level);
+  FixedArray<S2XYZFaceSiTi> pts(num_points);
+  MakeXYZFaceSiTiPoints(points, MakeSpan(pts));
+  Encoder encoder;
+  for (auto s : state) {
+    encoder.clear();
+    S2EncodePointsCompressed(pts, level, &encoder);
+    benchmark::DoNotOptimize(encoder);
+  }
+}
+BENCHMARK(BM_S2EncodePointsCompressed)->Range(3, 1 << 20);
+
+void BM_S2DecodePointsCompressed(benchmark::State& state) {
+  const int num_points = state.range(0);
+  int level = absl::GetFlag(FLAGS_s2point_compression_bm_level);
+  const vector<S2Point> points = MakeRegularPoints(
+      num_points, absl::GetFlag(FLAGS_s2point_compression_bm_radius_km), level);
+  Encoder encoder;
+  FixedArray<S2XYZFaceSiTi> pts(num_points);
+  MakeXYZFaceSiTiPoints(points, MakeSpan(pts));
+  S2EncodePointsCompressed(pts, level, &encoder);
+  Decoder decoder;
+  vector<S2Point> decoded_points(points.size());
+  for (auto s : state) {
+    decoder.reset(encoder.base(), encoder.length());
+    ABSL_CHECK(
+        S2DecodePointsCompressed(&decoder, level, MakeSpan(decoded_points)));
+    benchmark::DoNotOptimize(decoder);
+  }
+}
+BENCHMARK(BM_S2DecodePointsCompressed)->Range(3, 1 << 20);
 
 }  // namespace

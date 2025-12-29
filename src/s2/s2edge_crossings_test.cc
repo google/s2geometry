@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
@@ -621,3 +622,59 @@ TEST(S2, CompareEdgesOrderInvariant) {
 }
 
 }  // namespace
+
+// Follows ApproximatelyOrdered check from //util/geometry/s2edge_crossings.cc.
+MATCHER_P2(ApproximatelyOnEdge, a, b, "") {
+  constexpr double kTolerance = S2::kIntersectionError.radians();
+  if ((arg - a).Norm2() <= kTolerance * kTolerance) return true;
+  if ((arg - b).Norm2() <= kTolerance * kTolerance) return true;
+  return s2pred::OrderedCCW(a, arg, b, S2::RobustCrossProd(a, b).Normalize());
+}
+
+template <S2Point (*Func)(const S2Point&, const S2Point&, const S2Point&,
+                          const S2Point&)>
+void BM_GetIntersection(benchmark::State& state) {
+  const string seed_str =
+      absl::StrCat("BM_GET_INTERSECTION", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  GetIntersectionStats stats;
+  static constexpr int kNumIsects = 100;
+  struct Isect { S2Point a, b, c, d; };
+  vector<Isect> isects(kNumIsects);
+  for (int i = 0; i < kNumIsects; ++i) {
+    // Choose edges with lengths between about 6 meters and 6 km.
+    double ab_len = s2random::LogUniform(bitgen, 1e-6, 1e-3);
+    double cd_len = s2random::LogUniform(bitgen, 1e-6, 1e-3);
+    S2Point ab_dir = ab_len * s2random::Point(bitgen);
+    S2Point cd_dir = cd_len * s2random::Point(bitgen);
+    Isect isect;
+    S2Point p = s2random::Point(bitgen);
+    isect.a = (p - absl::Uniform(bitgen, 0.0, 1.0) * ab_dir).Normalize();
+    isect.b = (isect.a + ab_dir).Normalize();
+    isect.c = (p - absl::Uniform(bitgen, 0.0, 1.0) * cd_dir).Normalize();
+    isect.d = (isect.c + cd_dir).Normalize();
+    isects[i] = isect;
+  }
+  int i = 0;
+  for (auto s : state) {
+    const Isect& isect = isects[i++ % kNumIsects];
+    benchmark::DoNotOptimize(Func(isect.a, isect.b, isect.c, isect.d));
+  }
+  // Do not print stats, since that messes up benchmark output and benchy
+  // parsing.
+  // stats.Print();
+}
+BENCHMARK(BM_GetIntersection<&S2::GetIntersection>);
+
+S2Point GetIntersectionStableLDIgnoreValidity(const S2Point& a,
+                                              const S2Point& b,
+                                              const S2Point& c,
+                                              const S2Point& d) {
+  S2Point result;
+  S2::internal::GetIntersectionStableLD(a, b, c, d, &result);
+  return result;
+}
+BENCHMARK(BM_GetIntersection<&GetIntersectionStableLDIgnoreValidity>);
+BENCHMARK(BM_GetIntersection<&S2::internal::GetIntersectionExact>);

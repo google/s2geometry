@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "absl/base/macros.h"
+#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -510,7 +511,7 @@ class S2Builder {
   // This predicate is only needed by layers that are assembled into polygons.
   // It is not used by other layer types.
   using IsFullPolygonPredicate =
-      std::function<bool (const Graph& g, S2Error* error)>;
+      std::function<bool(const Graph& g, S2Error* absl_nonnull error)>;
 
   // Default constructor; requires Init() to be called.
   S2Builder();
@@ -643,7 +644,7 @@ class S2Builder {
   // A predicate that returns an error indicating that no polygon predicate
   // has been specified.
   static bool IsFullPolygonUnspecified(const S2Builder::Graph& g,
-                                       S2Error* error);
+                                       S2Error* absl_nonnull error);
 
   // Returns a predicate that returns a constant value (true or false);
   static IsFullPolygonPredicate IsFullPolygon(bool is_full);
@@ -717,7 +718,7 @@ class S2Builder {
   // can be reused.
   //
   // REQUIRES: error != nullptr.
-  bool Build(S2Error* error);
+  bool Build(S2Error* absl_nonnull error);
 
   // Clears all input data and resets the builder state.  Any options
   // specified are preserved.
@@ -922,7 +923,7 @@ class S2Builder {
   double edge_snap_radius_sin2_;
 
   // A copy of the argument to Build().
-  S2Error* error_;
+  S2Error* absl_nonnull error_;
 
   // True if snapping was requested.  This is true if either snap_radius() is
   // positive, or split_crossing_edges() is true (which implicitly requests

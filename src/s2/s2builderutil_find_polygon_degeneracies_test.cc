@@ -20,13 +20,16 @@
 #include <algorithm>
 #include <memory>
 #include <ostream>
+#include <random>
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "absl/base/attributes.h"
+#include "absl/base/nullability.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
@@ -103,7 +106,7 @@ class DegeneracyCheckingLayer : public S2Builder::Layer {
     return GraphOptions(EdgeType::DIRECTED, DegenerateEdges::DISCARD_EXCESS,
                         DuplicateEdges::KEEP, SiblingPairs::DISCARD_EXCESS);
   }
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   vector<TestDegeneracy> expected_;
@@ -117,7 +120,8 @@ std::ostream& operator<<(std::ostream& os, absl::Span<const TestDegeneracy> v) {
   return os;
 }
 
-void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
+void DegeneracyCheckingLayer::Build(const Graph& g,
+                                    S2Error* absl_nonnull error) {
   auto degeneracies = FindPolygonDegeneracies(g, error);
   // Convert the output into a human-readable format.
   vector<TestDegeneracy> actual;
@@ -140,7 +144,7 @@ void ExpectDegeneracies(string_view polygon_str,
   builder.StartLayer(make_unique<DegeneracyCheckingLayer>(expected));
   auto polygon = s2textformat::MakeLaxPolygonOrDie(polygon_str);
   builder.AddIsFullPolygonPredicate(
-      [&polygon](const Graph& graph, S2Error* error) {
+      [&polygon](const Graph& graph, S2Error* absl_nonnull error) {
         return polygon->GetReferencePoint().contained;
       });
   builder.AddShape(*polygon);
@@ -206,5 +210,57 @@ TEST(FindPolygonDegeneracies, SiblingPairHolesWithinFull) {
       {"1:0, 0:1", true}, {"0:0, 1:0", true}, {"1:0, 0:0", true}
     });
 }
+
+class DegeneracyBenchmarkLayer : public S2Builder::Layer {
+ public:
+  explicit DegeneracyBenchmarkLayer(benchmark::State* state) : state_(state) {}
+
+  GraphOptions graph_options() const override {
+    return GraphOptions(EdgeType::DIRECTED, DegenerateEdges::DISCARD_EXCESS,
+                        DuplicateEdges::KEEP, SiblingPairs::DISCARD_EXCESS);
+  }
+
+  void Build(const Graph& g, S2Error* absl_nonnull error) override {
+    for (auto _ : *state_) {
+      S2Error error;
+      FindPolygonDegeneracies(g, &error);
+    }
+  }
+
+ private:
+  benchmark::State* state_;
+};
+
+static void BM_FindPolygonDegeneracies(benchmark::State& state) {
+  // Benchmark argument is the number of degenerate components to create.
+  //
+  // To tune the kMaxUnindexedSignComputations parameter in the .cc file, run
+  // this benchmark twice: once with the parameter set to zero and once with
+  // it set to 1000.  Then interpolate to find the parameter value where these
+  // two methods are equally fast.
+  //
+  // The benchmark geometry consists of a fractal loop with about 200,000
+  // edges and N isolated degenerate edges (i.e. degenerate shells or holes).
+  const string seed_str = absl::StrCat("FIND_POLYGON_DEGENERACIES",
+                                       absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  S2Builder builder{S2Builder::Options()};
+  builder.StartLayer(make_unique<DegeneracyBenchmarkLayer>(&state));
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(200000);  // Actually 3 * 65536.
+  S2Point center(1, 0, 0);
+  S1Angle radius = S1Angle::Degrees(20);
+  builder.AddLoop(*fractal.MakeLoop(S2::GetFrame(center), radius));
+  for (int i = 0; i < state.range(0); ++i) {
+    S2Point p = s2random::SamplePoint(bitgen, S2Cap(center, 2 * radius));
+    builder.AddEdge(p, p);
+  }
+  S2Error error;
+  ABSL_CHECK(builder.Build(&error)) << error;
+}
+BENCHMARK(BM_FindPolygonDegeneracies)
+->Arg(1)->Arg(2)->Arg(3)
+->Arg(10)->Arg(20)->Arg(30)->Arg(40)->Arg(50)->Arg(1000);
 
 }  // namespace s2builderutil

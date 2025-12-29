@@ -23,6 +23,8 @@ exports_files(
             "s2*.cc",
         ],
     ) + [
+        "gmock_matchers.h",
+        "gmock_matchers.cc",
         "thread_testing.h",
         "thread_testing.cc",
     ],

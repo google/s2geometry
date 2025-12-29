@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_set.h"
@@ -53,6 +54,7 @@ using ::testing::IsFalse;
 using ::testing::IsTrue;
 using ::testing::Le;
 using ::testing::SizeIs;
+using ::testing::UnorderedElementsAreArray;
 
 // Cell IDs covering Central Park in New York City
 constexpr static string_view kCentralParkATokens[] = {
@@ -332,7 +334,7 @@ TEST(S2CellIteratorJoin, AllPairsSeen) {
         return true;
       });
 
-  EXPECT_THAT(brute_pairs, Eq(join_pairs));
+  EXPECT_THAT(join_pairs, UnorderedElementsAreArray(brute_pairs));
 }
 
 TEST(S2CellIteratorJoin, b299938257Regression) {
@@ -372,5 +374,131 @@ TEST(S2CellIteratorJoin, b299938257Regression) {
   EXPECT_THAT(count, Eq(8));
 }
 
+static void BM_IterateOverlappingFractal(benchmark::State& state) {
+  const int num_edges = state.range(0);
+
+  // Coordinate frame to use to generate fractal.
+  const Matrix3x3_d kFrame(  //
+      1.0, 0.0, 0.0,         //
+      0.0, 1.0, 0.0,         //
+      0.0, 0.0, 1.0          //
+  );
+
+  std::mt19937_64 bitgen;
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(num_edges);
+
+  S2Polygon polygon_a(fractal.MakeLoop(kFrame, S1Angle::Degrees(10)));
+  const MutableS2ShapeIndex& index_a = polygon_a.index();
+  index_a.ForceBuild();
+
+  S2Polygon polygon_b(fractal.MakeLoop(kFrame, S1Angle::Degrees(8)));
+  const MutableS2ShapeIndex& index_b = polygon_b.index();
+  index_b.ForceBuild();
+
+  for (auto _ : state) {
+    MakeS2CellIteratorJoin(&index_a, &index_b)
+        .Join([](const MutableS2ShapeIndex::Iterator& iter_a,
+                 const MutableS2ShapeIndex::Iterator& iter_b) {
+          return true;
+        });
+  }
+}
+BENCHMARK(BM_IterateOverlappingFractal)->Range(4096, 2000000);
+
+static void BM_IterateDisjointFractal(benchmark::State& state) {
+  const int num_edges = state.range(0);
+
+  // Fractal loops are build around the z-axis of a frame, so we'll define two
+  // frames with z-axes 90 degrees apart to build two separate fractals.
+  const Matrix3x3_d kFrameA(  //
+      1.0, 0.0, 0.0,          //
+      0.0, 1.0, 0.0,          //
+      0.0, 0.0, 1.0           //
+  );
+
+  const Matrix3x3_d kFrameB(  //
+      1.0, 0.0, 0.0,          //
+      1.0, 0.0, -1.0,         //
+      0.0, 1.0, 0.0           //
+  );
+
+  std::mt19937_64 bitgen;
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(num_edges);
+
+  S2Polygon polygon_a(fractal.MakeLoop(kFrameA, S1Angle::Degrees(10)));
+  const MutableS2ShapeIndex& index_a = polygon_a.index();
+  index_a.ForceBuild();
+
+  S2Polygon polygon_b(fractal.MakeLoop(kFrameB, S1Angle::Degrees(8)));
+  const MutableS2ShapeIndex& index_b = polygon_b.index();
+  index_b.ForceBuild();
+
+  for (auto _ : state) {
+    MakeS2CellIteratorJoin(&index_a, &index_b)
+        .Join([](const MutableS2ShapeIndex::Iterator& iter_a,
+                 const MutableS2ShapeIndex::Iterator& iter_b) {
+          return true;
+        });
+  }
+}
+BENCHMARK(BM_IterateDisjointFractal)->Range(4096, 2000000);
+
+static void BM_IterateFractalTolerant(benchmark::State& state) {
+  // Coordinate frame to use to generate fractal.
+  const Matrix3x3_d kFrame(  //
+      1.0, 0.0, 0.0,         //
+      0.0, 1.0, 0.0,         //
+      0.0, 0.0, 1.0          //
+  );
+
+  const S1ChordAngle kTolerance = S1ChordAngle::Degrees(0.1);
+
+  std::mt19937_64 bitgen;
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(state.range(0));
+
+  S2Polygon polygon(fractal.MakeLoop(kFrame, S1Angle::Degrees(10)));
+  const MutableS2ShapeIndex& index = polygon.index();
+  index.ForceBuild();
+
+  int count = 0;
+  for (auto _ : state) {
+    MakeS2CellIteratorJoin(&index, &index, kTolerance)
+        .Join([&](const MutableS2ShapeIndex::Iterator& iter_a,
+                  const MutableS2ShapeIndex::Iterator& iter_b) {
+          ++count;
+          return true;
+        });
+  }
+  state.SetItemsProcessed(count);
+}
+BENCHMARK(BM_IterateFractalTolerant)->Arg(128)->Arg(512)->Arg(4096)->Arg(8192);
+
+static void BM_IterateFractalTolerantDisjoint(benchmark::State& state) {
+  const S1ChordAngle kTolerance = S1ChordAngle::Degrees(0.1);
+
+  std::mt19937_64 bitgen;
+  S2Fractal fractal(bitgen);
+  fractal.SetLevelForApproxMaxEdges(1000);
+
+  S2Polygon polygon_a(fractal.MakeLoop(UpFrameAt(0, 0), S1Angle::Degrees(10)));
+  const MutableS2ShapeIndex& index_a = polygon_a.index();
+  index_a.ForceBuild();
+
+  double lat = state.range(0);
+  S2Polygon polygon_b(
+      fractal.MakeLoop(UpFrameAt(lat, 0), S1Angle::Degrees(10)));
+  const MutableS2ShapeIndex& index_b = polygon_b.index();
+  index_b.ForceBuild();
+
+  for (auto _ : state) {
+    MakeS2CellIteratorJoin(&index_a, &index_b, kTolerance)
+        .Join([](const MutableS2ShapeIndex::Iterator& iter_a,
+                 const MutableS2ShapeIndex::Iterator& iter_b) { return true; });
+  }
+}
+BENCHMARK(BM_IterateFractalTolerantDisjoint)->Arg(5)->Arg(10)->Arg(20);
 
 }  // namespace

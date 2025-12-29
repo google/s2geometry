@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
@@ -169,7 +170,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   void Init(std::vector<std::unique_ptr<S2Polyline>>* polylines,
@@ -194,7 +195,7 @@ class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
     return layer_.graph_options();
   }
 
-  void Build(const Graph& g, S2Error* error) override {
+  void Build(const Graph& g, S2Error* absl_nonnull error) override {
     layer_.Build(g, error);
     if (error->ok()) {
       for (auto& polyline : polylines_) {

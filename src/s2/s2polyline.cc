@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/fixed_array.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
@@ -33,7 +34,6 @@
 #include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/types/span.h"
-#include "absl/utility/utility.h"
 
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -53,6 +53,7 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polyline_measures.h"
@@ -65,6 +66,7 @@ using absl::flat_hash_set;
 using absl::Span;
 using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolylineLayer;
+using s2internal::MakeS2PointArrayForOverwrite;
 using std::make_unique;
 using std::max;
 using std::min;
@@ -75,6 +77,22 @@ static const unsigned char kCurrentCompressedEncodingVersionNumber = 2;
 
 S2Polyline::S2Polyline()
   : s2debug_override_(S2Debug::ALLOW) {}
+
+S2Polyline::S2Polyline(const S2Polyline& src)
+    : s2debug_override_(src.s2debug_override_),
+      num_vertices_(src.num_vertices_),
+      vertices_(MakeS2PointArrayForOverwrite(num_vertices_)) {
+  std::copy_n(src.vertices_.get(), num_vertices_, vertices_.get());
+}
+
+S2Polyline& S2Polyline::operator=(const S2Polyline& src) {
+  if (this == &src) return *this;
+  s2debug_override_ = src.s2debug_override_;
+  num_vertices_ = src.num_vertices_;
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+  std::copy_n(src.vertices_.get(), num_vertices_, vertices_.get());
+  return *this;
+}
 
 S2Polyline::S2Polyline(S2Polyline&& other) noexcept
     : s2debug_override_(other.s2debug_override_),
@@ -117,8 +135,8 @@ S2Debug S2Polyline::s2debug_override() const {
 
 void S2Polyline::Init(Span<const S2Point> vertices) {
   num_vertices_ = vertices.size();
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
-  std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+  std::copy_n(vertices.data(), num_vertices_, vertices_.get());
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
     ABSL_CHECK(IsValid());
   }
@@ -126,7 +144,7 @@ void S2Polyline::Init(Span<const S2Point> vertices) {
 
 void S2Polyline::Init(Span<const S2LatLng> vertices) {
   num_vertices_ = vertices.size();
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
   for (int i = 0; i < num_vertices_; ++i) {
     vertices_[i] = vertices[i].ToPoint();
   }
@@ -165,7 +183,7 @@ bool S2Polyline::IsValid() const {
   return true;
 }
 
-bool S2Polyline::FindValidationError(S2Error* error) const {
+bool S2Polyline::FindValidationError(S2Error* absl_nonnull error) const {
   // All vertices must be unit length.
   for (int i = 0; i < num_vertices(); ++i) {
     if (!S2::IsUnitLength(vertex(i))) {
@@ -190,18 +208,6 @@ bool S2Polyline::FindValidationError(S2Error* error) const {
     }
   }
   return false;
-}
-
-S2Polyline::S2Polyline(const S2Polyline& src)
-  : num_vertices_(src.num_vertices_),
-    vertices_(new S2Point[num_vertices_]) {
-  // TODO(user, ericv): Decide whether to use a canonical empty
-  // representation.
-  // If num_vertices_ == 0, then src.vertices_ will be null if src was default
-  // constructed.
-  if (num_vertices_ != 0) {
-    std::copy(&src.vertices_[0], &src.vertices_[num_vertices_], &vertices_[0]);
-  }
 }
 
 S2Polyline* S2Polyline::Clone() const {
@@ -459,7 +465,7 @@ bool S2Polyline::DecodeUncompressed(Decoder* const decoder) {
   // Check the bytes available before allocating memory in case of
   // corrupt/malicious input.
   if (decoder->avail() < num_vertices_ * sizeof(S2Point)) return false;
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
   decoder->getn(&vertices_[0], num_vertices_ * sizeof(vertices_[0]));
 
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {

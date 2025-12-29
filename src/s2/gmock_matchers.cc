@@ -25,6 +25,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
+#include "s2/s2debug.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
@@ -37,6 +38,9 @@
 using absl::string_view;
 using std::string;
 using std::unique_ptr;
+using ::testing::MakePolymorphicMatcher;
+using ::testing::MatchResultListener;
+using ::testing::PolymorphicMatcher;
 
 // Printing methods need to be in the global namespace.
 
@@ -80,13 +84,13 @@ S2PointMatcher::S2PointMatcher(const S2Point& expected, S1Angle tolerance)
   ABSL_CHECK(!IsAlmostZeroLength(expected));
 }
 
-bool S2PointMatcher::MatchAndExplain(
-    string_view s, ::testing::MatchResultListener* listener) const {
+bool S2PointMatcher::MatchAndExplain(string_view s,
+                                     MatchResultListener* listener) const {
   return MatchAndExplain(s2textformat::MakePointOrDie(s), listener);
 }
 
-bool S2PointMatcher::MatchAndExplain(
-    const S2Point& g, ::testing::MatchResultListener* listener) const {
+bool S2PointMatcher::MatchAndExplain(const S2Point& g,
+                                     MatchResultListener* listener) const {
   // S2::ApproxEquals will either check fail (debug mode) to unconditionally
   // return true if either point is the zero-length vector (default S2Point), so
   // handle that explicitly.
@@ -105,14 +109,14 @@ bool S2PointMatcher::MatchAndExplain(
 
 // S2PolylineMatcher methods.
 
-bool S2PolylineMatcher::MatchAndExplain(
-    string_view s, ::testing::MatchResultListener* listener) const {
+bool S2PolylineMatcher::MatchAndExplain(string_view s,
+                                        MatchResultListener* listener) const {
   unique_ptr<S2Polyline> line = s2textformat::MakePolylineOrDie(s);
   return MatchAndExplain(*line, listener);
 }
 
-bool S2PolylineMatcher::MatchAndExplain(
-    const S2Polyline& g, ::testing::MatchResultListener* listener) const {
+bool S2PolylineMatcher::MatchAndExplain(const S2Polyline& g,
+                                        MatchResultListener* listener) const {
   switch (options_.type) {
     case Options::EQUALS: {
       if (!expected_->Equals(g)) {
@@ -133,17 +137,63 @@ bool S2PolylineMatcher::MatchAndExplain(
   return true;
 }
 
+// S2PolylineIdenticalToMatcher methods.
+
+S2PolylineIdenticalToMatcher::S2PolylineIdenticalToMatcher(
+    const S2Polyline& expected)
+    : expected_(&expected) {}
+
+bool S2PolylineIdenticalToMatcher::MatchAndExplain(
+    const S2Polyline& g, MatchResultListener* listener) const {
+  if (expected_->num_vertices() != g.num_vertices()) {
+    *listener << "whose num_vertices " << g.num_vertices() << " doesn't match "
+              << expected_->num_vertices();
+    return false;
+  }
+  for (int i = 0; i < expected_->num_vertices(); ++i) {
+    if (expected_->vertex(i) != g.vertex(i)) {
+      *listener << "whose vertex(" << i << ") "
+                << s2textformat::ToString(g.vertex(i)) << " doesn't match "
+                << s2textformat::ToString(expected_->vertex(i));
+      return false;
+    }
+  }
+  if (expected_->GetRectBound() != g.GetRectBound()) {
+    *listener << "whose GetRectBound() "
+              << s2textformat::ToString(g.GetRectBound()) << " doesn't match "
+              << s2textformat::ToString(expected_->GetRectBound());
+    return false;
+  }
+  if (expected_->s2debug_override() != g.s2debug_override()) {
+    *listener << "whose s2debug_override() "
+              << (g.s2debug_override() == S2Debug::ALLOW ? "ALLOW" : "DISABLE")
+              << " doesn't match "
+              << (expected_->s2debug_override() == S2Debug::ALLOW ? "ALLOW"
+                                                                  : "DISABLE");
+    return false;
+  }
+  return true;
+}
+
+void S2PolylineIdenticalToMatcher::DescribeTo(::std::ostream* os) const {
+  *os << "is identical to polyline " << s2textformat::ToString(*expected_);
+}
+
+void S2PolylineIdenticalToMatcher::DescribeNegationTo(std::ostream* os) const {
+  *os << "is not identical to polyline " << s2textformat::ToString(*expected_);
+}
+
 // S2PolygonMatcher methods.
 
-bool S2PolygonMatcher::MatchAndExplain(
-    string_view s, ::testing::MatchResultListener* listener) const {
+bool S2PolygonMatcher::MatchAndExplain(string_view s,
+                                       MatchResultListener* listener) const {
   unique_ptr<S2Polygon> polygon =
       s2textformat::MakePolygonOrDie(s, S2Debug::ALLOW);
   return MatchAndExplain(*polygon, listener);
 }
 
-bool S2PolygonMatcher::MatchAndExplain(
-    const S2Polygon& g, ::testing::MatchResultListener* listener) const {
+bool S2PolygonMatcher::MatchAndExplain(const S2Polygon& g,
+                                       MatchResultListener* listener) const {
   switch (options_.type) {
     case Options::EQUALS: {
       if (!expected_->Equals(g)) {
@@ -190,14 +240,14 @@ bool S2PolygonMatcher::MatchAndExplain(
 
 // S2LoopMatcher methods.
 
-bool S2LoopMatcher::MatchAndExplain(
-    string_view s, ::testing::MatchResultListener* listener) const {
+bool S2LoopMatcher::MatchAndExplain(string_view s,
+                                    MatchResultListener* listener) const {
   unique_ptr<S2Loop> loop = s2textformat::MakeLoopOrDie(s);
   return MatchAndExplain(*loop, listener);
 }
 
-bool S2LoopMatcher::MatchAndExplain(
-    const S2Loop& g, ::testing::MatchResultListener* listener) const {
+bool S2LoopMatcher::MatchAndExplain(const S2Loop& g,
+                                    MatchResultListener* listener) const {
   switch (options_.type) {
     case Options::EQUALS: {
       if (!expected_->Equals(g)) {
@@ -234,16 +284,131 @@ bool S2LoopMatcher::MatchAndExplain(
   return true;
 }
 
+// S2LoopIdenticalToMatcher methods.
+
+S2LoopIdenticalToMatcher::S2LoopIdenticalToMatcher(const S2Loop& expected)
+    : expected_(&expected) {}
+
+bool S2LoopIdenticalToMatcher::MatchAndExplain(
+    const S2Loop& g, MatchResultListener* listener) const {
+  if (expected_->depth() != g.depth()) {
+    *listener << "whose depth " << g.depth() << " doesn't match "
+              << expected_->depth();
+    return false;
+  }
+  if (expected_->num_vertices() != g.num_vertices()) {
+    *listener << "whose num_vertices " << g.num_vertices() << " doesn't match "
+              << expected_->num_vertices();
+    return false;
+  }
+  for (int i = 0; i < expected_->num_vertices(); ++i) {
+    if (expected_->vertex(i) != g.vertex(i)) {
+      *listener << "whose vertex(" << i << ") "
+                << s2textformat::ToString(g.vertex(i)) << " doesn't match "
+                << s2textformat::ToString(expected_->vertex(i));
+      return false;
+    }
+  }
+  if (expected_->is_empty() != g.is_empty()) {
+    *listener << "whose is_empty() " << g.is_empty() << " doesn't match "
+              << expected_->is_empty();
+    return false;
+  }
+  if (expected_->is_full() != g.is_full()) {
+    *listener << "whose is_full() " << g.is_full() << " doesn't match "
+              << expected_->is_full();
+    return false;
+  }
+  if (expected_->IsNormalized() != g.IsNormalized()) {
+    *listener << "whose IsNormalized() " << g.IsNormalized()
+              << " doesn't match " << expected_->IsNormalized();
+    return false;
+  }
+  if (expected_->Contains(S2::Origin()) != g.Contains(S2::Origin())) {
+    *listener << "whose Contains(S2::Origin()) " << g.Contains(S2::Origin())
+              << " doesn't match " << expected_->Contains(S2::Origin());
+    return false;
+  }
+  if (expected_->GetRectBound() != g.GetRectBound()) {
+    *listener << "whose GetRectBound() "
+              << s2textformat::ToString(g.GetRectBound()) << " doesn't match "
+              << s2textformat::ToString(expected_->GetRectBound());
+    return false;
+  }
+  if (expected_->s2debug_override() != g.s2debug_override()) {
+    *listener << "whose s2debug_override() "
+              << (g.s2debug_override() == S2Debug::ALLOW ? "ALLOW" : "DISABLE")
+              << " doesn't match "
+              << (expected_->s2debug_override() == S2Debug::ALLOW ? "ALLOW"
+                                                                  : "DISABLE");
+    return false;
+  }
+  return true;
+}
+
+void S2LoopIdenticalToMatcher::DescribeTo(::std::ostream* os) const {
+  *os << "is identical to loop " << s2textformat::ToString(*expected_);
+}
+
+void S2LoopIdenticalToMatcher::DescribeNegationTo(std::ostream* os) const {
+  *os << "is not identical to loop " << s2textformat::ToString(*expected_);
+}
+
+// S2PolygonIdenticalToMatcher methods.
+
+S2PolygonIdenticalToMatcher::S2PolygonIdenticalToMatcher(
+    const S2Polygon& expected)
+    : expected_(&expected) {}
+
+bool S2PolygonIdenticalToMatcher::MatchAndExplain(
+    const S2Polygon& g, MatchResultListener* listener) const {
+  if (expected_->num_loops() != g.num_loops()) {
+    *listener << "whose num_loops() " << g.num_loops() << " doesn't match "
+              << expected_->num_loops();
+    return false;
+  }
+  for (int i = 0; i < expected_->num_loops(); ++i) {
+    S2LoopIdenticalToMatcher loop_matcher(*expected_->loop(i));
+    if (!loop_matcher.MatchAndExplain(*g.loop(i), listener)) {
+      *listener << " in loop " << i;
+      return false;
+    }
+  }
+  if (expected_->GetRectBound() != g.GetRectBound()) {
+    *listener << "whose GetRectBound() "
+              << s2textformat::ToString(g.GetRectBound()) << " doesn't match "
+              << s2textformat::ToString(expected_->GetRectBound());
+    return false;
+  }
+  if (expected_->s2debug_override() != g.s2debug_override()) {
+    *listener << "whose s2debug_override() "
+              << (g.s2debug_override() == S2Debug::ALLOW ? "ALLOW" : "DISABLE")
+              << " doesn't match "
+              << (expected_->s2debug_override() == S2Debug::ALLOW ? "ALLOW"
+                                                                  : "DISABLE");
+    return false;
+  }
+  return true;
+}
+
+void S2PolygonIdenticalToMatcher::DescribeTo(::std::ostream* os) const {
+  *os << "is identical to polygon " << s2textformat::ToString(*expected_);
+}
+
+void S2PolygonIdenticalToMatcher::DescribeNegationTo(std::ostream* os) const {
+  *os << "is not identical to polygon " << s2textformat::ToString(*expected_);
+}
+
 // S2LatLngRectMatcher methods.
 
-bool S2LatLngRectMatcher::MatchAndExplain(
-    string_view s, ::testing::MatchResultListener* listener) const {
+bool S2LatLngRectMatcher::MatchAndExplain(string_view s,
+                                          MatchResultListener* listener) const {
   S2LatLngRect rect = s2textformat::MakeLatLngRectOrDie(s);
   return MatchAndExplain(rect, listener);
 }
 
-bool S2LatLngRectMatcher::MatchAndExplain(
-    const S2LatLngRect& g, ::testing::MatchResultListener* listener) const {
+bool S2LatLngRectMatcher::MatchAndExplain(const S2LatLngRect& g,
+                                          MatchResultListener* listener) const {
   switch (options_.type) {
     case Options::EQUALS: {
       if (!(expected_ == g)) {
@@ -274,14 +439,14 @@ bool S2LatLngRectMatcher::MatchAndExplain(
 
 // S2LatLngMatcher methods.
 
-bool S2LatLngMatcher::MatchAndExplain(
-    string_view s, ::testing::MatchResultListener* listener) const {
+bool S2LatLngMatcher::MatchAndExplain(string_view s,
+                                      MatchResultListener* listener) const {
   S2LatLng latlng = s2textformat::MakeLatLngOrDie(s);
   return MatchAndExplain(latlng, listener);
 }
 
-bool S2LatLngMatcher::MatchAndExplain(
-    const S2LatLng& latlng, ::testing::MatchResultListener* listener) const {
+bool S2LatLngMatcher::MatchAndExplain(const S2LatLng& latlng,
+                                      MatchResultListener* listener) const {
   switch (options_.type) {
     case Options::EQUALS: {
       if (!(expected_ == latlng)) {
@@ -306,275 +471,277 @@ bool S2LatLngMatcher::MatchAndExplain(
 
 // Matchers for S2Points provided as objects.
 
-::testing::PolymorphicMatcher<S2PointMatcher> PointEquals(
-    const S2Point& expected) {
-  return ::testing::MakePolymorphicMatcher(
-      S2PointMatcher(expected, S1Angle::Zero()));
+PolymorphicMatcher<S2PointMatcher> PointEquals(const S2Point& expected) {
+  return MakePolymorphicMatcher(S2PointMatcher(expected, S1Angle::Zero()));
 }
 
-::testing::PolymorphicMatcher<S2PointMatcher> PointApproxEquals(
-    const S2Point& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PointMatcher(expected, tolerance));
+PolymorphicMatcher<S2PointMatcher> PointApproxEquals(const S2Point& expected,
+                                                     S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2PointMatcher(expected, tolerance));
 }
 
 // Matchers for S2Points provided as strings.
 
-::testing::PolymorphicMatcher<S2PointMatcher> PointEquals(
-    string_view expected) {
-  return ::testing::MakePolymorphicMatcher(
-      S2PointMatcher(expected, S1Angle::Zero()));
+PolymorphicMatcher<S2PointMatcher> PointEquals(string_view expected) {
+  return MakePolymorphicMatcher(S2PointMatcher(expected, S1Angle::Zero()));
 }
 
-::testing::PolymorphicMatcher<S2PointMatcher> PointApproxEquals(
-    string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PointMatcher(expected, tolerance));
+PolymorphicMatcher<S2PointMatcher> PointApproxEquals(string_view expected,
+                                                     S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2PointMatcher(expected, tolerance));
 }
 
 // Matchers for S2Polylines provided as objects.
 
-::testing::PolymorphicMatcher<S2PolylineMatcher> PolylineEquals(
+PolymorphicMatcher<S2PolylineMatcher> PolylineEquals(
     const S2Polyline& expected) {
-  return ::testing::MakePolymorphicMatcher(S2PolylineMatcher(
+  return MakePolymorphicMatcher(S2PolylineMatcher(
       expected, S2PolylineMatcher::Options(S2PolylineMatcher::Options::EQUALS,
                                            S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2PolylineMatcher> PolylineApproxEquals(
+PolymorphicMatcher<S2PolylineMatcher> PolylineApproxEquals(
     const S2Polyline& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolylineMatcher(
+  return MakePolymorphicMatcher(S2PolylineMatcher(
       expected, S2PolylineMatcher::Options(
                     S2PolylineMatcher::Options::APPROX_EQUALS, tolerance)));
 }
 
 // Matchers for S2Polylines provided as strings.
 
-::testing::PolymorphicMatcher<S2PolylineMatcher> PolylineEquals(
-    string_view expected) {
-  return ::testing::MakePolymorphicMatcher(S2PolylineMatcher(
+PolymorphicMatcher<S2PolylineMatcher> PolylineEquals(string_view expected) {
+  return MakePolymorphicMatcher(S2PolylineMatcher(
       expected, S2PolylineMatcher::Options(S2PolylineMatcher::Options::EQUALS,
                                            S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2PolylineMatcher> PolylineApproxEquals(
-    string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolylineMatcher(
+PolymorphicMatcher<S2PolylineMatcher> PolylineApproxEquals(string_view expected,
+                                                           S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2PolylineMatcher(
       expected, S2PolylineMatcher::Options(
                     S2PolylineMatcher::Options::APPROX_EQUALS, tolerance)));
 }
 
+PolymorphicMatcher<S2PolylineIdenticalToMatcher> PolylineIdenticalTo(
+    const S2Polyline& expected) {
+  return MakePolymorphicMatcher(S2PolylineIdenticalToMatcher(expected));
+}
+
 // Matchers for S2Polygons provided as objects.
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonEquals(
-    const S2Polygon& expected) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+PolymorphicMatcher<S2PolygonMatcher> PolygonEquals(const S2Polygon& expected) {
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected, S2PolygonMatcher::Options(S2PolygonMatcher::Options::EQUALS,
                                           S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonApproxEquals(
+PolymorphicMatcher<S2PolygonMatcher> PolygonApproxEquals(
     const S2Polygon& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected, S2PolygonMatcher::Options(
                     S2PolygonMatcher::Options::APPROX_EQUALS, tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryEquals(
+PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryEquals(
     const S2Polygon& expected) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected,
       S2PolygonMatcher::Options(S2PolygonMatcher::Options::BOUNDARY_EQUALS,
                                 S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryApproxEquals(
+PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryApproxEquals(
     const S2Polygon& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected,
       S2PolygonMatcher::Options(
           S2PolygonMatcher::Options::BOUNDARY_APPROX_EQUALS, tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryNear(
+PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryNear(
     const S2Polygon& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected, S2PolygonMatcher::Options(
                     S2PolygonMatcher::Options::BOUNDARY_NEAR, tolerance)));
 }
 
 // Matchers for S2Polygons provided as string.
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonEquals(
-    string_view expected) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+PolymorphicMatcher<S2PolygonMatcher> PolygonEquals(string_view expected) {
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected, S2PolygonMatcher::Options(S2PolygonMatcher::Options::EQUALS,
                                           S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonApproxEquals(
-    string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+PolymorphicMatcher<S2PolygonMatcher> PolygonApproxEquals(string_view expected,
+                                                         S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected, S2PolygonMatcher::Options(
                     S2PolygonMatcher::Options::APPROX_EQUALS, tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryEquals(
+PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryEquals(
     string_view expected) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected,
       S2PolygonMatcher::Options(S2PolygonMatcher::Options::BOUNDARY_EQUALS,
                                 S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryApproxEquals(
+PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryApproxEquals(
     string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected,
       S2PolygonMatcher::Options(
           S2PolygonMatcher::Options::BOUNDARY_APPROX_EQUALS, tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryNear(
-    string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2PolygonMatcher(
+PolymorphicMatcher<S2PolygonMatcher> PolygonBoundaryNear(string_view expected,
+                                                         S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2PolygonMatcher(
       expected, S2PolygonMatcher::Options(
                     S2PolygonMatcher::Options::BOUNDARY_NEAR, tolerance)));
 }
 
+PolymorphicMatcher<S2PolygonIdenticalToMatcher> PolygonIdenticalTo(
+    const S2Polygon& expected) {
+  return MakePolymorphicMatcher(S2PolygonIdenticalToMatcher(expected));
+}
+
 // Matchers for S2Loops provided as objects.
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopEquals(
-    const S2Loop& expected) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+PolymorphicMatcher<S2LoopMatcher> LoopEquals(const S2Loop& expected) {
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected,
       S2LoopMatcher::Options(S2LoopMatcher::Options::EQUALS, S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopBoundaryEquals(
-    const S2Loop& expected) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+PolymorphicMatcher<S2LoopMatcher> LoopBoundaryEquals(const S2Loop& expected) {
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected, S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_EQUALS,
                                        S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopBoundaryApproxEquals(
+PolymorphicMatcher<S2LoopMatcher> LoopBoundaryApproxEquals(
     const S2Loop& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected,
       S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_APPROX_EQUALS,
                              tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopBoundaryNear(
-    const S2Loop& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+PolymorphicMatcher<S2LoopMatcher> LoopBoundaryNear(const S2Loop& expected,
+                                                   S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected, S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_NEAR,
                                        tolerance)));
 }
 
+PolymorphicMatcher<S2LoopIdenticalToMatcher> LoopIdenticalTo(
+    const S2Loop& expected) {
+  return MakePolymorphicMatcher(S2LoopIdenticalToMatcher(expected));
+}
+
 // Matchers for S2Loops provided as string.
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopEquals(string_view expected) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+PolymorphicMatcher<S2LoopMatcher> LoopEquals(string_view expected) {
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected,
       S2LoopMatcher::Options(S2LoopMatcher::Options::EQUALS, S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopBoundaryEquals(
-    string_view expected) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+PolymorphicMatcher<S2LoopMatcher> LoopBoundaryEquals(string_view expected) {
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected, S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_EQUALS,
                                        S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopBoundaryApproxEquals(
-    string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+PolymorphicMatcher<S2LoopMatcher> LoopBoundaryApproxEquals(string_view expected,
+                                                           S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected,
       S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_APPROX_EQUALS,
                              tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2LoopMatcher> LoopBoundaryNear(
-    string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LoopMatcher(
+PolymorphicMatcher<S2LoopMatcher> LoopBoundaryNear(string_view expected,
+                                                   S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2LoopMatcher(
       expected, S2LoopMatcher::Options(S2LoopMatcher::Options::BOUNDARY_NEAR,
                                        tolerance)));
 }
 
 // Matchers for S2LatLngRect provided as objects.
 
-::testing::PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectEquals(
+PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectEquals(
     const S2LatLngRect& expected) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngRectMatcher(
+  return MakePolymorphicMatcher(S2LatLngRectMatcher(
       expected, S2LatLngRectMatcher::Options(
                     S2LatLngRectMatcher::Options::EQUALS, S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
+PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
     const S2LatLngRect& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngRectMatcher(
+  return MakePolymorphicMatcher(S2LatLngRectMatcher(
       expected, S2LatLngRectMatcher::Options(
                     S2LatLngRectMatcher::Options::APPROX_EQUALS, tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
+PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
     const S2LatLngRect& expected, S2LatLng tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngRectMatcher(
+  return MakePolymorphicMatcher(S2LatLngRectMatcher(
       expected, S2LatLngRectMatcher::Options(
                     S2LatLngRectMatcher::Options::APPROX_EQUALS_2, tolerance)));
 }
 
 // Matchers for S2LatLngRect provided as string.
 
-::testing::PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectEquals(
-    string_view expected) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngRectMatcher(
+PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectEquals(string_view expected) {
+  return MakePolymorphicMatcher(S2LatLngRectMatcher(
       expected, S2LatLngRectMatcher::Options(
                     S2LatLngRectMatcher::Options::EQUALS, S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
+PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
     string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngRectMatcher(
+  return MakePolymorphicMatcher(S2LatLngRectMatcher(
       expected, S2LatLngRectMatcher::Options(
                     S2LatLngRectMatcher::Options::APPROX_EQUALS, tolerance)));
 }
 
-::testing::PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
+PolymorphicMatcher<S2LatLngRectMatcher> LatLngRectApproxEquals(
     string_view expected, S2LatLng tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngRectMatcher(
+  return MakePolymorphicMatcher(S2LatLngRectMatcher(
       expected, S2LatLngRectMatcher::Options(
                     S2LatLngRectMatcher::Options::APPROX_EQUALS_2, tolerance)));
 }
 
 // Matchers for S2LatLng provided as objects.
 
-::testing::PolymorphicMatcher<S2LatLngMatcher> LatLngEquals(
-    const S2LatLng& expected) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngMatcher(
+PolymorphicMatcher<S2LatLngMatcher> LatLngEquals(const S2LatLng& expected) {
+  return MakePolymorphicMatcher(S2LatLngMatcher(
       expected, S2LatLngMatcher::Options(S2LatLngMatcher::Options::EQUALS,
                                          S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LatLngMatcher> LatLngApproxEquals(
-    const S2LatLng& expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngMatcher(
+PolymorphicMatcher<S2LatLngMatcher> LatLngApproxEquals(const S2LatLng& expected,
+                                                       S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2LatLngMatcher(
       expected, S2LatLngMatcher::Options(
                     S2LatLngMatcher::Options::APPROX_EQUALS, tolerance)));
 }
 
 // Matchers for S2LatLng provided as string.
 
-::testing::PolymorphicMatcher<S2LatLngMatcher> LatLngEquals(
-    string_view expected) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngMatcher(
+PolymorphicMatcher<S2LatLngMatcher> LatLngEquals(string_view expected) {
+  return MakePolymorphicMatcher(S2LatLngMatcher(
       expected, S2LatLngMatcher::Options(S2LatLngMatcher::Options::EQUALS,
                                          S1Angle::Zero())));
 }
 
-::testing::PolymorphicMatcher<S2LatLngMatcher> LatLngApproxEquals(
-    string_view expected, S1Angle tolerance) {
-  return ::testing::MakePolymorphicMatcher(S2LatLngMatcher(
+PolymorphicMatcher<S2LatLngMatcher> LatLngApproxEquals(string_view expected,
+                                                       S1Angle tolerance) {
+  return MakePolymorphicMatcher(S2LatLngMatcher(
       expected, S2LatLngMatcher::Options(
                     S2LatLngMatcher::Options::APPROX_EQUALS, tolerance)));
 }

@@ -17,6 +17,7 @@
 
 #include <cstdint>
 
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
@@ -44,13 +45,14 @@ int64_t CountVertices(const S2Shape& shape) {
       // all chains, we see the number of vertices is just the number of
       // edges + the number of chains (+1 for each).
       return shape.num_edges() + shape.num_chains();
-    default:
+    case 2:
       // Dimension 2 shapes contain polygons, which are closed, so they have
       // the form [AB, BC, CD, DA], which is even simpler than the
       // one-dimensional case above, the number of unique vertices simply
       // being the number of edges.
       return shape.num_edges();
   }
+  ABSL_UNREACHABLE();
 }
 
 int64_t CountVertices(const S2ShapeIndex& index) {

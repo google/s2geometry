@@ -93,9 +93,9 @@ inline static void BN_ext_set_uint64(BIGNUM* bn, uint64_t v) {
 // Return the absolute value of a BIGNUM as a 64-bit unsigned integer.
 // Requires that BIGNUM fits into 64 bits.
 inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
-  ABSL_DCHECK_LE(BN_num_bytes(bn), sizeof(uint64_t));
   // Use `BN_get_word` if its return type is large enough.
   if constexpr (sizeof(decltype(BN_get_word(bn))) >= sizeof(uint64_t)) {
+    ABSL_CHECK_LE(BN_num_bytes(bn), sizeof(uint64_t));
     return BN_get_word(bn);
   } else {
     uint64_t v;

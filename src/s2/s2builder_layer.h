@@ -18,6 +18,7 @@
 #ifndef S2_S2BUILDER_LAYER_H_
 #define S2_S2BUILDER_LAYER_H_
 
+#include "absl/base/nullability.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -47,7 +48,7 @@ class S2Builder::Layer {
   // This makes it easier to write algorithms that gather the output graphs
   // from several layers and process them all at once (such as
   // s2builderutil::ClosedSetNormalizer).
-  virtual void Build(const Graph& g, S2Error* error) = 0;
+  virtual void Build(const Graph& g, S2Error* absl_nonnull error) = 0;
 };
 
 #endif  // S2_S2BUILDER_LAYER_H_

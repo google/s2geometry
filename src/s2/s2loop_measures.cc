@@ -211,7 +211,7 @@ double GetCurvature(S2PointLoopSpan loop) {
   vector<S2Point> vertices;
   loop = PruneDegeneracies(loop, &vertices);
 
-  // If the entire loop was degenerate, it's turning angle is defined as 2*Pi.
+  // If the entire loop was degenerate, its turning angle is defined as 2*Pi.
   if (loop.empty()) return 2 * M_PI;
 
   // To ensure that we get the same result when the vertex order is rotated,

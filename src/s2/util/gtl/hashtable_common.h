@@ -46,10 +46,9 @@
 #ifndef S2_UTIL_GTL_HASHTABLE_COMMON_H_
 #define S2_UTIL_GTL_HASHTABLE_COMMON_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
-
-#include <algorithm>
 
 #include <stdexcept>                 // For length_error
 

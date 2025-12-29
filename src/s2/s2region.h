@@ -40,10 +40,12 @@ class S2Region {
  public:
   virtual ~S2Region() = default;
 
-  // Returns a deep copy of the region.
+  // Returns a copy of the region.  Owned data is deep-copied, while
+  // references to external data are not.  Therefore if the region depends
+  // on the lifetime of external objects, the copy shares that dependency.
   //
-  // Note that each subtype of S2Region returns a pointer to an object of its
-  // own type (e.g., S2Cap::Clone() returns an S2Cap*).
+  // Note that the return type is S2Region*, but the actual object returned
+  // is of the same type as the object being cloned.
   virtual S2Region* Clone() const = 0;
 
   // Returns a bounding spherical cap that contains the region.  The bound may

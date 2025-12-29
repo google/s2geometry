@@ -19,14 +19,18 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/absl_check.h"
@@ -34,6 +38,7 @@
 #include "absl/meta/type_traits.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -60,6 +65,7 @@
 #include "s2/s2text_format.h"
 #include "s2/s2wrapped_shape.h"
 
+using ::absl::StrCat;
 using ::std::make_unique;
 using ::std::unique_ptr;
 using ::std::vector;
@@ -699,7 +705,7 @@ TEST_F(DecodedPathTest, DecodesPathsCorrectly) {
     ExpectWeight(S2CellId::FromFace(face), 0);
   }
 
-  // But face two is in the tree so we should get it's summed children's weight.
+  // But face two is in the tree so we should get its summed children's weight.
   ExpectWeight(S2CellId::FromFace(2), 220);
 
   // Children of a face not in the tree should be empty.
@@ -844,11 +850,9 @@ class SumDensityTreesTest : public ::testing::TestWithParam<bool> {
   S2DensityTree BuildTree(
       int64_t approx_size_bytes, int max_level,
       S2DensityTree::BreadthFirstTreeBuilder::CellWeightFunction sum,
-      S2Error* error) {
+      S2Error* absl_nonnull error) {
     S2DensityTree tree;
-    S2DensityTree::TreeEncoder encoder;
-    S2DensityTree::BreadthFirstTreeBuilder(approx_size_bytes, max_level,
-                                           encoder)
+    S2DensityTree::BreadthFirstTreeBuilder(approx_size_bytes, max_level)
         .Build(sum, &tree, error);
     return tree;
   }
@@ -979,7 +983,7 @@ TEST_P(SumDensityTreesTest, SumMaxLevel) {
   for (int max_level = 0; max_level <= cell.level(); ++max_level) {
     auto tree = BuildTree(
         10'000, max_level,
-        [&](S2CellId cell_id, S2Error* error) {
+        [&](S2CellId cell_id, S2Error* absl_nonnull error) {
           return cell_id.intersects(cell);
         },
         &error);
@@ -1072,7 +1076,7 @@ class CoveringsTest : public ::testing::Test {
     S2CellUnion complement(
         coverer.GetCovering(S2Loop(S2Loop::kFull()).GetCapBound()).cell_ids());
     for (const S2CellId cell : complement.Difference(
-             coverer.GetCovering(MakeS2ShapeIndexRegion(&index)))) {
+             coverer.GetCovering(S2ShapeIndexRegion(&index)))) {
       // ...unless the cell is on the border between cover and its complement,
       // since both S2ShapeIndexRegion and S2DensityTree use a small amount of
       // outward padding.
@@ -1089,7 +1093,7 @@ class CoveringsTest : public ::testing::Test {
     for (const auto [shape, weight] : weights) {
       MutableS2ShapeIndex index;
       index.Add(make_unique<S2WrappedShape>(shape));
-      if (MakeS2ShapeIndexRegion(&index).MayIntersect(S2Cell(cell))) {
+      if (S2ShapeIndexRegion(&index).MayIntersect(S2Cell(cell))) {
         sum += weight;
       }
     }
@@ -1355,3 +1359,72 @@ TEST(S2DensityTreeTest, DilationAtFaceCenter) {
                   "10000001", "10000007"));
 }
 
+void BM_DecodeCellsByVisitor(benchmark::State& state) {
+  const std::string seed_str =
+      StrCat("BM_DECODE_CELLS_BY_VISITOR", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  int num_shapes = state.range(0);
+  MutableS2ShapeIndex index;
+
+  vector<std::pair<unique_ptr<S2Shape>, int64_t>> shape_weights;
+  for (int i = 0; i < num_shapes; ++i) {
+    index.Add(make_unique<S2LaxPolygonShape>(
+        vector<vector<S2Point>>{S2Testing::MakeRegularPoints(
+            s2random::Point(bitgen), S2Testing::KmToAngle(1), 5)}));
+  }
+
+  S2DensityTree tree;
+  S2Error error;
+  ABSL_CHECK(tree.InitToVertexDensity(index, 100'000, 30, &error)) << error;
+
+  for (auto s : state) {
+    ABSL_CHECK(tree.VisitCells(
+        [](S2CellId, const S2DensityTree::Cell&) {
+          return S2DensityTree::VisitAction::ENTER_CELL;
+        },
+        &error))
+        << error;
+  }
+}
+BENCHMARK(BM_DecodeCellsByVisitor)
+    ->Arg(10)
+    ->Arg(100)
+    ->Arg(1000)
+    ->Arg(10000)
+    ->Arg(100000);
+
+void BM_InitToFeatureDensity(benchmark::State& state) {
+  const int num_shapes = state.range(0);
+  const int tree_size_bytes = state.range(1);
+
+  const std::string seed_str =
+      StrCat("BM_INIT_TO_FEATURE_DENSITY", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  MutableS2ShapeIndex index;
+  for (int i = 0; i < num_shapes; ++i) {
+    index.Add(make_unique<S2LaxPolygonShape>(
+        vector<vector<S2Point>>{S2Testing::MakeRegularPoints(
+            s2random::Point(bitgen), S2Testing::KmToAngle(1), 5)}));
+  }
+
+  using Feature = S2Shape;
+  auto feature_lookup_fn = [](const S2Shape& shape) { return &shape; };
+  auto feature_weight_fn = [](const Feature& feature) { return int64_t{1}; };
+
+  for (auto s : state) {
+    S2DensityTree tree;
+    S2Error error;
+    tree.InitToFeatureDensity<Feature>(index, feature_lookup_fn,
+                                       feature_weight_fn, tree_size_bytes, 15,
+                                       &error);
+    benchmark::DoNotOptimize(tree);
+  }
+}
+BENCHMARK(BM_InitToFeatureDensity)
+    ->RangeMultiplier(10)
+    ->RangePair(10, 100'000,    // num_shapes
+                100, 100'000);  // tree_size_bytes

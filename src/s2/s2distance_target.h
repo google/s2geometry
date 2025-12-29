@@ -99,8 +99,8 @@ class S2DistanceTarget {
   // target is Distance::Zero().
   virtual S2Cap GetCapBound() = 0;
 
-  // If the distance to the point "p" "min_dist", then updates "min_dist" and
-  // returns true.  Otherwise returns false.
+  // If the distance to the point "p" is less than "min_dist", then updates
+  // "min_dist" and returns true.  Otherwise returns false.
   virtual bool UpdateMinDistance(const S2Point& p, Distance* min_dist) = 0;
 
   // If the distance to the edge (v0, v1) is less than "min_dist", then

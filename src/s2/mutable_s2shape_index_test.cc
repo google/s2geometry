@@ -24,10 +24,12 @@
 #include <numeric>
 #include <thread>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
 #include "absl/flags/declare.h"
@@ -57,6 +59,7 @@
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2memory_tracker.h"
 #include "s2/s2padded_cell.h"
 #include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
@@ -840,5 +843,157 @@ TEST(S2Shape, user_data) {
   data->y = 10;
   ABSL_DCHECK_EQ(10, static_cast<const MyData*>(shape.user_data())->y);
 }
+
+static void BenchmarkConstruction(benchmark::State& state) {
+  // The intent is not to include the destructor time, but it turns out that
+  // PauseTiming() / ResumeTiming() is so expensive that it is faster to
+  // simply run the destructor when the number of edges is small.
+  int num_edges = state.range(0);
+  bool omit_destructor = num_edges > 100;
+
+  const string seed_str = absl::StrCat("BENCHMARK_CONSTRUCTION",
+                                       absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    {
+      MutableS2ShapeIndex index;
+      unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
+          s2random::Point(bitgen), S2Testing::KmToAngle(5), num_edges));
+      state.ResumeTiming();
+      index.Add(make_unique<S2Loop::Shape>(loop.get()));
+      index.ForceBuild();
+      if (omit_destructor) state.PauseTiming();
+    }
+    if (omit_destructor) state.ResumeTiming();
+  }
+}
+
+void BM_Construction(benchmark::State& state) {
+  BenchmarkConstruction(state);
+}
+BENCHMARK(BM_Construction)->Arg(4)->Arg(16)->Arg(1024);
+
+}  // namespace
+
+ABSL_FLAG(int32_t, bm_num_edges_per_loop, 100,
+          "Benchmarks: number of edges per loop");
+ABSL_FLAG(double, bm_loop_overlap_fraction, 0.0,
+          "Benchmarks: fractional overlap between adjacent loops");
+
+namespace {
+
+static void BenchmarkLoopGridAddRelease(benchmark::State& state,
+                                        int num_edges_per_loop,
+                                        bool benchmark_release) {
+  int num_loops = state.range(0);
+  int num_loops_per_update = state.range(1);
+  ABSL_CHECK_LE(num_loops_per_update, num_loops);
+
+  // Construct a grid of loops that optionally overlap.
+  const std::string seed_str = absl::StrCat(
+      "BENCHMARK_LOOP_GRID_ADD_RELEASE", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  int sqrt_num_loops = ceil(sqrt(num_loops));
+  double max_angle = S2Testing::KmToAngle(100).radians();
+  double spacing = 2 * max_angle / sqrt_num_loops;
+  // The cos(max_angle) factor ensures that the grids don't overlap when
+  // FLAGS_bm_loop_overlap_fraction is set to zero.
+  double radius = 0.5 * spacing * cos(max_angle) *
+                  (1 + absl::GetFlag(FLAGS_bm_loop_overlap_fraction));
+
+  MutableS2ShapeIndex index;
+  vector<int> ids;  // The shape ids currently in the index.
+
+  // If "num_loops" is not a perfect square, make the grid slightly larger
+  // and leave some locations empty.
+  int left = num_loops;
+  Matrix3x3_d frame = s2random::Frame(bitgen);
+  for (int i = 0; i < sqrt_num_loops && left > 0; ++i) {
+    for (int j = 0; j < sqrt_num_loops && left > 0; ++j, --left) {
+      S2Point center(tan((i + 0.5) * spacing - max_angle),
+                     tan((j + 0.5) * spacing - max_angle), 1.0);
+      const int shape_id =
+          index.Add(make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+              S2::FromFrame(frame, center).Normalize(),
+              S1Angle::Radians(radius), num_edges_per_loop)));
+      ids.push_back(shape_id);
+    }
+  }
+  index.ForceBuild();
+  for (auto _ : state) {
+    state.PauseTiming();
+    vector<std::pair<int, S2Shape*>> released;
+    for (int j = 0; j < num_loops_per_update; ++j) {
+      size_t k = absl::Uniform<size_t>(bitgen, 0, ids.size());
+      released.emplace_back(ids[k], const_cast<S2Shape*>(index.shape(ids[k])));
+      ids[k] = ids.back();
+      ids.pop_back();
+    }
+
+    // Either time releasing shapes from the index.
+    if (benchmark_release) state.ResumeTiming();
+    for (const auto& item : released) {
+      index.Release(item.first).release();
+    }
+    index.ForceBuild();
+
+    // Or time adding them to the index, save their new ids after adding.
+    if (!benchmark_release) state.ResumeTiming();
+    for (const auto& item : released) {
+      ids.push_back(index.Add(WrapUnique(item.second)));
+    }
+    index.ForceBuild();
+  }
+}
+
+void BM_IncrementalAddLoopGrid(benchmark::State& state) {
+  BenchmarkLoopGridAddRelease(state, absl::GetFlag(FLAGS_bm_num_edges_per_loop),
+                              false /*benchmark_release*/);
+}
+BENCHMARK(BM_IncrementalAddLoopGrid)
+    ->ArgPair(10, 1)
+    ->ArgPair(100, 10)
+    ->ArgPair(1000, 1)
+    ->ArgPair(1000, 50);
+
+void BM_IncrementalReleaseLoopGrid(benchmark::State& state) {
+  BenchmarkLoopGridAddRelease(state, absl::GetFlag(FLAGS_bm_num_edges_per_loop),
+                              true /*benchmark_release*/);
+}
+BENCHMARK(BM_IncrementalReleaseLoopGrid)
+    ->ArgPair(10, 1)
+    ->ArgPair(100, 10)
+    ->ArgPair(1000, 1)
+    ->ArgPair(1000, 50);
+
+// Tests indexing a fractal with 12,582,912 edges.
+void BM_BigFractalConstruction(benchmark::State& state) {
+  const string seed_str = absl::StrCat("BIG_FRACTAL_CONSTRUCTION",
+                                       absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  absl::SetFlag(&FLAGS_s2shape_index_tmp_memory_budget,
+                static_cast<int64_t>(state.range(0)) << 20);
+  S2Fractal fractal(bitgen);
+  fractal.set_max_level(11);
+  S2Polygon polygon(fractal.MakeLoop(
+      s2random::FrameAt(bitgen, S2Point(1, 0, 0)), S1Angle::Degrees(40)));
+  for (auto _ : state) {
+    {
+      MutableS2ShapeIndex index;
+      index.Add(make_unique<S2Polygon::Shape>(&polygon));
+      index.ForceBuild();
+      state.PauseTiming();
+    }
+    state.ResumeTiming();
+  }
+}
+BENCHMARK(BM_BigFractalConstruction)->Arg(100 /*MB*/)->Arg(10000 /*MB*/);
 
 }  // namespace

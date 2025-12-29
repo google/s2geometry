@@ -28,7 +28,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/base/attributes.h"
 #include "absl/base/optimization.h"
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
@@ -131,6 +130,33 @@ class S2CellId {
   // Returns an invalid cell id guaranteed to be larger than any
   // valid cell id.  Useful for creating indexes.
   static constexpr S2CellId Sentinel() { return S2CellId(~uint64_t{0}); }
+
+  friend constexpr bool operator==(S2CellId x, S2CellId y);
+#if defined(__cpp_impl_three_way_comparison) && \
+    __cpp_impl_three_way_comparison >= 201907L
+  // This should be `= default`, but can't be due to PyCLIF limitations.
+  // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+  friend constexpr auto operator<=>(S2CellId x, S2CellId y) {
+    // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+    return x.id() <=> y.id();
+  }
+#else
+  friend constexpr bool operator!=(S2CellId x, S2CellId y) {
+    return x.id() != y.id();
+  }
+  friend constexpr bool operator<(S2CellId x, S2CellId y) {
+    return x.id() < y.id();
+  }
+  friend constexpr bool operator>(S2CellId x, S2CellId y) {
+    return x.id() > y.id();
+  }
+  friend constexpr bool operator<=(S2CellId x, S2CellId y) {
+    return x.id() <= y.id();
+  }
+  friend constexpr bool operator>=(S2CellId x, S2CellId y) {
+    return x.id() >= y.id();
+  }
+#endif
 
   // Return the cell corresponding to a given S2 cube face.
   static S2CellId FromFace(int face);
@@ -287,9 +313,12 @@ class S2CellId {
   // Return true if the given cell intersects this one.
   bool intersects(S2CellId other) const;
 
-  // Return the cell at the previous level or at the given level (which must
-  // be less than or equal to the current level).
+  // Return the cell at the previous level.
   IFNDEF_SWIG([[nodiscard]]) S2CellId parent() const;
+
+  // Return the cell at the given level.
+  //
+  // REQUIRES: 0 <= level <= this->level()
   IFNDEF_SWIG([[nodiscard]]) S2CellId parent(int level) const;
 
   // Return the immediate child of this cell at the given traversal order
@@ -481,7 +510,7 @@ class S2CellId {
   template <typename H>
   friend H AbslHashValue(H h, S2CellId id) {
     // Mix id_ twice and rotate to avoid collisions.
-    return H::combine(std::move(h), id.id_, absl::rotr(id.id_, 32));
+    return H::combine(std::move(h), id.id(), absl::rotr(id.id(), 32));
   }
 
  private:
@@ -501,32 +530,11 @@ class S2CellId {
   // or FromFaceIJWrap if "same_face" is false.
   static S2CellId FromFaceIJSame(int face, int i, int j, bool same_face);
 
-  uint64_t id_ = 0;       // 0 is an invalid cell id.
-} ABSL_ATTRIBUTE_PACKED;  // Necessary so that structures containing S2CellId's
-                          // can be ABSL_ATTRIBUTE_PACKED.
+  uint64_t id_ = 0;  // 0 is an invalid cell id.
+};
 
 inline constexpr bool operator==(S2CellId x, S2CellId y) {
   return x.id() == y.id();
-}
-
-inline constexpr bool operator!=(S2CellId x, S2CellId y) {
-  return x.id() != y.id();
-}
-
-inline constexpr bool operator<(S2CellId x, S2CellId y) {
-  return x.id() < y.id();
-}
-
-inline constexpr bool operator>(S2CellId x, S2CellId y) {
-  return x.id() > y.id();
-}
-
-inline constexpr bool operator<=(S2CellId x, S2CellId y) {
-  return x.id() <= y.id();
-}
-
-inline constexpr bool operator>=(S2CellId x, S2CellId y) {
-  return x.id() >= y.id();
 }
 
 inline S2CellId S2CellId::FromFace(int face) {

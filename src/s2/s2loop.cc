@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -61,6 +62,7 @@
 #include "s2/s2loop_measures.h"
 #include "s2/s2padded_cell.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
@@ -75,6 +77,7 @@
 using absl::flat_hash_set;
 using absl::MakeSpan;
 using absl::Span;
+using ::s2internal::MakeS2PointArrayForOverwrite;
 using std::make_unique;
 using std::pair;
 using std::unique_ptr;
@@ -100,8 +103,36 @@ enum CompressedLoopProperty {
 const S2Point S2Loop::kEmptyVertex(0, 0, 1);
 const S2Point S2Loop::kFullVertex(0, 0, -1);
 
-S2Loop::S2Loop() {
-  // The loop is not valid until Init() is called.
+// The loop is not valid until Init() is called.
+S2Loop::S2Loop() = default;
+
+S2Loop::S2Loop(const S2Loop& src)
+    : depth_(src.depth_),
+      num_vertices_(src.num_vertices_),
+      vertices_(MakeS2PointArrayForOverwrite(num_vertices_)),
+      s2debug_override_(src.s2debug_override_),
+      origin_inside_(src.origin_inside_),
+      bound_(src.bound_),
+      subregion_bound_(src.subregion_bound_) {
+  std::copy_n(src.vertices_.get(), num_vertices_, vertices_.get());
+  InitIndex();
+}
+
+
+S2Loop& S2Loop::operator=(const S2Loop& src) {
+  if (this == &src) return *this;
+  depth_ = src.depth_;
+  num_vertices_ = src.num_vertices_;
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+  s2debug_override_ = src.s2debug_override_;
+  origin_inside_ = src.origin_inside_;
+  bound_ = src.bound_;
+  subregion_bound_ = src.subregion_bound_;
+  std::copy_n(src.vertices_.get(), num_vertices_, vertices_.get());
+  // TODO(b/466969293): Copy the index efficiently.
+  index_.Clear();
+  InitIndex();
+  return *this;
 }
 
 S2Loop::S2Loop(S2Loop&& b) noexcept
@@ -170,8 +201,8 @@ void S2Loop::ClearIndex() {
 void S2Loop::Init(Span<const S2Point> vertices) {
   ClearIndex();
   num_vertices_ = vertices.size();
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
-  std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
+  std::copy_n(vertices.data(), num_vertices_, vertices_.get());
   InitOriginAndBound();
 }
 
@@ -184,12 +215,12 @@ bool S2Loop::IsValid() const {
   return true;
 }
 
-bool S2Loop::FindValidationError(S2Error* error) const {
+bool S2Loop::FindValidationError(S2Error* absl_nonnull error) const {
   return (FindValidationErrorNoIndex(error) ||
           s2shapeutil::FindSelfIntersection(index_, error));
 }
 
-bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
+bool S2Loop::FindValidationErrorNoIndex(S2Error* absl_nonnull error) const {
   // subregion_bound_ must be at least as large as bound_.  (This is an
   // internal consistency check rather than a test of client data.)
   ABSL_DCHECK(subregion_bound_.Contains(bound_));
@@ -328,7 +359,7 @@ void S2Loop::InitIndex() {
 }
 
 S2Loop::S2Loop(const S2Cell& cell)
-    : num_vertices_(4), vertices_(new S2Point[num_vertices_]) {
+    : num_vertices_(4), vertices_(MakeS2PointArrayForOverwrite(num_vertices_)) {
   for (int i = 0; i < 4; ++i) {
     vertices_[i] = cell.GetVertex(i);
   }
@@ -338,18 +369,6 @@ S2Loop::S2Loop(const S2Cell& cell)
 }
 
 S2Loop::~S2Loop() = default;
-
-S2Loop::S2Loop(const S2Loop& src)
-    : depth_(src.depth_),
-      num_vertices_(src.num_vertices_),
-      vertices_(make_unique<S2Point[]>(num_vertices_)),
-      s2debug_override_(src.s2debug_override_),
-      origin_inside_(src.origin_inside_),
-      bound_(src.bound_),
-      subregion_bound_(src.subregion_bound_) {
-  std::copy(&src.vertices_[0], &src.vertices_[num_vertices_], &vertices_[0]);
-  InitIndex();
-}
 
 S2Loop* S2Loop::Clone() const {
   return new S2Loop(*this);
@@ -658,7 +677,7 @@ bool S2Loop::DecodeInternal(Decoder* const decoder) {
   ClearIndex();
   num_vertices_ = num_vertices;
 
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
   decoder->getn(vertices_.get(), num_vertices_ * sizeof(vertices_[0]));
   origin_inside_ = decoder->get8();
   depth_ = decoder->get32();
@@ -1321,12 +1340,12 @@ static bool MatchBoundaries(const S2Loop& a, const S2Loop& b, int a_offset,
     int io = i + a_offset;
     if (io >= a.num_vertices()) io -= a.num_vertices();
 
-    if (i < a.num_vertices() && done.count(std::make_pair(i + 1, j)) == 0 &&
+    if (i < a.num_vertices() && !done.contains(std::make_pair(i + 1, j)) &&
         S2::GetDistance(a.vertex(io + 1), b.vertex(j),
                                 b.vertex(j + 1)) <= max_error) {
       pending.push_back(std::make_pair(i + 1, j));
     }
-    if (j < b.num_vertices() && done.count(std::make_pair(i, j + 1)) == 0 &&
+    if (j < b.num_vertices() && !done.contains(std::make_pair(i, j + 1)) &&
         S2::GetDistance(b.vertex(j + 1), a.vertex(io),
                                 a.vertex(io + 1)) <= max_error) {
       pending.push_back(std::make_pair(i, j + 1));
@@ -1392,7 +1411,7 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
   }
   ClearIndex();
   num_vertices_ = unsigned_num_vertices;
-  vertices_ = make_unique<S2Point[]>(num_vertices_);
+  vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
 
   if (!S2DecodePointsCompressed(decoder, snap_level,
                                 MakeSpan(vertices_.get(), num_vertices_))) {

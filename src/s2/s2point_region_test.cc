@@ -28,8 +28,6 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
 
-using std::unique_ptr;
-
 namespace {
 
 TEST(S2PointRegionTest, Basic) {
@@ -39,8 +37,8 @@ TEST(S2PointRegionTest, Basic) {
   EXPECT_TRUE(r0.Contains(p));
   EXPECT_TRUE(r0.Contains(r0.point()));
   EXPECT_FALSE(r0.Contains(S2Point(1, 0, 1)));
-  unique_ptr<S2PointRegion> r0_clone(r0.Clone());
-  EXPECT_EQ(r0_clone->point(), r0.point());
+  S2PointRegion r0_copy(r0);
+  EXPECT_EQ(r0_copy.point(), r0.point());
   EXPECT_EQ(r0.GetCapBound(), S2Cap::FromPoint(p));
   S2LatLng ll(p);
   EXPECT_EQ(r0.GetRectBound(), S2LatLngRect(ll, ll));

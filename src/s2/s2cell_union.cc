@@ -35,6 +35,7 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
+#include "s2/s2region.h"
 #include "s2/util/coding/coder.h"
 
 using std::is_sorted;
@@ -47,6 +48,11 @@ ABSL_FLAG(int32_t, s2cell_union_decode_max_num_cells, 1000000,
           "The maximum number of cells allowed by S2CellUnion::Decode");
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
+
+S2CellUnion::S2CellUnion(const S2CellUnion&) = default;
+S2CellUnion& S2CellUnion::operator=(const S2CellUnion&) = default;
+S2CellUnion::S2CellUnion(S2CellUnion&&) = default;
+S2CellUnion& S2CellUnion::operator=(S2CellUnion&&) = default;
 
 vector<S2CellId> S2CellUnion::ToS2CellIds(const vector<uint64_t>& ids) {
   vector<S2CellId> cell_ids;
@@ -112,7 +118,7 @@ void S2CellUnion::Pack(int excess) {
   }
 }
 
-S2CellUnion* S2CellUnion::Clone() const {
+S2Region* S2CellUnion::Clone() const {
   return new S2CellUnion(cell_ids_, VERBATIM);
 }
 

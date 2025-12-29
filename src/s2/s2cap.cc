@@ -39,6 +39,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2region.h"
 
 using std::fabs;
 using std::max;
@@ -139,7 +140,7 @@ S2Cap S2Cap::Union(const S2Cap& other) const {
   }
 }
 
-S2Cap* S2Cap::Clone() const {
+S2Region* S2Cap::Clone() const {
   return new S2Cap(*this);
 }
 

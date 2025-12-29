@@ -22,6 +22,7 @@
 #include <limits>
 
 #include <gtest/gtest.h>
+#include "s2/base/log_severity.h"
 #include "s2/s2coords.h"
 
 // Note: obviously, I could have defined a bundle of metrics like this in the
@@ -96,6 +97,8 @@ TEST(S2, Metrics) {
   // The minimum level for which the minimum or maximum width of a cell is at
   // most 0 is kMaxCellLevel, because no cell at any level has width less than
   // or equal to zero.
+  EXPECT_EQ(S2::kMinWidth.GetLevelForMaxValue(-1), S2::kMaxCellLevel);
+  EXPECT_EQ(S2::kMaxWidth.GetLevelForMaxValue(-1), S2::kMaxCellLevel);
   EXPECT_EQ(S2::kMinWidth.GetLevelForMaxValue(0), S2::kMaxCellLevel);
   EXPECT_EQ(S2::kMaxWidth.GetLevelForMaxValue(0), S2::kMaxCellLevel);
 
@@ -103,6 +106,9 @@ TEST(S2, Metrics) {
   // least 4 is 0, because no cell at any level has width greater than 4.
   EXPECT_EQ(S2::kMinWidth.GetLevelForMinValue(4), 0);
   EXPECT_EQ(S2::kMaxWidth.GetLevelForMinValue(4), 0);
+  constexpr double kInf = std::numeric_limits<double>::infinity();
+  EXPECT_EQ(S2::kMinWidth.GetLevelForMinValue(kInf), 0);
+  EXPECT_EQ(S2::kMaxWidth.GetLevelForMinValue(kInf), 0);
 
   // GetLevelForMaxValue() and friends have built-in assertions, we just need
   // to call these functions to test them.
@@ -141,19 +147,44 @@ TEST(S2, Metrics) {
   }
 }
 
-TEST(S2, NaNInput) {
+TEST(LengthMetricTest, GetLevelOptModeDoesNotDieOnNaN) {
+  if (S2_DEBUG_MODE) {
+    GTEST_SKIP() << "ABSL_CHECK-fails in debug mode.";
+  }
   constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
-  S2::LengthMetric metric_1d(1);
-  S2::AreaMetric metric_2d(1);
-
+  S2::LengthMetric metric(1);
   // The exact result is not specified and is not really important.
   // The essential property is that we don't hit undefined behavior, so this
-  // test needs to be run with the `ubsan` enabled.
-  EXPECT_GE(metric_1d.GetLevelForMaxValue(kNaN), 0);
-  EXPECT_GE(metric_1d.GetLevelForMinValue(kNaN), 0);
-  EXPECT_GE(metric_1d.GetClosestLevel(kNaN), 0);
-
-  EXPECT_GE(metric_2d.GetLevelForMaxValue(kNaN), 0);
-  EXPECT_GE(metric_2d.GetLevelForMinValue(kNaN), 0);
-  EXPECT_GE(metric_2d.GetClosestLevel(kNaN), 0);
+  // test needs to be run with `ubsan` enabled, but in opt-mode.
+  EXPECT_GE(metric.GetLevelForMaxValue(kNaN), 0);
+  EXPECT_GE(metric.GetLevelForMinValue(kNaN), 0);
+  EXPECT_GE(metric.GetClosestLevel(kNaN), 0);
 }
+
+TEST(AreaMetricTest, GetLevelOptModeDoesNotDieOnNaN) {
+  if (S2_DEBUG_MODE) {
+    GTEST_SKIP() << "ABSL_CHECK-fails in debug mode.";
+  }
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+  S2::AreaMetric metric(1);
+  // The exact result is not specified and is not really important.
+  // The essential property is that we don't hit undefined behavior, so this
+  // test needs to be run with `ubsan` enabled, but in opt-mode.
+  EXPECT_GE(metric.GetLevelForMaxValue(kNaN), 0);
+  EXPECT_GE(metric.GetLevelForMinValue(kNaN), 0);
+  EXPECT_GE(metric.GetClosestLevel(kNaN), 0);
+}
+
+#ifdef GTEST_HAS_DEATH_TEST
+TEST(LengthMetricDeathTest, GetLevelDbgModeDiesOnNaN) {
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+  S2::LengthMetric metric(1);
+  EXPECT_DEBUG_DEATH(metric.GetLevelForMaxValue(kNaN), "!std::isnan");
+}
+
+TEST(AreaMetricDeathTest, GetLevelDbgModeDiesOnNaN) {
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+  S2::AreaMetric metric(1);
+  EXPECT_DEBUG_DEATH(metric.GetLevelForMaxValue(kNaN), "!std::isnan");
+}
+#endif  // GTEST_HAS_DEATH_TEST

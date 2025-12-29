@@ -25,14 +25,13 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2region.h"
 
 using std::vector;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
-S2PointRegion::~S2PointRegion() = default;
-
-S2PointRegion* S2PointRegion::Clone() const {
+S2Region* S2PointRegion::Clone() const {
   return new S2PointRegion(point_);
 }
 

@@ -60,13 +60,11 @@ This issue may require revision of boringssl or exactfloat.
     [`20250814`](https://github.com/abseil/abseil-cpp/releases/tag/20250814.1)
     (standard library extensions). This exact version must be used.
 *   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
-*   [googletest testing framework >= 1.10](https://github.com/google/googletest)
-    (to build tests and example programs, optional)
 
 On Ubuntu, all of these other than abseil can be installed via apt-get:
 
 ```
-sudo apt-get install cmake googletest libssl-dev
+sudo apt-get install cmake libssl-dev
 ```
 
 abseil-cpp may need to be installed from source if an LTS release is not
@@ -79,14 +77,6 @@ On macOS, use [MacPorts](http://www.macports.org/) or
 ```
 sudo port install cmake abseil gtest openssl
 ```
-
-then use
-
-```
-cmake -DGOOGLETEST_ROOT=/opt/local/src -DCMAKE_PREFIX_PATH=/opt/local ..
-```
-
-in the build instructions below.
 
 ## Build and Install
 
@@ -125,11 +115,11 @@ From the appropriate directory depending on how you got the source:
 ```
 mkdir build
 cd build
-# You can omit -DGOOGLETEST_ROOT to skip tests; see above for macOS.
+# You can use -DBUILD_TESTS=no to skip tests.
 # Use the same CMAKE_CXX_STANDARD value that was used with absl.
-cmake -DGOOGLETEST_ROOT=/usr/src/googletest -DCMAKE_PREFIX_PATH=/path/to/absl/install -DCMAKE_CXX_STANDARD=17 ..
+cmake -DBUILD_TESTS=yes -DCMAKE_PREFIX_PATH=/path/to/absl/install -DCMAKE_CXX_STANDARD=17 ..
 make -j $(nproc)
-make test ARGS="-j$(nproc)"  # If GOOGLETEST_ROOT specified above.
+make test ARGS="-j$(nproc)"  # If -DBUILD_TESTS=yes was used above.
 sudo make install
 ```
 

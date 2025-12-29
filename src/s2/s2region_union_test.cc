@@ -24,6 +24,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "s2/gmock_matchers.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -33,7 +34,6 @@
 #include "s2/s2point_region.h"
 #include "s2/s2region.h"
 #include "s2/s2region_coverer.h"
-#include "s2/s2text_format.h"
 
 using std::make_unique;
 using std::unique_ptr;
@@ -49,10 +49,10 @@ TEST(S2RegionUnionTest, Basic) {
   unique_ptr<S2Region> empty_clone(ru_empty.Clone());
 
   vector<unique_ptr<S2Region>> two_point_region;
-  two_point_region.emplace_back(
-      new S2PointRegion(S2LatLng::FromDegrees(35, 40).ToPoint()));
-  two_point_region.emplace_back(
-      new S2PointRegion(S2LatLng::FromDegrees(-35, -40).ToPoint()));
+  two_point_region.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  two_point_region.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(-35, -40).ToPoint()));
 
   auto two_points_orig =
       make_unique<S2RegionUnion>(std::move(two_point_region));
@@ -63,9 +63,9 @@ TEST(S2RegionUnionTest, Basic) {
   two_points_orig.reset();
   // The bounds below may not be exactly equal because the S2PointRegion
   // version converts each S2LatLng value to an S2Point and back.
-  EXPECT_TRUE(s2textformat::MakeLatLngRectOrDie("-35:-40,35:40").ApproxEquals(
-      two_points->GetRectBound()))
-      << two_points->GetRectBound();
+  EXPECT_THAT(
+      two_points->GetRectBound(),
+      S2::LatLngRectApproxEquals("-35:-40,35:40", S1Angle::Radians(1e-15)));
 
   S2Cell face0 = S2Cell::FromFace(0);
   EXPECT_TRUE(two_points->MayIntersect(face0));
@@ -88,6 +88,74 @@ TEST(S2RegionUnionTest, Basic) {
   coverer.GetCovering(*two_points, &covering);
   EXPECT_EQ(1, covering.size());
   EXPECT_EQ(face0.id(), covering[0]);
+}
+
+TEST(S2RegionUnionTest, CloneResultIdenticalToSource) {
+  vector<unique_ptr<S2Region>> regions;
+  regions.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  S2RegionUnion region_union(std::move(regions));
+
+  unique_ptr<S2RegionUnion> cloned(region_union.Clone());
+  EXPECT_EQ(1, cloned->num_regions());
+  EXPECT_TRUE(cloned->Contains(S2LatLng::FromDegrees(35, 40).ToPoint()));
+}
+
+TEST(S2RegionUnionTest, CopyConstructionResultIdenticalToSource) {
+  vector<unique_ptr<S2Region>> regions;
+  regions.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  S2RegionUnion region_union(std::move(regions));
+
+  S2RegionUnion copied(region_union);
+  EXPECT_EQ(1, copied.num_regions());
+  EXPECT_TRUE(copied.Contains(S2LatLng::FromDegrees(35, 40).ToPoint()));
+}
+
+TEST(S2RegionUnionTest, CopyAssignmentResultIdenticalToSource) {
+  vector<unique_ptr<S2Region>> regions;
+  regions.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  S2RegionUnion region_union(std::move(regions));
+
+  S2RegionUnion copied;
+  copied = region_union;
+  EXPECT_EQ(1, copied.num_regions());
+  EXPECT_TRUE(copied.Contains(S2LatLng::FromDegrees(35, 40).ToPoint()));
+}
+
+TEST(S2RegionUnionTest, CopyAssignmentToSelfIsNoOp) {
+  vector<unique_ptr<S2Region>> regions;
+  regions.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  S2RegionUnion region_union(std::move(regions));
+
+  region_union = region_union;
+  EXPECT_EQ(1, region_union.num_regions());
+  EXPECT_TRUE(region_union.Contains(S2LatLng::FromDegrees(35, 40).ToPoint()));
+}
+
+TEST(S2RegionUnionTest, MoveConstructionResultIdenticalToSource) {
+  vector<unique_ptr<S2Region>> regions;
+  regions.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  S2RegionUnion region_union(std::move(regions));
+
+  S2RegionUnion moved(std::move(region_union));
+  EXPECT_EQ(1, moved.num_regions());
+  EXPECT_TRUE(moved.Contains(S2LatLng::FromDegrees(35, 40).ToPoint()));
+}
+
+TEST(S2RegionUnionTest, MoveAssignmentResultIdenticalToSource) {
+  vector<unique_ptr<S2Region>> regions;
+  regions.push_back(
+      make_unique<S2PointRegion>(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  S2RegionUnion region_union(std::move(regions));
+
+  S2RegionUnion moved;
+  moved = std::move(region_union);
+  EXPECT_EQ(1, moved.num_regions());
+  EXPECT_TRUE(moved.Contains(S2LatLng::FromDegrees(35, 40).ToPoint()));
 }
 
 }  // namespace
