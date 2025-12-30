@@ -1,0 +1,21 @@
+{
+  "homepage": "https://github.com/google/s2geometry",
+  "maintainers": [
+    {
+      "email": "vtsao@openai.com",
+      "github": "vtsao-openai",
+      "github_user_id": 176426301,
+      "name": "Vincent Tsao"
+    },
+    {
+      "github": "jmr",
+      "github_user_id": 949741,
+      "name": "Jesse Rosenstock"
+    }
+  ],
+  "repository": [
+    "github:google/s2geometry"
+  ],
+  "versions": [],
+  "yanked_versions": {}
+}
