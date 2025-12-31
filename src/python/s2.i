@@ -43,8 +43,10 @@
 %define %unignoreall %rename("%s") ""; %enddef
 
 %define ABSL_ATTRIBUTE_ALWAYS_INLINE %enddef
-%define ABSL_DEPRECATED(msg)
-%enddef
+%define ABSL_DEPRECATE_AND_INLINE(msg) %enddef
+%define ABSL_DEPRECATED(msg) %enddef
+%define absl_nonnull %enddef
+%define absl_nullable %enddef
 
 // SWIG <3.0 does not understand these C++11 keywords (unsure of exact version).
 #if SWIG_VERSION < 0x030000
