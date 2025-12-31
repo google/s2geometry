@@ -1,0 +1,13 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//:__subpackages__"])
+
+cc_library(
+    name = "endian",
+    hdrs = ["endian.h"],
+    deps = [
+        "//s2/util/gtl:unaligned",
+        "@abseil-cpp//absl/numeric:bits",
+        "@abseil-cpp//absl/numeric:int128",
+    ],
+)

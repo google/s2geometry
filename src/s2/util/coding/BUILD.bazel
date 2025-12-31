@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 cc_library(
     name = "coding",
@@ -15,15 +15,13 @@ cc_library(
         "varint.h",
     ],
     deps = [
-        "//s2/base:casts",
-        "//s2/base:logging",
         "//s2/base:malloc_extension",
-        "//s2/util/bits",
         "//s2/util/endian",
-        "@abseil-cpp//absl/base",
-        "@abseil-cpp//absl/container:btree",
-        "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/strings:cord",
+        "@abseil-cpp//absl/log:absl_log",
+        "@abseil-cpp//absl/meta:type_traits",
+        "@abseil-cpp//absl/numeric:int128",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
