@@ -156,29 +156,29 @@ public:
 %apply SWIGTYPE *DISOWN {S2Builder::Layer *layer_disown};
 %apply SWIGTYPE *DISOWN {S2Polygon *polygon_disown};
 
-%typemap(in) std::vector<S2Loop *> * (std::vector<S2Loop *> loops){
-  PyObject *element(nullptr);
-  PyObject *iterator(PyObject_GetIter($input));
-  if (!iterator) {
-    SWIG_fail;
+%typemap(in) std::vector<S2Loop *> * (std::vector<S2Loop *> loops) {
+  PyObject *iter = PyObject_GetIter($input);
+  if (iter == nullptr) {
+    %argument_fail(SWIG_TypeError, "iterable of S2Loop *", $symname, $argnum);
   }
-  int i(0);
-  while ((element = PyIter_Next(iterator))) {
-    i++;
-    S2Loop *loop(nullptr);
-    int res(SWIG_ConvertPtr(element, (void **)&loop, $descriptor(S2Loop *), 0));
-    if (SWIG_IsOK(res)) {
-      loops.push_back(loop->Clone());
-    } else {
-      SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor(S2Loop *)), element);
-      SWIG_Python_ArgFail(i);
-      Py_DECREF(element);
-      Py_DECREF(iterator);
-      SWIG_fail;
+
+  for (PyObject *elem; (elem = PyIter_Next(iter)); Py_DECREF(elem)) {
+    S2Loop *loop = nullptr;
+    int res = SWIG_ConvertPtr(
+        elem, reinterpret_cast<void **>(&loop), $descriptor(S2Loop *),
+        SWIG_POINTER_NO_NULL);
+
+    if (!SWIG_IsOK(res)) {
+      Py_DECREF(elem);
+      Py_DECREF(iter);
+      for (S2Loop *loop : loops) delete loop;
+      %argument_fail(res, "$type", $symname, $argnum);
     }
-    Py_DECREF(element);
+
+    loops.push_back(new S2Loop(*loop));
   }
-  Py_DECREF(iterator);
+
+  Py_DECREF(iter);
   $1 = &loops;
 }
 
