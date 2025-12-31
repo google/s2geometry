@@ -213,6 +213,8 @@ class S1ChordAngle {
   // All operators and functions are declared here so that we can put them all
   // in one place.  (The compound assignment operators must be put here.)
 
+#ifndef SWIG
+  // `friend operator`s are incompatible with SWIG 4.0, but work with 4.3.
   // Comparison operators.
   friend constexpr bool operator==(S1ChordAngle x, S1ChordAngle y);
 #if defined(__cpp_impl_three_way_comparison) && \
@@ -240,6 +242,7 @@ class S1ChordAngle {
     return x.length2() >= y.length2();
   }
 #endif
+#endif  // !SWIG
 
   // Comparison predicates.
   constexpr bool is_zero() const;

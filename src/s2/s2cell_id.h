@@ -131,6 +131,8 @@ class S2CellId {
   // valid cell id.  Useful for creating indexes.
   static constexpr S2CellId Sentinel() { return S2CellId(~uint64_t{0}); }
 
+#ifndef SWIG
+  // `friend operator`s are incompatible with SWIG 4.0, but work with 4.3.
   friend constexpr bool operator==(S2CellId x, S2CellId y);
 #if defined(__cpp_impl_three_way_comparison) && \
     __cpp_impl_three_way_comparison >= 201907L
@@ -157,6 +159,7 @@ class S2CellId {
     return x.id() >= y.id();
   }
 #endif
+#endif  // !SWIG
 
   // Return the cell corresponding to a given S2 cube face.
   static S2CellId FromFace(int face);

@@ -47,7 +47,14 @@ jobs:
         working-directory: ${{ runner.temp }}
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - run: mkdir build
-      - run: cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_PREFIX_PATH=/usr/local/ -DGOOGLETEST_ROOT=${{ env.GOOGLETEST_ROOT }} -DGOOGLETEST_VERSION=${{ env.GOOGLETEST_VERSION }} ..
+      - run: >
+          cmake
+          -DWITH_PYTHON=yes
+          -DCMAKE_CXX_STANDARD=17
+          -DCMAKE_PREFIX_PATH=/usr/local/
+          -DGOOGLETEST_ROOT=${{ env.GOOGLETEST_ROOT }}
+          -DGOOGLETEST_VERSION=${{ env.GOOGLETEST_VERSION }}
+          ..
         working-directory: build/
       - run: cmake --build . --parallel 45
         working-directory: build/
