@@ -134,6 +134,8 @@ class S1Angle {
   S1Angle abs() const;
   friend S1Angle abs(S1Angle a);
 
+#ifndef SWIG
+  // `friend operator`s are incompatible with SWIG 4.0, but work with 4.3.
   // Comparison operators.
   friend constexpr bool operator==(S1Angle x, S1Angle y);
 #if defined(__cpp_impl_three_way_comparison) && \
@@ -170,6 +172,7 @@ class S1Angle {
   friend constexpr S1Angle operator*(S1Angle a, double m);
   friend constexpr S1Angle operator/(S1Angle a, double m);
   friend constexpr double operator/(S1Angle a, S1Angle b);
+#endif  // !SWIG
   S1Angle& operator+=(S1Angle a);
   S1Angle& operator-=(S1Angle a);
   S1Angle& operator*=(double m);
