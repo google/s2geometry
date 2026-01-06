@@ -215,7 +215,6 @@ The resulting wheel will be in the `dist` directory.
 
 * [Go](https://github.com/golang/geo) (Approximately 40% complete.)
 * [Java](https://github.com/google/s2-geometry-library-java)
-* [Kotlin](https://github.com/Enovea/s2-geometry-kotlin) (Complete except binary serialization)
 
 ## Disclaimer
 
