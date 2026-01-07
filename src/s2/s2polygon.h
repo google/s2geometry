@@ -60,10 +60,10 @@ class S2Loop;
 class S2Polyline;
 struct S2XYZFaceSiTi;
 
-// An S2Polygon is an S2Region object that represents a polygon.  A polygon is
-// defined by zero or more loops; recall that the interior of a loop is
-// defined to be its left-hand side (see S2Loop).  There are two different
-// conventions for creating an S2Polygon:
+// Obsolete, see S2LaxPolygonShape. An S2Polygon is an S2Region object that 
+// represents a polygon.  A polygon is defined by zero or more loops; recall
+// that the interior of a loop is defined to be its left-hand side (see S2Loop).
+// There are two different conventions for creating an S2Polygon:
 //
 //   - InitNested() expects the input loops to be nested hierarchically.  The
 //     polygon interior then consists of the set of points contained by an odd
