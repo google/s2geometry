@@ -1,0 +1,10 @@
+load("@rules_python//python:defs.bzl", "py_test")
+
+package(default_visibility = ["//python:__pkg__"])
+
+# Test for S2Point bindings
+py_test(
+    name = "s2point_test",
+    srcs = ["s2point_test.py"],
+    deps = ["//python:s2geometry_pybind"],
+)

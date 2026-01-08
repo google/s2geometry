@@ -1,0 +1,16 @@
+load("@rules_python//python:defs.bzl", "py_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# Python library for the s2geometry_pybind package
+py_library(
+    name = "s2geometry_pybind",
+    srcs = ["s2geometry_pybind/__init__.py"],
+    data = [
+        "//python/bindings:s2geometry_bindings",
+    ],
+    imports = [
+        ".",
+        "bindings",
+    ],
+)
