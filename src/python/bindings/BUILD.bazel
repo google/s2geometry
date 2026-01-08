@@ -1,0 +1,20 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
+
+package(default_visibility = ["//python:__subpackages__"])
+
+pybind_extension(
+    name = "s2geometry_bindings",
+    srcs = ["module.cc"],
+    deps = [
+        ":s2point_bindings",
+    ],
+)
+
+pybind_library(
+    name = "s2point_bindings",
+    srcs = ["s2point_bindings.cc"],
+    deps = [
+        "//:s2",
+    ],
+)
