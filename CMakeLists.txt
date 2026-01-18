@@ -653,7 +653,7 @@ if (BUILD_TESTS)
 
   target_link_libraries(
     bignum_test
-    ${OPENSSL_CRYPTO_LIBRARIES})
+    ${OPENSSL_LIBRARIES})
 
 endif()
 
