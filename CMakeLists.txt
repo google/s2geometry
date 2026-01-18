@@ -479,6 +479,9 @@ if (BUILD_TESTS)
     bignum_test
     ${OPENSSL_LIBRARIES})
 
+  target_include_directories(
+    bignum_test PRIVATE ${OPENSSL_INCLUDE_DIR})
+
 endif()
 
 if (BUILD_EXAMPLES AND TARGET s2testing)
