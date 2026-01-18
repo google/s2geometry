@@ -121,13 +121,17 @@ int S2RegionSharder::GetMostIntersectingShard(const S2Region& region,
   // no intersecting candidates.
   int best_shard = default_shard;
   int64_t best_sum = 0;
-  for (const auto& shard : intersecting_shards) {
+
+  for (const auto& [shard, covering] : intersecting_shards) {
     int64_t sum = 0;
-    for (const S2CellId cell_id : shard.second) {
+    for (const S2CellId cell_id : covering) {
       sum += cell_id.lsb();
     }
-    if (sum > best_sum) {
-      best_shard = shard.first;
+    // Prefer the smaller shard number to break ties, to make the selection
+    // deterministic.  Note, that sum can never be zero because all coverings
+    // have at least one cell.
+    if (sum > best_sum || (sum == best_sum && shard < best_shard)) {
+      best_shard = shard;
       best_sum = sum;
     }
   }

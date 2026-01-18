@@ -16,358 +16,369 @@ config_setting(
 cc_library(
     name = "s2",
     srcs = [
-        "//s2:encoded_s2cell_id_vector.cc",
-        "//s2:encoded_s2point_vector.cc",
-        "//s2:encoded_s2shape_index.cc",
-        "//s2:encoded_string_vector.cc",
-        "//s2:id_set_lexicon.cc",
-        "//s2:internal/s2incident_edge_tracker.cc",
-        "//s2:internal/s2index_cell_data.cc",
-        "//s2:mutable_s2shape_index.cc",
-        "//s2:r2rect.cc",
-        "//s2:s1angle.cc",
-        "//s2:s1chord_angle.cc",
-        "//s2:s1interval.cc",
-        "//s2:s2boolean_operation.cc",
-        "//s2:s2buffer_operation.cc",
-        "//s2:s2builder.cc",
-        "//s2:s2builder_graph.cc",
-        "//s2:s2builderutil_closed_set_normalizer.cc",
-        "//s2:s2builderutil_find_polygon_degeneracies.cc",
-        "//s2:s2builderutil_get_snapped_winding_delta.cc",
-        "//s2:s2builderutil_lax_polygon_layer.cc",
-        "//s2:s2builderutil_lax_polyline_layer.cc",
-        "//s2:s2builderutil_s2point_vector_layer.cc",
-        "//s2:s2builderutil_s2polygon_layer.cc",
-        "//s2:s2builderutil_s2polyline_layer.cc",
-        "//s2:s2builderutil_s2polyline_vector_layer.cc",
-        "//s2:s2builderutil_snap_functions.cc",
-        "//s2:s2cap.cc",
-        "//s2:s2cell.cc",
-        "//s2:s2cell_id.cc",
-        "//s2:s2cell_index.cc",
-        "//s2:s2cell_union.cc",
-        "//s2:s2centroids.cc",
-        "//s2:s2closest_cell_query.cc",
-        "//s2:s2closest_edge_query.cc",
-        "//s2:s2closest_point_query.cc",
-        "//s2:s2contains_vertex_query.cc",
-        "//s2:s2convex_hull_query.cc",
-        "//s2:s2coords.cc",
-        "//s2:s2crossing_edge_query.cc",
-        "//s2:s2debug.cc",
-        "//s2:s2earth.cc",
-        "//s2:s2edge_clipping.cc",
-        "//s2:s2edge_crosser.cc",
-        "//s2:s2edge_crossings.cc",
-        "//s2:s2edge_distances.cc",
-        "//s2:s2edge_tessellator.cc",
-        "//s2:s2error.cc",
-        "//s2:s2fractal.cc",
-        "//s2:s2furthest_edge_query.cc",
-        "//s2:s2hausdorff_distance_query.cc",
-        "//s2:s2latlng.cc",
-        "//s2:s2latlng_rect.cc",
-        "//s2:s2latlng_rect_bounder.cc",
-        "//s2:s2lax_loop_shape.cc",
-        "//s2:s2lax_polygon_shape.cc",
-        "//s2:s2lax_polyline_shape.cc",
-        "//s2:s2loop.cc",
-        "//s2:s2loop_measures.cc",
-        "//s2:s2max_distance_targets.cc",
-        "//s2:s2measures.cc",
-        "//s2:s2memory_tracker.cc",
-        "//s2:s2metrics.cc",
-        "//s2:s2min_distance_targets.cc",
-        "//s2:s2padded_cell.cc",
-        "//s2:s2point_compression.cc",
-        "//s2:s2point_region.cc",
-        "//s2:s2pointutil.cc",
-        "//s2:s2polygon.cc",
-        "//s2:s2polyline.cc",
-        "//s2:s2polyline_alignment.cc",
-        "//s2:s2polyline_measures.cc",
-        "//s2:s2polyline_simplifier.cc",
-        "//s2:s2predicates.cc",
-        "//s2:s2projections.cc",
-        "//s2:s2r2rect.cc",
-        "//s2:s2region_coverer.cc",
-        "//s2:s2region_intersection.cc",
-        "//s2:s2region_term_indexer.cc",
-        "//s2:s2region_union.cc",
-        "//s2:s2shape_index.cc",
-        "//s2:s2shape_index_buffered_region.cc",
-        "//s2:s2shape_index_measures.cc",
-        "//s2:s2shape_measures.cc",
-        "//s2:s2shape_nesting_query.cc",
-        "//s2:s2shapeutil_build_polygon_boundaries.cc",
-        "//s2:s2shapeutil_coding.cc",
-        "//s2:s2shapeutil_contains_brute_force.cc",
-        "//s2:s2shapeutil_conversion.cc",
-        "//s2:s2shapeutil_edge_iterator.cc",
-        "//s2:s2shapeutil_edge_wrap.cc",
-        "//s2:s2shapeutil_get_reference_point.cc",
-        "//s2:s2shapeutil_visit_crossing_edge_pairs.cc",
-        "//s2:s2text_format.cc",
-        "//s2:s2wedge_relations.cc",
-        "//s2:s2winding_operation.cc",
+        ":s2/encoded_s2cell_id_vector.cc",
+        ":s2/encoded_s2point_vector.cc",
+        ":s2/encoded_s2shape_index.cc",
+        ":s2/encoded_string_vector.cc",
+        ":s2/id_set_lexicon.cc",
+        ":s2/internal/s2incident_edge_tracker.cc",
+        ":s2/internal/s2index_cell_data.cc",
+        ":s2/mutable_s2shape_index.cc",
+        ":s2/r2rect.cc",
+        ":s2/s1angle.cc",
+        ":s2/s1chord_angle.cc",
+        ":s2/s1interval.cc",
+        ":s2/s2boolean_operation.cc",
+        ":s2/s2buffer_operation.cc",
+        ":s2/s2builder.cc",
+        ":s2/s2builder_graph.cc",
+        ":s2/s2builderutil_closed_set_normalizer.cc",
+        ":s2/s2builderutil_find_polygon_degeneracies.cc",
+        ":s2/s2builderutil_get_snapped_winding_delta.cc",
+        ":s2/s2builderutil_lax_polygon_layer.cc",
+        ":s2/s2builderutil_lax_polyline_layer.cc",
+        ":s2/s2builderutil_s2point_vector_layer.cc",
+        ":s2/s2builderutil_s2polygon_layer.cc",
+        ":s2/s2builderutil_s2polyline_layer.cc",
+        ":s2/s2builderutil_s2polyline_vector_layer.cc",
+        ":s2/s2builderutil_snap_functions.cc",
+        ":s2/s2cap.cc",
+        ":s2/s2cell.cc",
+        ":s2/s2cell_id.cc",
+        ":s2/s2cell_index.cc",
+        ":s2/s2cell_union.cc",
+        ":s2/s2centroids.cc",
+        ":s2/s2closest_cell_query.cc",
+        ":s2/s2closest_edge_query.cc",
+        ":s2/s2closest_point_query.cc",
+        ":s2/s2contains_vertex_query.cc",
+        ":s2/s2convex_hull_query.cc",
+        ":s2/s2coords.cc",
+        ":s2/s2crossing_edge_query.cc",
+        ":s2/s2debug.cc",
+        ":s2/s2earth.cc",
+        ":s2/s2edge_clipping.cc",
+        ":s2/s2edge_crosser.cc",
+        ":s2/s2edge_crossings.cc",
+        ":s2/s2edge_distances.cc",
+        ":s2/s2edge_tessellator.cc",
+        ":s2/s2error.cc",
+        ":s2/s2fractal.cc",
+        ":s2/s2furthest_edge_query.cc",
+        ":s2/s2hausdorff_distance_query.cc",
+        ":s2/s2latlng.cc",
+        ":s2/s2latlng_rect.cc",
+        ":s2/s2latlng_rect_bounder.cc",
+        ":s2/s2lax_loop_shape.cc",
+        ":s2/s2lax_polygon_shape.cc",
+        ":s2/s2lax_polyline_shape.cc",
+        ":s2/s2loop.cc",
+        ":s2/s2loop_measures.cc",
+        ":s2/s2max_distance_targets.cc",
+        ":s2/s2measures.cc",
+        ":s2/s2memory_tracker.cc",
+        ":s2/s2metrics.cc",
+        ":s2/s2min_distance_targets.cc",
+        ":s2/s2padded_cell.cc",
+        ":s2/s2point_compression.cc",
+        ":s2/s2point_region.cc",
+        ":s2/s2pointutil.cc",
+        ":s2/s2polygon.cc",
+        ":s2/s2polyline.cc",
+        ":s2/s2polyline_alignment.cc",
+        ":s2/s2polyline_measures.cc",
+        ":s2/s2polyline_simplifier.cc",
+        ":s2/s2predicates.cc",
+        ":s2/s2projections.cc",
+        ":s2/s2r2rect.cc",
+        ":s2/s2region_coverer.cc",
+        ":s2/s2region_intersection.cc",
+        ":s2/s2region_term_indexer.cc",
+        ":s2/s2region_union.cc",
+        ":s2/s2shape_index.cc",
+        ":s2/s2shape_index_buffered_region.cc",
+        ":s2/s2shape_index_measures.cc",
+        ":s2/s2shape_measures.cc",
+        ":s2/s2shape_nesting_query.cc",
+        ":s2/s2shapeutil_build_polygon_boundaries.cc",
+        ":s2/s2shapeutil_coding.cc",
+        ":s2/s2shapeutil_contains_brute_force.cc",
+        ":s2/s2shapeutil_conversion.cc",
+        ":s2/s2shapeutil_edge_iterator.cc",
+        ":s2/s2shapeutil_edge_wrap.cc",
+        ":s2/s2shapeutil_get_reference_point.cc",
+        ":s2/s2shapeutil_visit_crossing_edge_pairs.cc",
+        ":s2/s2text_format.cc",
+        ":s2/s2wedge_relations.cc",
+        ":s2/s2winding_operation.cc",
     ],
     hdrs = [
-        "//s2:_fp_contract_off.h",
-        "//s2:encoded_s2cell_id_vector.h",
-        "//s2:encoded_s2point_vector.h",
-        "//s2:encoded_s2shape_index.h",
-        "//s2:encoded_string_vector.h",
-        "//s2:encoded_uint_vector.h",
-        "//s2:id_set_lexicon.h",
-        "//s2:internal/s2disjoint_set.h",
-        "//s2:internal/s2incident_edge_tracker.h",
-        "//s2:internal/s2index_cell_data.h",
-        "//s2:internal/s2meta.h",
-        "//s2:mutable_s2shape_index.h",
-        "//s2:r1interval.h",
-        "//s2:r2.h",
-        "//s2:r2rect.h",
-        "//s2:s1angle.h",
-        "//s2:s1chord_angle.h",
-        "//s2:s1interval.h",
-        "//s2:s2boolean_operation.h",
-        "//s2:s2buffer_operation.h",
-        "//s2:s2builder.h",
-        "//s2:s2builder_graph.h",
-        "//s2:s2builder_layer.h",
-        "//s2:s2builderutil_closed_set_normalizer.h",
-        "//s2:s2builderutil_find_polygon_degeneracies.h",
-        "//s2:s2builderutil_get_snapped_winding_delta.h",
-        "//s2:s2builderutil_graph_shape.h",
-        "//s2:s2builderutil_lax_polygon_layer.h",
-        "//s2:s2builderutil_lax_polyline_layer.h",
-        "//s2:s2builderutil_s2point_vector_layer.h",
-        "//s2:s2builderutil_s2polygon_layer.h",
-        "//s2:s2builderutil_s2polyline_layer.h",
-        "//s2:s2builderutil_s2polyline_vector_layer.h",
-        "//s2:s2builderutil_snap_functions.h",
-        "//s2:s2builderutil_testing.h",
-        "//s2:s2cap.h",
-        "//s2:s2cell.h",
-        "//s2:s2cell_id.h",
-        "//s2:s2cell_index.h",
-        "//s2:s2cell_iterator.h",
-        "//s2:s2cell_iterator_join.h",
-        "//s2:s2cell_range_iterator.h",
-        "//s2:s2cell_union.h",
-        "//s2:s2centroids.h",
-        "//s2:s2closest_cell_query.h",
-        "//s2:s2closest_cell_query_base.h",
-        "//s2:s2closest_edge_query.h",
-        "//s2:s2closest_edge_query_base.h",
-        "//s2:s2closest_point_query.h",
-        "//s2:s2closest_point_query_base.h",
-        "//s2:s2coder.h",
-        "//s2:s2contains_point_query.h",
-        "//s2:s2contains_vertex_query.h",
-        "//s2:s2convex_hull_query.h",
-        "//s2:s2coords.h",
-        "//s2:s2coords_internal.h",
-        "//s2:s2crossing_edge_query.h",
-        "//s2:s2debug.h",
-        "//s2:s2distance_target.h",
-        "//s2:s2earth.h",
-        "//s2:s2edge_clipping.h",
-        "//s2:s2edge_crosser.h",
-        "//s2:s2edge_crossings.h",
-        "//s2:s2edge_crossings_internal.h",
-        "//s2:s2edge_distances.h",
-        "//s2:s2edge_tessellator.h",
-        "//s2:s2edge_vector_shape.h",
-        "//s2:s2error.h",
-        "//s2:s2fractal.h",
-        "//s2:s2furthest_edge_query.h",
-        "//s2:s2hausdorff_distance_query.h",
-        "//s2:s2latlng.h",
-        "//s2:s2latlng_rect.h",
-        "//s2:s2latlng_rect_bounder.h",
-        "//s2:s2lax_loop_shape.h",
-        "//s2:s2lax_polygon_shape.h",
-        "//s2:s2lax_polyline_shape.h",
-        "//s2:s2loop.h",
-        "//s2:s2loop_measures.h",
-        "//s2:s2max_distance_targets.h",
-        "//s2:s2measures.h",
-        "//s2:s2memory_tracker.h",
-        "//s2:s2metrics.h",
-        "//s2:s2min_distance_targets.h",
-        "//s2:s2padded_cell.h",
-        "//s2:s2point.h",
-        "//s2:s2point_compression.h",
-        "//s2:s2point_index.h",
-        "//s2:s2point_region.h",
-        "//s2:s2point_span.h",
-        "//s2:s2point_vector_shape.h",
-        "//s2:s2pointutil.h",
-        "//s2:s2polygon.h",
-        "//s2:s2polyline.h",
-        "//s2:s2polyline_alignment.h",
-        "//s2:s2polyline_alignment_internal.h",
-        "//s2:s2polyline_measures.h",
-        "//s2:s2polyline_simplifier.h",
-        "//s2:s2predicates.h",
-        "//s2:s2predicates_internal.h",
-        "//s2:s2projections.h",
-        "//s2:s2r2rect.h",
-        "//s2:s2region.h",
-        "//s2:s2region_coverer.h",
-        "//s2:s2region_intersection.h",
-        "//s2:s2region_term_indexer.h",
-        "//s2:s2region_union.h",
-        "//s2:s2shape.h",
-        "//s2:s2shape_index.h",
-        "//s2:s2shape_index_buffered_region.h",
-        "//s2:s2shape_index_measures.h",
-        "//s2:s2shape_index_region.h",
-        "//s2:s2shape_measures.h",
-        "//s2:s2shape_nesting_query.h",
-        "//s2:s2shapeutil_build_polygon_boundaries.h",
-        "//s2:s2shapeutil_coding.h",
-        "//s2:s2shapeutil_contains_brute_force.h",
-        "//s2:s2shapeutil_conversion.h",
-        "//s2:s2shapeutil_count_edges.h",
-        "//s2:s2shapeutil_edge_iterator.h",
-        "//s2:s2shapeutil_edge_wrap.h",
-        "//s2:s2shapeutil_get_reference_point.h",
-        "//s2:s2shapeutil_shape_edge.h",
-        "//s2:s2shapeutil_shape_edge_id.h",
-        "//s2:s2shapeutil_testing.h",
-        "//s2:s2shapeutil_visit_crossing_edge_pairs.h",
-        "//s2:s2text_format.h",
-        "//s2:s2validation_query.h",
-        "//s2:s2wedge_relations.h",
-        "//s2:s2winding_operation.h",
-        "//s2:s2wrapped_shape.h",
-        "//s2:sequence_lexicon.h",
-        "//s2:thread_testing.h",
-        "//s2:value_lexicon.h",
+        ":s2/_fp_contract_off.h",
+        ":s2/encoded_s2cell_id_vector.h",
+        ":s2/encoded_s2point_vector.h",
+        ":s2/encoded_s2shape_index.h",
+        ":s2/encoded_string_vector.h",
+        ":s2/encoded_uint_vector.h",
+        ":s2/id_set_lexicon.h",
+        ":s2/internal/s2disjoint_set.h",
+        ":s2/internal/s2incident_edge_tracker.h",
+        ":s2/internal/s2index_cell_data.h",
+        ":s2/internal/s2meta.h",
+        ":s2/mutable_s2shape_index.h",
+        ":s2/r1interval.h",
+        ":s2/r2.h",
+        ":s2/r2rect.h",
+        ":s2/s1angle.h",
+        ":s2/s1chord_angle.h",
+        ":s2/s1interval.h",
+        ":s2/s2boolean_operation.h",
+        ":s2/s2buffer_operation.h",
+        ":s2/s2builder.h",
+        ":s2/s2builder_graph.h",
+        ":s2/s2builder_layer.h",
+        ":s2/s2builderutil_closed_set_normalizer.h",
+        ":s2/s2builderutil_find_polygon_degeneracies.h",
+        ":s2/s2builderutil_get_snapped_winding_delta.h",
+        ":s2/s2builderutil_graph_shape.h",
+        ":s2/s2builderutil_lax_polygon_layer.h",
+        ":s2/s2builderutil_lax_polyline_layer.h",
+        ":s2/s2builderutil_s2point_vector_layer.h",
+        ":s2/s2builderutil_s2polygon_layer.h",
+        ":s2/s2builderutil_s2polyline_layer.h",
+        ":s2/s2builderutil_s2polyline_vector_layer.h",
+        ":s2/s2builderutil_snap_functions.h",
+        ":s2/s2builderutil_testing.h",
+        ":s2/s2cap.h",
+        ":s2/s2cell.h",
+        ":s2/s2cell_id.h",
+        ":s2/s2cell_index.h",
+        ":s2/s2cell_iterator.h",
+        ":s2/s2cell_iterator_join.h",
+        ":s2/s2cell_range_iterator.h",
+        ":s2/s2cell_union.h",
+        ":s2/s2centroids.h",
+        ":s2/s2closest_cell_query.h",
+        ":s2/s2closest_cell_query_base.h",
+        ":s2/s2closest_edge_query.h",
+        ":s2/s2closest_edge_query_base.h",
+        ":s2/s2closest_point_query.h",
+        ":s2/s2closest_point_query_base.h",
+        ":s2/s2coder.h",
+        ":s2/s2contains_point_query.h",
+        ":s2/s2contains_vertex_query.h",
+        ":s2/s2convex_hull_query.h",
+        ":s2/s2coords.h",
+        ":s2/s2coords_internal.h",
+        ":s2/s2crossing_edge_query.h",
+        ":s2/s2debug.h",
+        ":s2/s2distance_target.h",
+        ":s2/s2earth.h",
+        ":s2/s2edge_clipping.h",
+        ":s2/s2edge_crosser.h",
+        ":s2/s2edge_crossings.h",
+        ":s2/s2edge_crossings_internal.h",
+        ":s2/s2edge_distances.h",
+        ":s2/s2edge_tessellator.h",
+        ":s2/s2edge_vector_shape.h",
+        ":s2/s2error.h",
+        ":s2/s2fractal.h",
+        ":s2/s2furthest_edge_query.h",
+        ":s2/s2hausdorff_distance_query.h",
+        ":s2/s2latlng.h",
+        ":s2/s2latlng_rect.h",
+        ":s2/s2latlng_rect_bounder.h",
+        ":s2/s2lax_loop_shape.h",
+        ":s2/s2lax_polygon_shape.h",
+        ":s2/s2lax_polyline_shape.h",
+        ":s2/s2loop.h",
+        ":s2/s2loop_measures.h",
+        ":s2/s2max_distance_targets.h",
+        ":s2/s2measures.h",
+        ":s2/s2memory_tracker.h",
+        ":s2/s2metrics.h",
+        ":s2/s2min_distance_targets.h",
+        ":s2/s2padded_cell.h",
+        ":s2/s2point.h",
+        ":s2/s2point_array.h",
+        ":s2/s2point_compression.h",
+        ":s2/s2point_index.h",
+        ":s2/s2point_region.h",
+        ":s2/s2point_span.h",
+        ":s2/s2point_vector_shape.h",
+        ":s2/s2pointutil.h",
+        ":s2/s2polygon.h",
+        ":s2/s2polyline.h",
+        ":s2/s2polyline_alignment.h",
+        ":s2/s2polyline_alignment_internal.h",
+        ":s2/s2polyline_measures.h",
+        ":s2/s2polyline_simplifier.h",
+        ":s2/s2predicates.h",
+        ":s2/s2predicates_internal.h",
+        ":s2/s2projections.h",
+        ":s2/s2r2rect.h",
+        ":s2/s2region.h",
+        ":s2/s2region_coverer.h",
+        ":s2/s2region_intersection.h",
+        ":s2/s2region_term_indexer.h",
+        ":s2/s2region_union.h",
+        ":s2/s2shape.h",
+        ":s2/s2shape_index.h",
+        ":s2/s2shape_index_buffered_region.h",
+        ":s2/s2shape_index_measures.h",
+        ":s2/s2shape_index_region.h",
+        ":s2/s2shape_measures.h",
+        ":s2/s2shape_nesting_query.h",
+        ":s2/s2shapeutil_build_polygon_boundaries.h",
+        ":s2/s2shapeutil_coding.h",
+        ":s2/s2shapeutil_contains_brute_force.h",
+        ":s2/s2shapeutil_conversion.h",
+        ":s2/s2shapeutil_count_edges.h",
+        ":s2/s2shapeutil_edge_iterator.h",
+        ":s2/s2shapeutil_edge_wrap.h",
+        ":s2/s2shapeutil_get_reference_point.h",
+        ":s2/s2shapeutil_shape_edge.h",
+        ":s2/s2shapeutil_shape_edge_id.h",
+        ":s2/s2shapeutil_testing.h",
+        ":s2/s2shapeutil_visit_crossing_edge_pairs.h",
+        ":s2/s2text_format.h",
+        ":s2/s2validation_query.h",
+        ":s2/s2wedge_relations.h",
+        ":s2/s2winding_operation.h",
+        ":s2/s2wrapped_shape.h",
+        ":s2/sequence_lexicon.h",
+        ":s2/thread_testing.h",
+        ":s2/value_lexicon.h",
     ],
     deps = [
-        "//s2/base:logging",
+        "//s2/base:casts",
+        "//s2/base:log_severity",
         "//s2/base:spinlock",
-        "//s2/testing",
+        "//s2/testing:gtest_prod",
         "//s2/util/bitmap",
         "//s2/util/bits",
         "//s2/util/coding",
         "//s2/util/endian",
-        "//s2/util/gtl",
-        "//s2/util/hash",
+        "//s2/util/gtl:compact_array",
+        "//s2/util/gtl:container_logging",
+        "//s2/util/gtl:dense_hash_set",
+        "//s2/util/gtl:requires",
+        "//s2/util/gtl:unaligned",
+        "//s2/util/gtl:value_or_die",
+        "//s2/util/hash:mix",
         "//s2/util/math:mathutil",
         "//s2/util/math:matrix3x3",
         "//s2/util/math:vector",
         "//s2/util/math/exactfloat",
         "//s2/util/random",
+        "//s2/util/task:status_macros",
         "//s2/util/units",
         "@abseil-cpp//absl/base",
+        "@abseil-cpp//absl/container:btree",
+        "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/flags:flag",
         "@abseil-cpp//absl/log:absl_log",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/random:bit_gen_ref",
         "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
     ],
 )
 
 cc_binary(
     name = "s2shared",
     srcs = [
-        "//s2:encoded_s2cell_id_vector.cc",
-        "//s2:encoded_s2point_vector.cc",
-        "//s2:encoded_s2shape_index.cc",
-        "//s2:encoded_string_vector.cc",
-        "//s2:id_set_lexicon.cc",
-        "//s2:mutable_s2shape_index.cc",
-        "//s2:r2rect.cc",
-        "//s2:s1angle.cc",
-        "//s2:s1chord_angle.cc",
-        "//s2:s1interval.cc",
-        "//s2:s2boolean_operation.cc",
-        "//s2:s2buffer_operation.cc",
-        "//s2:s2builder.cc",
-        "//s2:s2builder_graph.cc",
-        "//s2:s2builderutil_closed_set_normalizer.cc",
-        "//s2:s2builderutil_find_polygon_degeneracies.cc",
-        "//s2:s2builderutil_get_snapped_winding_delta.cc",
-        "//s2:s2builderutil_lax_polygon_layer.cc",
-        "//s2:s2builderutil_lax_polyline_layer.cc",
-        "//s2:s2builderutil_s2point_vector_layer.cc",
-        "//s2:s2builderutil_s2polygon_layer.cc",
-        "//s2:s2builderutil_s2polyline_layer.cc",
-        "//s2:s2builderutil_s2polyline_vector_layer.cc",
-        "//s2:s2builderutil_snap_functions.cc",
-        "//s2:s2cap.cc",
-        "//s2:s2cell.cc",
-        "//s2:s2cell_id.cc",
-        "//s2:s2cell_index.cc",
-        "//s2:s2cell_union.cc",
-        "//s2:s2centroids.cc",
-        "//s2:s2closest_cell_query.cc",
-        "//s2:s2closest_edge_query.cc",
-        "//s2:s2closest_point_query.cc",
-        "//s2:s2contains_vertex_query.cc",
-        "//s2:s2convex_hull_query.cc",
-        "//s2:s2coords.cc",
-        "//s2:s2crossing_edge_query.cc",
-        "//s2:s2debug.cc",
-        "//s2:s2earth.cc",
-        "//s2:s2edge_clipping.cc",
-        "//s2:s2edge_crosser.cc",
-        "//s2:s2edge_crossings.cc",
-        "//s2:s2edge_distances.cc",
-        "//s2:s2edge_tessellator.cc",
-        "//s2:s2error.cc",
-        "//s2:s2fractal.cc",
-        "//s2:s2furthest_edge_query.cc",
-        "//s2:s2hausdorff_distance_query.cc",
-        "//s2:s2latlng.cc",
-        "//s2:s2latlng_rect.cc",
-        "//s2:s2latlng_rect_bounder.cc",
-        "//s2:s2lax_loop_shape.cc",
-        "//s2:s2lax_polygon_shape.cc",
-        "//s2:s2lax_polyline_shape.cc",
-        "//s2:s2loop.cc",
-        "//s2:s2loop_measures.cc",
-        "//s2:s2max_distance_targets.cc",
-        "//s2:s2measures.cc",
-        "//s2:s2memory_tracker.cc",
-        "//s2:s2metrics.cc",
-        "//s2:s2min_distance_targets.cc",
-        "//s2:s2padded_cell.cc",
-        "//s2:s2point_compression.cc",
-        "//s2:s2point_region.cc",
-        "//s2:s2pointutil.cc",
-        "//s2:s2polygon.cc",
-        "//s2:s2polyline.cc",
-        "//s2:s2polyline_alignment.cc",
-        "//s2:s2polyline_measures.cc",
-        "//s2:s2polyline_simplifier.cc",
-        "//s2:s2predicates.cc",
-        "//s2:s2projections.cc",
-        "//s2:s2r2rect.cc",
-        "//s2:s2region_coverer.cc",
-        "//s2:s2region_intersection.cc",
-        "//s2:s2region_term_indexer.cc",
-        "//s2:s2region_union.cc",
-        "//s2:s2shape_index.cc",
-        "//s2:s2shape_index_buffered_region.cc",
-        "//s2:s2shape_index_measures.cc",
-        "//s2:s2shape_measures.cc",
-        "//s2:s2shape_nesting_query.cc",
-        "//s2:s2shapeutil_build_polygon_boundaries.cc",
-        "//s2:s2shapeutil_coding.cc",
-        "//s2:s2shapeutil_contains_brute_force.cc",
-        "//s2:s2shapeutil_conversion.cc",
-        "//s2:s2shapeutil_edge_iterator.cc",
-        "//s2:s2shapeutil_get_reference_point.cc",
-        "//s2:s2shapeutil_visit_crossing_edge_pairs.cc",
-        "//s2:s2text_format.cc",
-        "//s2:s2wedge_relations.cc",
-        "//s2:s2winding_operation.cc",
+        ":s2/encoded_s2cell_id_vector.cc",
+        ":s2/encoded_s2point_vector.cc",
+        ":s2/encoded_s2shape_index.cc",
+        ":s2/encoded_string_vector.cc",
+        ":s2/id_set_lexicon.cc",
+        ":s2/mutable_s2shape_index.cc",
+        ":s2/r2rect.cc",
+        ":s2/s1angle.cc",
+        ":s2/s1chord_angle.cc",
+        ":s2/s1interval.cc",
+        ":s2/s2boolean_operation.cc",
+        ":s2/s2buffer_operation.cc",
+        ":s2/s2builder.cc",
+        ":s2/s2builder_graph.cc",
+        ":s2/s2builderutil_closed_set_normalizer.cc",
+        ":s2/s2builderutil_find_polygon_degeneracies.cc",
+        ":s2/s2builderutil_get_snapped_winding_delta.cc",
+        ":s2/s2builderutil_lax_polygon_layer.cc",
+        ":s2/s2builderutil_lax_polyline_layer.cc",
+        ":s2/s2builderutil_s2point_vector_layer.cc",
+        ":s2/s2builderutil_s2polygon_layer.cc",
+        ":s2/s2builderutil_s2polyline_layer.cc",
+        ":s2/s2builderutil_s2polyline_vector_layer.cc",
+        ":s2/s2builderutil_snap_functions.cc",
+        ":s2/s2cap.cc",
+        ":s2/s2cell.cc",
+        ":s2/s2cell_id.cc",
+        ":s2/s2cell_index.cc",
+        ":s2/s2cell_union.cc",
+        ":s2/s2centroids.cc",
+        ":s2/s2closest_cell_query.cc",
+        ":s2/s2closest_edge_query.cc",
+        ":s2/s2closest_point_query.cc",
+        ":s2/s2contains_vertex_query.cc",
+        ":s2/s2convex_hull_query.cc",
+        ":s2/s2coords.cc",
+        ":s2/s2crossing_edge_query.cc",
+        ":s2/s2debug.cc",
+        ":s2/s2earth.cc",
+        ":s2/s2edge_clipping.cc",
+        ":s2/s2edge_crosser.cc",
+        ":s2/s2edge_crossings.cc",
+        ":s2/s2edge_distances.cc",
+        ":s2/s2edge_tessellator.cc",
+        ":s2/s2error.cc",
+        ":s2/s2fractal.cc",
+        ":s2/s2furthest_edge_query.cc",
+        ":s2/s2hausdorff_distance_query.cc",
+        ":s2/s2latlng.cc",
+        ":s2/s2latlng_rect.cc",
+        ":s2/s2latlng_rect_bounder.cc",
+        ":s2/s2lax_loop_shape.cc",
+        ":s2/s2lax_polygon_shape.cc",
+        ":s2/s2lax_polyline_shape.cc",
+        ":s2/s2loop.cc",
+        ":s2/s2loop_measures.cc",
+        ":s2/s2max_distance_targets.cc",
+        ":s2/s2measures.cc",
+        ":s2/s2memory_tracker.cc",
+        ":s2/s2metrics.cc",
+        ":s2/s2min_distance_targets.cc",
+        ":s2/s2padded_cell.cc",
+        ":s2/s2point_compression.cc",
+        ":s2/s2point_region.cc",
+        ":s2/s2pointutil.cc",
+        ":s2/s2polygon.cc",
+        ":s2/s2polyline.cc",
+        ":s2/s2polyline_alignment.cc",
+        ":s2/s2polyline_measures.cc",
+        ":s2/s2polyline_simplifier.cc",
+        ":s2/s2predicates.cc",
+        ":s2/s2projections.cc",
+        ":s2/s2r2rect.cc",
+        ":s2/s2region_coverer.cc",
+        ":s2/s2region_intersection.cc",
+        ":s2/s2region_term_indexer.cc",
+        ":s2/s2region_union.cc",
+        ":s2/s2shape_index.cc",
+        ":s2/s2shape_index_buffered_region.cc",
+        ":s2/s2shape_index_measures.cc",
+        ":s2/s2shape_measures.cc",
+        ":s2/s2shape_nesting_query.cc",
+        ":s2/s2shapeutil_build_polygon_boundaries.cc",
+        ":s2/s2shapeutil_coding.cc",
+        ":s2/s2shapeutil_contains_brute_force.cc",
+        ":s2/s2shapeutil_conversion.cc",
+        ":s2/s2shapeutil_edge_iterator.cc",
+        ":s2/s2shapeutil_get_reference_point.cc",
+        ":s2/s2shapeutil_visit_crossing_edge_pairs.cc",
+        ":s2/s2text_format.cc",
+        ":s2/s2wedge_relations.cc",
+        ":s2/s2winding_operation.cc",
     ],
     linkshared = True,
     deps = [
@@ -379,21 +390,23 @@ cc_library(
     name = "s2_testing_headers",
     testonly = True,
     srcs = [
-        "//s2:s2builderutil_testing.cc",
-        "//s2:s2random.cc",
-        "//s2:s2shapeutil_testing.cc",
-        "//s2:s2testing.cc",
-        "//s2:thread_testing.cc",
+        ":s2/gmock_matchers.cc",
+        ":s2/s2builderutil_testing.cc",
+        ":s2/s2random.cc",
+        ":s2/s2shapeutil_testing.cc",
+        ":s2/s2testing.cc",
+        ":s2/thread_testing.cc",
     ],
     hdrs = [
-        "//s2:s2builderutil_testing.h",
-        "//s2:s2cell_iterator_testing.h",
-        "//s2:s2closest_edge_query_testing.h",
-        "//s2:s2coder_testing.h",
-        "//s2:s2random.h",
-        "//s2:s2shapeutil_testing.h",
-        "//s2:s2testing.h",
-        "//s2:thread_testing.h",
+        ":s2/gmock_matchers.h",
+        ":s2/s2builderutil_testing.h",
+        ":s2/s2cell_iterator_testing.h",
+        ":s2/s2closest_edge_query_testing.h",
+        ":s2/s2coder_testing.h",
+        ":s2/s2random.h",
+        ":s2/s2shapeutil_testing.h",
+        ":s2/s2testing.h",
+        ":s2/thread_testing.h",
     ],
     includes = ["src"],
     deps = [
@@ -414,1150 +427,1155 @@ cc_library(
 
 cc_test(
     name = "s2disjoint_set_test",
-    srcs = ["//s2:internal/s2disjoint_set_test.cc"],
+    srcs = [":s2/internal/s2disjoint_set_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2fractal_test",
-    srcs = ["//s2:s2fractal_test.cc"],
+    srcs = [":s2/s2fractal_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "encoded_s2cell_id_vector_test",
-    srcs = ["//s2:encoded_s2cell_id_vector_test.cc"],
+    srcs = [":s2/encoded_s2cell_id_vector_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "encoded_s2point_vector_test",
-    srcs = ["//s2:encoded_s2point_vector_test.cc"],
+    srcs = [":s2/encoded_s2point_vector_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "encoded_s2shape_index_test",
-    srcs = ["//s2:encoded_s2shape_index_test.cc"],
+    srcs = [":s2/encoded_s2shape_index_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "encoded_string_vector_test",
-    srcs = ["//s2:encoded_string_vector_test.cc"],
+    srcs = [":s2/encoded_string_vector_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "encoded_uint_vector_test",
-    srcs = ["//s2:encoded_uint_vector_test.cc"],
+    srcs = [":s2/encoded_uint_vector_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "id_set_lexicon_test",
-    srcs = ["//s2:id_set_lexicon_test.cc"],
+    srcs = [":s2/id_set_lexicon_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "mutable_s2shape_index_test",
-    srcs = ["//s2:mutable_s2shape_index_test.cc"],
+    srcs = [":s2/mutable_s2shape_index_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "r1interval_test",
-    srcs = ["//s2:r1interval_test.cc"],
+    srcs = [":s2/r1interval_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "r2rect_test",
-    srcs = ["//s2:r2rect_test.cc"],
+    srcs = [":s2/r2rect_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s1angle_test",
-    srcs = ["//s2:s1angle_test.cc"],
+    srcs = [":s2/s1angle_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s1chord_angle_test",
-    srcs = ["//s2:s1chord_angle_test.cc"],
+    srcs = [":s2/s1chord_angle_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s1interval_test",
-    srcs = ["//s2:s1interval_test.cc"],
+    srcs = [":s2/s1interval_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2boolean_operation_test",
-    srcs = ["//s2:s2boolean_operation_test.cc"],
+    srcs = [":s2/s2boolean_operation_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2buffer_operation_test",
-    srcs = ["//s2:s2buffer_operation_test.cc"],
+    srcs = [":s2/s2buffer_operation_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builder_graph_test",
-    srcs = ["//s2:s2builder_graph_test.cc"],
+    srcs = [":s2/s2builder_graph_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builder_test",
-    srcs = ["//s2:s2builder_test.cc"],
+    srcs = [":s2/s2builder_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_closed_set_normalizer_test",
-    srcs = ["//s2:s2builderutil_closed_set_normalizer_test.cc"],
+    srcs = [":s2/s2builderutil_closed_set_normalizer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_find_polygon_degeneracies_test",
-    srcs = ["//s2:s2builderutil_find_polygon_degeneracies_test.cc"],
+    srcs = [":s2/s2builderutil_find_polygon_degeneracies_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_get_snapped_winding_delta_test",
-    srcs = ["//s2:s2builderutil_get_snapped_winding_delta_test.cc"],
+    srcs = [":s2/s2builderutil_get_snapped_winding_delta_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_lax_polygon_layer_test",
-    srcs = ["//s2:s2builderutil_lax_polygon_layer_test.cc"],
+    srcs = [":s2/s2builderutil_lax_polygon_layer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_lax_polyline_layer_test",
-    srcs = ["//s2:s2builderutil_lax_polyline_layer_test.cc"],
+    srcs = [":s2/s2builderutil_lax_polyline_layer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_s2point_vector_layer_test",
-    srcs = ["//s2:s2builderutil_s2point_vector_layer_test.cc"],
+    srcs = [":s2/s2builderutil_s2point_vector_layer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_s2polygon_layer_test",
-    srcs = ["//s2:s2builderutil_s2polygon_layer_test.cc"],
+    srcs = [":s2/s2builderutil_s2polygon_layer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_s2polyline_layer_test",
-    srcs = ["//s2:s2builderutil_s2polyline_layer_test.cc"],
+    srcs = [":s2/s2builderutil_s2polyline_layer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_s2polyline_vector_layer_test",
-    srcs = ["//s2:s2builderutil_s2polyline_vector_layer_test.cc"],
+    srcs = [":s2/s2builderutil_s2polyline_vector_layer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_snap_functions_test",
-    srcs = ["//s2:s2builderutil_snap_functions_test.cc"],
+    srcs = [":s2/s2builderutil_snap_functions_test.cc"],
+    shard_count = 3,
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2builderutil_testing_test",
-    srcs = ["//s2:s2builderutil_testing_test.cc"],
+    srcs = [":s2/s2builderutil_testing_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cap_test",
-    srcs = ["//s2:s2cap_test.cc"],
+    srcs = [":s2/s2cap_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cell_test",
-    srcs = ["//s2:s2cell_test.cc"],
+    srcs = [":s2/s2cell_test.cc"],
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cell_id_test",
-    srcs = ["//s2:s2cell_id_test.cc"],
+    srcs = [":s2/s2cell_id_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cell_index_test",
-    srcs = ["//s2:s2cell_index_test.cc"],
+    srcs = [":s2/s2cell_index_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cell_iterator_join_test",
-    srcs = ["//s2:s2cell_iterator_join_test.cc"],
+    srcs = [":s2/s2cell_iterator_join_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cell_iterator_testing_test",
-    srcs = ["//s2:s2cell_iterator_testing_test.cc"],
+    srcs = [":s2/s2cell_iterator_testing_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cell_range_iterator_test",
-    srcs = ["//s2:s2cell_range_iterator_test.cc"],
+    srcs = [":s2/s2cell_range_iterator_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2cell_union_test",
-    srcs = ["//s2:s2cell_union_test.cc"],
+    srcs = [":s2/s2cell_union_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2centroids_test",
-    srcs = ["//s2:s2centroids_test.cc"],
+    srcs = [":s2/s2centroids_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2closest_cell_query_base_test",
-    srcs = ["//s2:s2closest_cell_query_base_test.cc"],
+    srcs = [":s2/s2closest_cell_query_base_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2closest_cell_query_test",
-    srcs = ["//s2:s2closest_cell_query_test.cc"],
+    srcs = [":s2/s2closest_cell_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2closest_edge_query_base_test",
-    srcs = ["//s2:s2closest_edge_query_base_test.cc"],
+    srcs = [":s2/s2closest_edge_query_base_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2closest_edge_query_test",
-    srcs = ["//s2:s2closest_edge_query_test.cc"],
+    srcs = [":s2/s2closest_edge_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2closest_point_query_base_test",
-    srcs = ["//s2:s2closest_point_query_base_test.cc"],
+    srcs = [":s2/s2closest_point_query_base_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2closest_point_query_test",
-    srcs = ["//s2:s2closest_point_query_test.cc"],
+    srcs = [":s2/s2closest_point_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2contains_point_query_test",
-    srcs = ["//s2:s2contains_point_query_test.cc"],
+    srcs = [":s2/s2contains_point_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2contains_vertex_query_test",
-    srcs = ["//s2:s2contains_vertex_query_test.cc"],
+    srcs = [":s2/s2contains_vertex_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2convex_hull_query_test",
-    srcs = ["//s2:s2convex_hull_query_test.cc"],
+    srcs = [":s2/s2convex_hull_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2coords_test",
-    srcs = ["//s2:s2coords_test.cc"],
+    srcs = [":s2/s2coords_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2crossing_edge_query_test",
-    srcs = ["//s2:s2crossing_edge_query_test.cc"],
+    srcs = [":s2/s2crossing_edge_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2earth_test",
-    srcs = ["//s2:s2earth_test.cc"],
+    srcs = [":s2/s2earth_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2edge_clipping_test",
-    srcs = ["//s2:s2edge_clipping_test.cc"],
+    srcs = [":s2/s2edge_clipping_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2edge_crosser_test",
-    srcs = ["//s2:s2edge_crosser_test.cc"],
+    srcs = [":s2/s2edge_crosser_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2edge_crossings_test",
-    srcs = ["//s2:s2edge_crossings_test.cc"],
+    srcs = [":s2/s2edge_crossings_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2edge_distances_test",
-    srcs = ["//s2:s2edge_distances_test.cc"],
+    srcs = [":s2/s2edge_distances_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2edge_tessellator_test",
-    srcs = ["//s2:s2edge_tessellator_test.cc"],
+    srcs = [":s2/s2edge_tessellator_test.cc"],
+    shard_count = 2,
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2edge_vector_shape_test",
-    srcs = ["//s2:s2edge_vector_shape_test.cc"],
+    srcs = [":s2/s2edge_vector_shape_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2error_test",
-    srcs = ["//s2:s2error_test.cc"],
+    srcs = [":s2/s2error_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2furthest_edge_query_test",
-    srcs = ["//s2:s2furthest_edge_query_test.cc"],
+    srcs = [":s2/s2furthest_edge_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2hausdorff_distance_query_test",
-    srcs = ["//s2:s2hausdorff_distance_query_test.cc"],
+    srcs = [":s2/s2hausdorff_distance_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2index_cell_data_test",
-    srcs = ["//s2:internal/s2index_cell_data_test.cc"],
+    srcs = [":s2/internal/s2index_cell_data_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2latlng_test",
-    srcs = ["//s2:s2latlng_test.cc"],
+    srcs = [":s2/s2latlng_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2latlng_rect_bounder_test",
-    srcs = ["//s2:s2latlng_rect_bounder_test.cc"],
+    srcs = [":s2/s2latlng_rect_bounder_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2latlng_rect_test",
-    srcs = ["//s2:s2latlng_rect_test.cc"],
+    srcs = [":s2/s2latlng_rect_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2lax_loop_shape_test",
-    srcs = ["//s2:s2lax_loop_shape_test.cc"],
+    srcs = [":s2/s2lax_loop_shape_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2lax_polygon_shape_test",
-    srcs = ["//s2:s2lax_polygon_shape_test.cc"],
+    srcs = [":s2/s2lax_polygon_shape_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2lax_polyline_shape_test",
-    srcs = ["//s2:s2lax_polyline_shape_test.cc"],
+    srcs = [":s2/s2lax_polyline_shape_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2loop_measures_test",
-    srcs = ["//s2:s2loop_measures_test.cc"],
+    srcs = [":s2/s2loop_measures_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2loop_test",
-    srcs = ["//s2:s2loop_test.cc"],
+    srcs = [":s2/s2loop_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
+        "@abseil-cpp//absl/status:status_matchers",
     ],
 )
 
 cc_test(
     name = "s2measures_test",
-    srcs = ["//s2:s2measures_test.cc"],
+    srcs = [":s2/s2measures_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2memory_tracker_test",
-    srcs = ["//s2:s2memory_tracker_test.cc"],
+    srcs = [":s2/s2memory_tracker_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2metrics_test",
-    srcs = ["//s2:s2metrics_test.cc"],
+    srcs = [":s2/s2metrics_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2max_distance_targets_test",
-    srcs = ["//s2:s2max_distance_targets_test.cc"],
+    srcs = [":s2/s2max_distance_targets_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2min_distance_targets_test",
-    srcs = ["//s2:s2min_distance_targets_test.cc"],
+    srcs = [":s2/s2min_distance_targets_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2padded_cell_test",
-    srcs = ["//s2:s2padded_cell_test.cc"],
+    srcs = [":s2/s2padded_cell_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2point_test",
-    srcs = ["//s2:s2point_test.cc"],
+    srcs = [":s2/s2point_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2point_vector_shape_test",
-    srcs = ["//s2:s2point_vector_shape_test.cc"],
+    srcs = [":s2/s2point_vector_shape_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2point_compression_test",
-    srcs = ["//s2:s2point_compression_test.cc"],
+    srcs = [":s2/s2point_compression_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2point_index_test",
-    srcs = ["//s2:s2point_index_test.cc"],
+    srcs = [":s2/s2point_index_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2point_region_test",
-    srcs = ["//s2:s2point_region_test.cc"],
+    srcs = [":s2/s2point_region_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2pointutil_test",
-    srcs = ["//s2:s2pointutil_test.cc"],
+    srcs = [":s2/s2pointutil_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2polygon_test",
-    srcs = ["//s2:s2polygon_test.cc"],
+    srcs = [":s2/s2polygon_test.cc"],
+    shard_count = 5,
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2polyline_alignment_test",
-    srcs = ["//s2:s2polyline_alignment_test.cc"],
+    srcs = [":s2/s2polyline_alignment_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2polyline_simplifier_test",
-    srcs = ["//s2:s2polyline_simplifier_test.cc"],
+    srcs = [":s2/s2polyline_simplifier_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2polyline_measures_test",
-    srcs = ["//s2:s2polyline_measures_test.cc"],
+    srcs = [":s2/s2polyline_measures_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2polyline_test",
-    srcs = ["//s2:s2polyline_test.cc"],
+    srcs = [":s2/s2polyline_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2predicates_test",
-    srcs = ["//s2:s2predicates_test.cc"],
+    srcs = [":s2/s2predicates_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2projections_test",
-    srcs = ["//s2:s2projections_test.cc"],
+    srcs = [":s2/s2projections_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2r2rect_test",
-    srcs = ["//s2:s2r2rect_test.cc"],
+    srcs = [":s2/s2r2rect_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2region_test",
-    srcs = ["//s2:s2region_test.cc"],
+    srcs = [":s2/s2region_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2region_term_indexer_test",
-    srcs = ["//s2:s2region_term_indexer_test.cc"],
+    srcs = [":s2/s2region_term_indexer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2region_coverer_test",
-    srcs = ["//s2:s2region_coverer_test.cc"],
+    srcs = [":s2/s2region_coverer_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2region_union_test",
-    srcs = ["//s2:s2region_union_test.cc"],
+    srcs = [":s2/s2region_union_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shape_index_buffered_region_test",
-    srcs = ["//s2:s2shape_index_buffered_region_test.cc"],
+    srcs = [":s2/s2shape_index_buffered_region_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shape_index_measures_test",
-    srcs = ["//s2:s2shape_index_measures_test.cc"],
+    srcs = [":s2/s2shape_index_measures_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shape_index_region_test",
-    srcs = ["//s2:s2shape_index_region_test.cc"],
+    srcs = [":s2/s2shape_index_region_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shape_index_test",
-    srcs = ["//s2:s2shape_index_test.cc"],
+    srcs = [":s2/s2shape_index_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shape_measures_test",
-    srcs = ["//s2:s2shape_measures_test.cc"],
+    srcs = [":s2/s2shape_measures_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shape_nesting_query_test",
-    srcs = ["//s2:s2shape_nesting_query_test.cc"],
+    srcs = [":s2/s2shape_nesting_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_build_polygon_boundaries_test",
-    srcs = ["//s2:s2shapeutil_build_polygon_boundaries_test.cc"],
+    srcs = [":s2/s2shapeutil_build_polygon_boundaries_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_coding_test",
-    srcs = ["//s2:s2shapeutil_coding_test.cc"],
+    srcs = [":s2/s2shapeutil_coding_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_contains_brute_force_test",
-    srcs = ["//s2:s2shapeutil_contains_brute_force_test.cc"],
+    srcs = [":s2/s2shapeutil_contains_brute_force_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_conversion_test",
-    srcs = ["//s2:s2shapeutil_conversion_test.cc"],
+    srcs = [":s2/s2shapeutil_conversion_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_count_edges_test",
-    srcs = ["//s2:s2shapeutil_count_edges_test.cc"],
+    srcs = [":s2/s2shapeutil_count_edges_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_edge_iterator_test",
-    srcs = ["//s2:s2shapeutil_edge_iterator_test.cc"],
+    srcs = [":s2/s2shapeutil_edge_iterator_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_edge_wrap_test",
-    srcs = ["//s2:s2shapeutil_edge_wrap_test.cc"],
+    srcs = [":s2/s2shapeutil_edge_wrap_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_get_reference_point_test",
-    srcs = ["//s2:s2shapeutil_get_reference_point_test.cc"],
+    srcs = [":s2/s2shapeutil_get_reference_point_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2shapeutil_visit_crossing_edge_pairs_test",
-    srcs = ["//s2:s2shapeutil_visit_crossing_edge_pairs_test.cc"],
+    srcs = [":s2/s2shapeutil_visit_crossing_edge_pairs_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 #cc_test(
 #    name = "s2testing_test",
-#    srcs = ["//s2:s2testing_test.cc"],
+#    srcs = [":s2/s2testing_test.cc"],
 #    deps = [
 #        ":s2",
 #        ":s2_testing_headers",
-#        "@googletest//:gtest_main",
+#        "//s2/testing:test_main",
 #    ],
 #)
 
 cc_test(
     name = "s2text_format_test",
-    srcs = ["//s2:s2text_format_test.cc"],
+    srcs = [":s2/s2text_format_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2validation_query_test",
-    srcs = ["//s2:s2validation_query_test.cc"],
+    srcs = [":s2/s2validation_query_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2wedge_relations_test",
-    srcs = ["//s2:s2wedge_relations_test.cc"],
+    srcs = [":s2/s2wedge_relations_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2winding_operation_test",
-    srcs = ["//s2:s2winding_operation_test.cc"],
+    srcs = [":s2/s2winding_operation_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "s2wrapped_shape_test",
-    srcs = ["//s2:s2wrapped_shape_test.cc"],
+    srcs = [":s2/s2wrapped_shape_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "sequence_lexicon_test",
-    srcs = ["//s2:sequence_lexicon_test.cc"],
+    srcs = [":s2/sequence_lexicon_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )
 
 cc_test(
     name = "value_lexicon_test",
-    srcs = ["//s2:value_lexicon_test.cc"],
+    srcs = [":s2/value_lexicon_test.cc"],
     deps = [
         ":s2",
         ":s2_testing_headers",
-        "@googletest//:gtest_main",
+        "//s2/testing:test_main",
     ],
 )

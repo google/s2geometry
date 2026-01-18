@@ -1,0 +1,53 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//:__subpackages__"])
+
+cc_library(
+    name = "compact_array",
+    hdrs = ["compact_array.h"],
+    deps = [
+        ":container_logging",
+        "//s2/base:malloc_extension",
+        "//s2/util/gtl:unaligned",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/meta:type_traits",
+        "@abseil-cpp//absl/numeric:bits",
+    ],
+)
+
+cc_library(
+    name = "container_logging",
+    hdrs = ["container_logging.h"],
+    deps = [
+        ":requires",
+        "@abseil-cpp//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "dense_hash_set",
+    srcs = [
+        "densehashtable.h",
+        "hashtable_common.h",
+    ],
+    hdrs = ["dense_hash_set.h"],
+    deps = [
+        ":requires",
+        "@abseil-cpp//absl/base:core_headers",
+    ],
+)
+
+cc_library(
+    name = "requires",
+    hdrs = ["requires.h"],
+)
+
+cc_library(
+    name = "unaligned",
+    hdrs = ["unaligned.h"],
+)
+
+cc_library(
+    name = "value_or_die",
+    hdrs = ["value_or_die.h"],
+)

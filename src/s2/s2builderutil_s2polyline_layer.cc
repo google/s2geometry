@@ -19,6 +19,7 @@
 
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
@@ -78,7 +79,7 @@ GraphOptions S2PolylineLayer::graph_options() const {
                       DuplicateEdges::KEEP, SiblingPairs::KEEP);
 }
 
-void S2PolylineLayer::Build(const Graph& g, S2Error* error) {
+void S2PolylineLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   if (g.num_edges() == 0) {
     polyline_->Init(vector<S2Point>{});
     return;

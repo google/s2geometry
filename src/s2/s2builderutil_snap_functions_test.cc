@@ -151,10 +151,8 @@ static S2CellId kSearchFocusId = S2CellId::FromFace(0).child(3);
 
 static S1Angle GetMaxVertexDistance(const S2Point& p, S2CellId id) {
   S2Cell cell(id);
-  return max(max(S1Angle(p, cell.GetVertex(0)),
-                 S1Angle(p, cell.GetVertex(1))),
-                  max(S1Angle(p, cell.GetVertex(2)),
-                      S1Angle(p, cell.GetVertex(3))));
+  return max({S1Angle(p, cell.GetVertex(0)), S1Angle(p, cell.GetVertex(1)),
+              S1Angle(p, cell.GetVertex(2)), S1Angle(p, cell.GetVertex(3))});
 }
 
 // Helper function that computes the vertex separation between "id0" and its
@@ -511,10 +509,10 @@ static S2Point GetVertex(const IntLatLng& ll, int64_t scale, int i) {
 
 static S1Angle GetMaxVertexDistance(const S2Point& p, const IntLatLng& ll,
                                     int64_t scale) {
-  return max(max(S1Angle(p, GetVertex(ll, scale, 0)),
-                 S1Angle(p, GetVertex(ll, scale, 1))),
-             max(S1Angle(p, GetVertex(ll, scale, 2)),
-                 S1Angle(p, GetVertex(ll, scale, 3))));
+  return max({S1Angle(p, GetVertex(ll, scale, 0)),
+              S1Angle(p, GetVertex(ll, scale, 1)),
+              S1Angle(p, GetVertex(ll, scale, 2)),
+              S1Angle(p, GetVertex(ll, scale, 3))});
 }
 
 static double GetLatLngMinVertexSeparation(

@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/types/span.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
@@ -402,7 +403,7 @@ class S2Builder::Graph {
   // Convenience method that calls is_full_polygon_predicate() to determine
   // whether a graph that consists only of polygon degeneracies represents the
   // empty polygon or the full polygon (see s2builder.h for details).
-  bool IsFullPolygon(S2Error* error) const;
+  bool IsFullPolygon(S2Error* absl_nonnull error) const;
 
   // Returns a method that determines whether a graph that consists only of
   // polygon degeneracies represents the empty polygon or the full polygon
@@ -440,7 +441,8 @@ class S2Builder::Graph {
   //
   // "in_edge_ids" should be equal to GetInEdgeIds() or GetSiblingMap().
   bool GetLeftTurnMap(absl::Span<const EdgeId> in_edge_ids,
-                      std::vector<EdgeId>* left_turn_map, S2Error* error) const;
+                      std::vector<EdgeId>* left_turn_map,
+                      S2Error* absl_nonnull error) const;
 
   // Rotates the edges of "loop" if necessary so that the edge(s) with the
   // largest input edge ids are last.  This ensures that when an output loop
@@ -485,7 +487,7 @@ class S2Builder::Graph {
   // REQUIRES: options.degenerate_edges() == {DISCARD, DISCARD_EXCESS}
   // REQUIRES: options.edge_type() == DIRECTED
   bool GetDirectedLoops(LoopType loop_type, std::vector<EdgeLoop>* loops,
-                        S2Error* error) const;
+                        S2Error* absl_nonnull error) const;
 
   // Builds loops from a set of directed edges, turning left at each vertex
   // until a repeated edge is found (i.e., LoopType::CIRCUIT).  The loops are
@@ -526,9 +528,9 @@ class S2Builder::Graph {
   //           [i.e., every edge must have a sibling edge]
   enum class DegenerateBoundaries { DISCARD, KEEP };
   using DirectedComponent = std::vector<EdgeLoop>;
-  bool GetDirectedComponents(
-      DegenerateBoundaries degenerate_boundaries,
-      std::vector<DirectedComponent>* components, S2Error* error) const;
+  bool GetDirectedComponents(DegenerateBoundaries degenerate_boundaries,
+                             std::vector<DirectedComponent>* components,
+                             S2Error* absl_nonnull error) const;
 
   // Builds loops from a set of undirected edges, turning left at each vertex
   // until either a repeated vertex (for LoopType::SIMPLE) or a repeated edge
@@ -568,7 +570,7 @@ class S2Builder::Graph {
   using UndirectedComponent = std::array<std::vector<EdgeLoop>, 2>;
   bool GetUndirectedComponents(LoopType loop_type,
                                std::vector<UndirectedComponent>* components,
-                               S2Error* error) const;
+                               S2Error* absl_nonnull error) const;
 
   // Indicates whether polylines should be "paths" (which don't allow
   // duplicate vertices, except possibly the first and last vertex) or
@@ -622,10 +624,11 @@ class S2Builder::Graph {
   // already being tracked, i.e. their current memory usage is reflected in
   // "tracker".  Note that "id_set_lexicon" typically uses a negligible amount
   // of memory and is not tracked.
-  static void ProcessEdges(
-      GraphOptions* options, std::vector<Edge>* edges,
-      std::vector<InputEdgeIdSetId>* input_ids, IdSetLexicon* id_set_lexicon,
-      S2Error* error, S2MemoryTracker::Client* tracker = nullptr);
+  static void ProcessEdges(GraphOptions* options, std::vector<Edge>* edges,
+                           std::vector<InputEdgeIdSetId>* input_ids,
+                           IdSetLexicon* id_set_lexicon,
+                           S2Error* absl_nonnull error,
+                           S2MemoryTracker::Client* tracker = nullptr);
 
   // Given a set of vertices and edges, removes all vertices that do not have
   // any edges and returns the new, minimal set of vertices.  Also updates
@@ -683,12 +686,12 @@ class S2Builder::Graph {
   // already being tracked, i.e. their current memory usage is reflected in
   // "tracker".  Note that "id_set_lexicon" typically uses a negligible amount
   // of memory and is not tracked.
-  Graph MakeSubgraph(
-      GraphOptions new_options, std::vector<Edge>* new_edges,
-      std::vector<InputEdgeIdSetId>* new_input_edge_id_set_ids,
-      IdSetLexicon* new_input_edge_id_set_lexicon,
-      IsFullPolygonPredicate is_full_polygon_predicate,
-      S2Error* error, S2MemoryTracker::Client* tracker = nullptr) const;
+  Graph MakeSubgraph(GraphOptions new_options, std::vector<Edge>* new_edges,
+                     std::vector<InputEdgeIdSetId>* new_input_edge_id_set_ids,
+                     IdSetLexicon* new_input_edge_id_set_lexicon,
+                     IsFullPolygonPredicate is_full_polygon_predicate,
+                     S2Error* absl_nonnull error,
+                     S2MemoryTracker::Client* tracker = nullptr) const;
 
  private:
   class EdgeProcessor;
@@ -839,7 +842,7 @@ inline const IdSetLexicon& S2Builder::Graph::label_set_lexicon() const {
   return *label_set_lexicon_;
 }
 
-inline bool S2Builder::Graph::IsFullPolygon(S2Error* error) const {
+inline bool S2Builder::Graph::IsFullPolygon(S2Error* absl_nonnull error) const {
   return is_full_polygon_predicate_(*this, error);
 }
 

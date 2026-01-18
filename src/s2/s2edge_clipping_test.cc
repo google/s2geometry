@@ -20,10 +20,14 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <random>
+#include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/container/inlined_vector.h"
+#include "absl/flags/flag.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
@@ -368,3 +372,38 @@ TEST(S2, EdgeClipping) {
   TestEdgeClipping(bitgen, R2Rect::FromPoint(R2Point(0.3, 0.8)));
   TestEdgeClipping(bitgen, R2Rect::Empty());
 }
+
+// Benchmark clipping edges in UV space that are not connected in sequence.
+static void BM_EdgeClippingDisjoint(benchmark::State& state) {
+  // The cell we're clipping against.
+  constexpr string_view kCellToken = "89c25c1";
+  const S2Cell kCell = S2Cell(S2CellId::FromToken(kCellToken));
+  const int kFace = kCell.face();
+
+  const int kNumEdges = state.range(0);
+  const std::string seed_str =
+      StrCat("EDGE_CLIPPING_DISJOINT", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  vector<S2Shape::Edge> edges;
+  edges.reserve(kNumEdges);
+  for (int i = 0; i < kNumEdges; ++i) {
+    R2Point v0(s2random::Point(bitgen));
+    R2Point v1(s2random::Point(bitgen));
+    edges.emplace_back(S2::FaceUVtoXYZ(kFace, v0), S2::FaceUVtoXYZ(kFace, v1));
+  }
+
+  while (state.KeepRunningBatch(kNumEdges)) {
+    for (const auto& edge : edges) {
+      R2Point v0, v1;
+      S2::ValidFaceXYZtoUV(0, edge.v0, &v0);
+      S2::ValidFaceXYZtoUV(0, edge.v1, &v1);
+      S2::ClipEdge(v0, v1, kCell.GetBoundUV(), &v0, &v1);
+      benchmark::DoNotOptimize(v0);
+      benchmark::DoNotOptimize(v1);
+    }
+  }
+  state.SetItemsProcessed(state.iterations());
+}
+BENCHMARK(BM_EdgeClippingDisjoint)->Arg(100000);

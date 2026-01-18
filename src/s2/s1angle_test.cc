@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <sstream>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
 #include "absl/log/log_streamer.h"
@@ -178,6 +179,53 @@ TEST(S1Angle, DecodeFailsWithTruncatedBuffer) {
   Decoder decoder(encoder.base(), encoder.length() - 2);
   EXPECT_FALSE(S1Angle::Coder().Decode(decoder, decoded_angle, error));
 }
+
+// Benchmarks to verify that the conversion to E5/E6/E7 is not much slower
+// than the conversion from E5/E6/E7.  (Float-to-integer conversions can be
+// quite slow on some platforms.)  We only check the times for E6; the times
+// for E5/E7 should be similar.
+
+// Inspect the results to make sure that the To/From E6 times are not
+// much different.  The difference factor slightly less than 2 on an x86_64.
+
+// To reduce the impact of loop overhead, we do kOpsPerLoop ops per loop.
+static constexpr int kOpsPerLoop = 8;
+
+static void BM_E6ToRadians(benchmark::State& state) {
+  // Time conversion from E6 to radians.
+  int i = 0;
+  while (state.KeepRunningBatch(kOpsPerLoop)) {
+    benchmark::DoNotOptimize(S1Angle::E6(i + 0).radians());
+    benchmark::DoNotOptimize(S1Angle::E6(i + 1).radians());
+    benchmark::DoNotOptimize(S1Angle::E6(i + 2).radians());
+    benchmark::DoNotOptimize(S1Angle::E6(i + 3).radians());
+    benchmark::DoNotOptimize(S1Angle::E6(i + 4).radians());
+    benchmark::DoNotOptimize(S1Angle::E6(i + 5).radians());
+    benchmark::DoNotOptimize(S1Angle::E6(i + 6).radians());
+    benchmark::DoNotOptimize(S1Angle::E6(i + 7).radians());
+    i += kOpsPerLoop;
+  }
+}
+BENCHMARK(BM_E6ToRadians);
+
+static void BM_RadiansToE6(benchmark::State& state) {
+  // Time conversion from radians to E6.
+  const double delta = (2 * M_PI) / (state.max_iterations + kOpsPerLoop);
+  double angle = -M_PI;
+  while (state.KeepRunningBatch(kOpsPerLoop)) {
+    // clang-format off
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    benchmark::DoNotOptimize(S1Angle::Radians(angle).e6()); angle += delta;
+    // clang-format on
+  }
+}
+BENCHMARK(BM_RadiansToE6);
 
 // The current implementation guarantees exact conversions between
 // Degrees() and E6() when the Degrees() argument is an integer.

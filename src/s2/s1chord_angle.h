@@ -213,13 +213,36 @@ class S1ChordAngle {
   // All operators and functions are declared here so that we can put them all
   // in one place.  (The compound assignment operators must be put here.)
 
+#ifndef SWIG
+  // `friend operator`s are incompatible with SWIG 4.0, but work with 4.3.
   // Comparison operators.
-  friend bool operator==(S1ChordAngle x, S1ChordAngle y);
-  friend bool operator!=(S1ChordAngle x, S1ChordAngle y);
-  friend bool operator<(S1ChordAngle x, S1ChordAngle y);
-  friend bool operator>(S1ChordAngle x, S1ChordAngle y);
-  friend bool operator<=(S1ChordAngle x, S1ChordAngle y);
-  friend bool operator>=(S1ChordAngle x, S1ChordAngle y);
+  friend constexpr bool operator==(S1ChordAngle x, S1ChordAngle y);
+#if defined(__cpp_impl_three_way_comparison) && \
+    __cpp_impl_three_way_comparison >= 201907L
+  // This should be `= default`, but can't be due to PyCLIF limitations.
+  // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+  friend constexpr auto operator<=>(S1ChordAngle x, S1ChordAngle y) {
+    // NOLINTNEXTLINE(clang-diagnostic-pre-c++20-compat)
+    return x.length2() <=> y.length2();
+  }
+#else
+  friend constexpr bool operator!=(S1ChordAngle x, S1ChordAngle y) {
+    return x.length2() != y.length2();
+  }
+  friend constexpr bool operator<(S1ChordAngle x, S1ChordAngle y) {
+    return x.length2() < y.length2();
+  }
+  friend constexpr bool operator>(S1ChordAngle x, S1ChordAngle y) {
+    return x.length2() > y.length2();
+  }
+  friend constexpr bool operator<=(S1ChordAngle x, S1ChordAngle y) {
+    return x.length2() <= y.length2();
+  }
+  friend constexpr bool operator>=(S1ChordAngle x, S1ChordAngle y) {
+    return x.length2() >= y.length2();
+  }
+#endif
+#endif  // !SWIG
 
   // Comparison predicates.
   constexpr bool is_zero() const;
@@ -248,7 +271,7 @@ class S1ChordAngle {
   friend double sin2(S1ChordAngle a);
 
   // The squared length of the chord.  (Most clients will not need this.)
-  double length2() const { return length2_; }
+  constexpr double length2() const { return length2_; }
 
   // Returns the smallest representable S1ChordAngle larger than this object.
   // This can be used to convert a "<" comparison to a "<=" comparison.  For
@@ -422,28 +445,8 @@ inline constexpr bool S1ChordAngle::is_special() const {
   return is_negative() || is_infinity();
 }
 
-inline bool operator==(S1ChordAngle x, S1ChordAngle y) {
+inline constexpr bool operator==(S1ChordAngle x, S1ChordAngle y) {
   return x.length2() == y.length2();
-}
-
-inline bool operator!=(S1ChordAngle x, S1ChordAngle y) {
-  return x.length2() != y.length2();
-}
-
-inline bool operator<(S1ChordAngle x, S1ChordAngle y) {
-  return x.length2() < y.length2();
-}
-
-inline bool operator>(S1ChordAngle x, S1ChordAngle y) {
-  return x.length2() > y.length2();
-}
-
-inline bool operator<=(S1ChordAngle x, S1ChordAngle y) {
-  return x.length2() <= y.length2();
-}
-
-inline bool operator>=(S1ChordAngle x, S1ChordAngle y) {
-  return x.length2() >= y.length2();
 }
 
 inline S1ChordAngle& S1ChordAngle::operator+=(S1ChordAngle a) {

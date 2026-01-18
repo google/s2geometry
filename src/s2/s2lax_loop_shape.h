@@ -35,12 +35,12 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 #include "absl/types/span.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2shape.h"
 
 // S2LaxLoopShape represents a closed loop of edges surrounding an interior
@@ -95,7 +95,7 @@ class S2LaxLoopShape : public S2Shape {
   // For clients that have many small loops, we save some memory by
   // representing the vertices as an array rather than using std::vector.
   int32_t num_vertices_ = 0;
-  std::unique_ptr<S2Point[]> vertices_;
+  s2internal::UniqueS2PointArray vertices_;
 };
 
 // S2LaxClosedPolylineShape is like S2LaxPolylineShape except that the last

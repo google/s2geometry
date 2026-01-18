@@ -41,9 +41,28 @@ void S2RegionIntersection::Init(vector<unique_ptr<S2Region>> regions) {
 
 S2RegionIntersection::S2RegionIntersection(const S2RegionIntersection& src)
   : regions_(src.num_regions()) {
-  for (int i = 0; i < num_regions(); ++i) {
+  for (int i = 0, n = num_regions(); i < n; ++i) {
     regions_[i].reset(src.region(i)->Clone());
   }
+}
+
+S2RegionIntersection& S2RegionIntersection::operator=(
+    const S2RegionIntersection& src) {
+  if (this == &src) return *this;
+  regions_.resize(src.num_regions());
+  for (int i = 0, n = num_regions(); i < n; ++i) {
+    regions_[i].reset(src.region(i)->Clone());
+  }
+  return *this;
+}
+
+S2RegionIntersection::S2RegionIntersection(S2RegionIntersection&& src) noexcept
+    : regions_(std::move(src.regions_)) {}
+
+S2RegionIntersection& S2RegionIntersection::operator=(
+    S2RegionIntersection&& src) noexcept {
+  regions_ = std::move(src.regions_);
+  return *this;
 }
 
 vector<unique_ptr<S2Region>> S2RegionIntersection::Release() {

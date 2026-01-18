@@ -386,7 +386,7 @@ bool S2CellIteratorJoin<A, B>::ProcessCellPairs(
   }
 
   return ScanCellRange(iter_a_, cell_a.id(), [&](const auto& iter_a) {
-    // If the index cell doesn't have it's endpoint in this cell then ignore it.
+    // If the index cell doesn't have its endpoint in this cell then ignore it.
     // This makes it so that we only see each index cell in a single A cell.
     if (!cell_a.id().intersects(iter_a.id().range_min())) {
       return true;

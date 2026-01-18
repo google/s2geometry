@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
@@ -202,10 +203,11 @@ class WindingLayer : public S2Builder::Layer {
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
-  bool ComputeBoundary(const Graph& g, WindingOracle* oracle, S2Error* error);
+  bool ComputeBoundary(const Graph& g, WindingOracle* oracle,
+                       S2Error* absl_nonnull error);
   EdgeId GetContainingLoopEdge(VertexId v, EdgeId start, const Graph& g,
                                absl::Span<const EdgeId> left_turn_map,
                                absl::Span<const EdgeId> sibling_map) const;
@@ -235,7 +237,7 @@ GraphOptions WindingLayer::graph_options() const {
                       DuplicateEdges::KEEP, SiblingPairs::KEEP);
 }
 
-void WindingLayer::Build(const Graph& g, S2Error* error) {
+void WindingLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   if (!error->ok()) return;  // Abort if an error already exists.
 
   // The WindingOracle computes the winding number of any point on the sphere.
@@ -295,9 +297,10 @@ void WindingLayer::Build(const Graph& g, S2Error* error) {
   // empty results (including cases where there are degeneracies).  Note that
   // we can use the winding number at any point on the sphere for this
   // purpose.
-  auto is_full_polygon_predicate = [&](const Graph& g, S2Error* error) {
-      return MatchesRule(oracle.current_ref_winding());
-    };
+  auto is_full_polygon_predicate = [&](const Graph& g,
+                                       S2Error* absl_nonnull error) {
+    return MatchesRule(oracle.current_ref_winding());
+  };
   IdSetLexicon result_id_set_lexicon = new_graph.input_edge_id_set_lexicon();
   Graph result_graph = new_graph.MakeSubgraph(
       result_layer_->graph_options(), &result_edges_, &result_input_edge_ids_,
@@ -308,7 +311,7 @@ void WindingLayer::Build(const Graph& g, S2Error* error) {
 }
 
 bool WindingLayer::ComputeBoundary(const Graph& g, WindingOracle* oracle,
-                                   S2Error* error) {
+                                   S2Error* absl_nonnull error) {
   // We assemble the edges into loops using an algorithm similar to
   // S2Builder::Graph::GetDirectedComponents(), except that we also keep track
   // of winding numbers and output the relevant edges as we go along.
@@ -548,7 +551,7 @@ void S2WindingOperation::AddLoop(S2PointLoopSpan loop) {
 }
 
 bool S2WindingOperation::Build(const S2Point& ref_p, int ref_winding,
-                               WindingRule rule, S2Error* error) {
+                               WindingRule rule, S2Error* absl_nonnull error) {
   // The reference point must be an S2Builder input vertex in order to
   // determine how its winding number is affected by snapping.  We record the
   // input edge id of this edge so that we can find it later.

@@ -26,6 +26,7 @@
 #include "s2/s2coords.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
+#include "s2/s2region.h"
 
 using std::vector;
 
@@ -40,7 +41,7 @@ S2R2Rect S2R2Rect::FromCellId(S2CellId id) {
   return FromCenterSize(id.GetCenterST(), R2Point(size, size));
 }
 
-S2R2Rect* S2R2Rect::Clone() const {
+S2Region* S2R2Rect::Clone() const {
   return new S2R2Rect(*this);
 }
 

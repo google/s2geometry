@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/types/span.h"
@@ -85,7 +86,7 @@ class DegeneracyFinder {
   explicit DegeneracyFinder(const S2Builder::Graph* g)
       : g_(*g), in_(g_), out_(g_) {
   }
-  vector<PolygonDegeneracy> Run(S2Error* error);
+  vector<PolygonDegeneracy> Run(S2Error* absl_nonnull error);
 
  private:
   // Methods are documented below.
@@ -110,7 +111,7 @@ class DegeneracyFinder {
   vector<bool> is_vertex_unbalanced_;  // Has unbalanced sibling pairs?
 };
 
-vector<PolygonDegeneracy> DegeneracyFinder::Run(S2Error* error) {
+vector<PolygonDegeneracy> DegeneracyFinder::Run(S2Error* absl_nonnull error) {
   // Mark all degenerate edges and sibling pairs in the "is_edge_degeneracy_"
   // vector, and mark any vertices with unbalanced edges in the
   // "is_vertex_unbalanced_" vector.
@@ -376,7 +377,7 @@ void CheckGraphOptions(const Graph& g) {
 }  // namespace
 
 vector<PolygonDegeneracy> FindPolygonDegeneracies(const Graph& g,
-                                                  S2Error* error) {
+                                                  S2Error* absl_nonnull error) {
   CheckGraphOptions(g);
   if (g.options().degenerate_edges() == DegenerateEdges::DISCARD &&
       g.options().sibling_pairs() == SiblingPairs::DISCARD) {

@@ -24,13 +24,17 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <random>
 #include <vector>
 
+#include <benchmark/benchmark.h>
+#include <gtest/gtest.h>
 #include "absl/base/casts.h"
 #include "absl/base/macros.h"
 #include "absl/base/no_destructor.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/random/random.h"
 #include "s2/util/math/vector.h"
 
 namespace {
@@ -976,5 +980,31 @@ TEST_F(ExactFloatTest, ExactCalculations) {
   EXPECT_GE(det.prec(), 6000);
   EXPECT_LT(det.prec(), 6300);
 }
+
+void BM_Det3x3(benchmark::State &state) {
+  // Compute the determinant of a 3x3 matrix of numbers in the range [0,1).
+  // (It would be better to use a different matrix for each iteration, but
+  // then generating the matrix takes up a significant fraction of the time.)
+  typedef Vector3<ExactFloat> Vector3_xf;
+  std::mt19937_64 rnd;
+  Vector3_d a(absl::Uniform<double>(rnd, 0, 1),
+              absl::Uniform<double>(rnd, 0, 1),
+              absl::Uniform<double>(rnd, 0, 1));
+  Vector3_d b(absl::Uniform<double>(rnd, 0, 1),
+              absl::Uniform<double>(rnd, 0, 1),
+              absl::Uniform<double>(rnd, 0, 1));
+  Vector3_d c(absl::Uniform<double>(rnd, 0, 1),
+              absl::Uniform<double>(rnd, 0, 1),
+              absl::Uniform<double>(rnd, 0, 1));
+
+  for (auto _ : state) {
+    Vector3_xf xa = Vector3_xf::Cast(a);
+    Vector3_xf xb = Vector3_xf::Cast(b);
+    Vector3_xf xc = Vector3_xf::Cast(c);
+    ExactFloat det = xa.CrossProd(xb).DotProd(xc);
+    ABSL_CHECK_NE(det.sgn(), 0);
+  }
+}
+BENCHMARK(BM_Det3x3);
 
 }  // namespace

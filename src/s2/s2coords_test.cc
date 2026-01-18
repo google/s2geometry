@@ -18,10 +18,17 @@
 #include "s2/s2coords.h"
 
 #include <cmath>
+#include <cstdint>
+#include <limits>
+#include <random>
 #include <string>
+#include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
+#include "s2/base/log_severity.h"
 #include "absl/log/log_streamer.h"
+#include "absl/numeric/bits.h"
 #include "absl/random/random.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords_internal.h"
@@ -264,3 +271,49 @@ TEST(S2, UVWFace) {
     }
   }
 }
+
+TEST(S2, NaNInput) {
+  // For the debug mode, we have additional checks, which are verified by the
+  // death test below.
+  if (S2_DEBUG_MODE) {
+    GTEST_SKIP() << "This test only makes sense in non-debug mode with ubsan "
+                    "enabled.";
+  }
+
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+
+  // The exact result is not specified and is not really important.
+  // The essential property is that we don't hit undefined behavior, so this
+  // test needs to be run with the `ubsan` enabled.
+  EXPECT_GE(S2::STtoIJ(kNaN), 0);
+}
+
+#if GTEST_HAS_DEATH_TEST
+TEST(S2DeathTest, NaNInput) {
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+
+  EXPECT_DEBUG_DEATH(S2::STtoIJ(kNaN), /*regex=*/"!std::isnan");
+}
+#endif  // GTEST_HAS_DEATH_TEST
+
+void BM_STtoIJ(benchmark::State& state) {
+  std::mt19937_64 bitgen;
+  constexpr int kNumTestCases = 1024;
+  std::vector<double> test_cases;
+  test_cases.reserve(kNumTestCases);
+  for (int i = 0; i < kNumTestCases; ++i) {
+    test_cases.push_back(absl::Uniform(bitgen, 0.0, 1.0));
+  }
+
+  int result = 0;
+  for (auto s : state) {
+    // The test case index depends on result of previous iteration, creating a
+    // loop-carried dependency to measure latency instead of throughput.
+    // Ensure `kNumTestCases` is a power of two so computing the remainder is
+    // just a bitwise AND with a mask.
+    static_assert(absl::has_single_bit(uint32_t{kNumTestCases}));
+    result = S2::STtoIJ(test_cases[result % kNumTestCases]);
+  }
+  benchmark::DoNotOptimize(result);
+}
+BENCHMARK(BM_STtoIJ);

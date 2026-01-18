@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
+#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
@@ -104,10 +105,10 @@ template <typename IndexType> class S2LegacyValidQuery;
 //     this set is updated with the current cell's edges before StartCell() is
 //     called.
 //
-// A query then has a `bool Validate(const IndexType& index, S2Error* error)`
-// method which validates the index and returns true if it's valid, otherwise
-// false, with the validation failure details provided through the error
-// parameter.
+// A query then has a `bool Validate(const IndexType& index, S2Error*
+// absl_nonnull error)` method which validates the index and returns true if
+// it's valid, otherwise false, with the validation failure details provided
+// through the error parameter.
 //
 // This example validates an index as containing valid geometry for
 // use with S2Polygon/S2Polyline:
@@ -128,46 +129,48 @@ class S2ValidationQueryBase {
   virtual ~S2ValidationQueryBase() = default;
 
   // Validate the index by calling the hooks in the derived class.
-  bool Validate(const IndexType& index, S2Error* error);
+  bool Validate(const IndexType& index, S2Error* absl_nonnull error);
 
  protected:
   using Iterator = typename IndexType::Iterator;
 
   // Subclass API
   // Starts the validation process; called once per query.
-  virtual bool Start(S2Error*) { return true; }
+  virtual bool Start(S2Error* absl_nonnull) { return true; }
 
   // Validates each individual shape in the index; called once per shape.
   //
   // A reference to the current iterator state is passed in.  The function may
   // reposition the iterator in order to do shape checking.
   virtual bool CheckShape(Iterator& iter, const S2Shape& shape, int shape_id,
-                          S2Error*) {
+                          S2Error* absl_nonnull) {
     return true;
   }
 
   // Starts processing of a cell in the index; called once per cell.
-  virtual bool StartCell(S2Error*) { return true; }
+  virtual bool StartCell(S2Error* absl_nonnull) { return true; }
 
   // Marks start of a clipped shape; called once per clipped shape in a cell.
-  virtual bool StartShape(const S2Shape&, const S2ClippedShape&, S2Error*) {
+  virtual bool StartShape(const S2Shape&, const S2ClippedShape&,
+                          S2Error* absl_nonnull) {
     return true;
   }
 
   // Validates a single edge of a given shape; called at least once per edge of
   // each shape.
   virtual bool CheckEdge(const S2Shape&, const S2ClippedShape&,
-                         const EdgeAndIdChain&, S2Error*) {
+                         const EdgeAndIdChain&, S2Error* absl_nonnull) {
     return true;
   }
 
   // Marks end of a clipped shape; called once per clipped shape in a cell.
-  virtual bool FinishShape(const S2Shape&, const S2ClippedShape&, S2Error*) {
+  virtual bool FinishShape(const S2Shape&, const S2ClippedShape&,
+                           S2Error* absl_nonnull) {
     return true;
   }
 
   // Marks end of validation; called once per query.
-  virtual bool Finish(S2Error* error) { return true; }
+  virtual bool Finish(S2Error* absl_nonnull error) { return true; }
 
   // Returns a reference to the index we're validating.
   const IndexType& Index() const {
@@ -343,11 +346,11 @@ class S2ValidQuery : public S2ValidationQueryBase<IndexType> {
   using typename Base::S2IndexCellData;
 
   bool CheckShape(Iterator& iter, const S2Shape& shape, int shape_id,
-                  S2Error*) override;
-  bool StartCell(S2Error*) override;
+                  S2Error* absl_nonnull) override;
+  bool StartCell(S2Error* absl_nonnull) override;
   bool CheckEdge(const S2Shape& shape, const S2ClippedShape& clipped,
-                 const EdgeAndIdChain& edge, S2Error*) override;
-  bool Finish(S2Error* error) override;
+                 const EdgeAndIdChain& edge, S2Error* absl_nonnull) override;
+  bool Finish(S2Error* absl_nonnull error) override;
 
  private:
   // Returns true if the given S2Point is valid, meaning none of its components
@@ -360,14 +363,15 @@ class S2ValidQuery : public S2ValidationQueryBase<IndexType> {
   //
   // Returns false if a point is not interior to any polygons, true otherwise
   // with error populated.
-  bool PointContained(S2CellId, int shape_id, const S2Point&, S2Error*);
+  bool PointContained(S2CellId, int shape_id, const S2Point&,
+                      S2Error* absl_nonnull);
 
   // Checks if any edge in the current cell is a duplicate (or reverse
   // duplicate).
-  bool CheckForDuplicateEdges(S2Error* error) const;
+  bool CheckForDuplicateEdges(S2Error* absl_nonnull error) const;
 
   // Checks if any edges in the current cell have an interior crossing.
-  bool CheckForInteriorCrossings(S2Error* error) const;
+  bool CheckForInteriorCrossings(S2Error* absl_nonnull error) const;
 
   // Checks that a given chain of a polygon is oriented properly relative to one
   // cell center in the index.  We only need to check one center because we
@@ -382,7 +386,8 @@ class S2ValidQuery : public S2ValidationQueryBase<IndexType> {
   // REQUIRES: Chain edges must be connected (no gaps).
   // REQUIRES: Chain must have at least three distinct points (cover some area).
   bool CheckChainOrientation(  //
-      Iterator&, const S2Shape&, int shape_id, int chain_id, S2Error*);
+      Iterator&, const S2Shape&, int shape_id, int chain_id,
+      S2Error* absl_nonnull);
 
   // Information on one vertex of an edge, including whether it's on the
   // boundary of its shape.  This is used by CheckTouchesAreValid() when we need
@@ -401,7 +406,7 @@ class S2ValidQuery : public S2ValidationQueryBase<IndexType> {
   //
   // Returns false if any vertices touch at an invalid point with the error
   // value set, true otherwise.
-  bool CheckTouchesAreValid(S2Error*);
+  bool CheckTouchesAreValid(S2Error* absl_nonnull);
 
   Options options_;
 };
@@ -463,7 +468,7 @@ void SortEdgesCcw(S2Point origin, S2Shape::Edge first, Container& data) {
 
 template <typename IndexType>
 bool S2ValidationQueryBase<IndexType>::Validate(const IndexType& index,
-                                                S2Error* error) {
+                                                S2Error* absl_nonnull error) {
   SetIndex(&index);
   incident_edge_tracker_.Reset();
   cell_buffer_.Reset();
@@ -558,12 +563,12 @@ class S2LegacyValidQuery final : public S2ValidQuery<IndexType> {
   using typename Base::Iterator;
   using typename Base::S2IndexCellData;
 
-  bool Start(S2Error*) final;
+  bool Start(S2Error* absl_nonnull) final;
   bool CheckShape(Iterator&, const S2Shape& shape, int shape_id,
-                  S2Error*) final;
-  bool StartCell(S2Error*) final;
+                  S2Error* absl_nonnull) final;
+  bool StartCell(S2Error* absl_nonnull) final;
   bool CheckEdge(const S2Shape& shape, const S2ClippedShape& clipped,
-                 const EdgeAndIdChain& edge, S2Error*) override;
+                 const EdgeAndIdChain& edge, S2Error* absl_nonnull) override;
 
  private:
   // Tuple of (shape, chain, vertex) for detecting duplicate vertices in the
@@ -589,7 +594,8 @@ class S2LegacyValidQuery final : public S2ValidQuery<IndexType> {
 
 template <typename IndexType>
 bool S2ValidQuery<IndexType>::CheckShape(Iterator& iter, const S2Shape& shape,
-                                         int shape_id, S2Error* error) {
+                                         int shape_id,
+                                         S2Error* absl_nonnull error) {
   // Verify that shape isn't outright lying to us about its dimension.
   const int dim = shape.dimension();
   if (dim < 0 || dim > 2) {
@@ -710,7 +716,8 @@ bool S2ValidQuery<IndexType>::CheckShape(Iterator& iter, const S2Shape& shape,
 }
 
 template <typename IndexType>
-bool S2ValidQuery<IndexType>::CheckForDuplicateEdges(S2Error* error) const {
+bool S2ValidQuery<IndexType>::CheckForDuplicateEdges(
+    S2Error* absl_nonnull error) const {
   int dim0 = options().allow_duplicate_polyline_edges() ? 2 : 1;
   int dim1 = 2;
 
@@ -739,7 +746,8 @@ bool S2ValidQuery<IndexType>::CheckForDuplicateEdges(S2Error* error) const {
 }
 
 template <typename IndexType>
-bool S2ValidQuery<IndexType>::CheckForInteriorCrossings(S2Error* error) const {
+bool S2ValidQuery<IndexType>::CheckForInteriorCrossings(
+    S2Error* absl_nonnull error) const {
   // Get all the polyline and polygon edges.
   absl::Span<const EdgeAndIdChain> edges = CurrentCell().dim_range_edges(1, 2);
 
@@ -810,7 +818,8 @@ inline bool PolylineVertexIsBoundaryPoint(
 }
 
 template <typename IndexType>
-bool S2ValidQuery<IndexType>::CheckTouchesAreValid(S2Error* error) {
+bool S2ValidQuery<IndexType>::CheckTouchesAreValid(
+    S2Error* absl_nonnull error) {
   using TouchType = typename Options::TouchType;
 
   const auto kAny = Options::kTouchAny;
@@ -941,7 +950,7 @@ bool S2ValidQuery<IndexType>::CheckTouchesAreValid(S2Error* error) {
 }
 
 template <typename IndexType>
-bool S2ValidQuery<IndexType>::StartCell(S2Error* error) {
+bool S2ValidQuery<IndexType>::StartCell(S2Error* absl_nonnull error) {
   if (!CheckForDuplicateEdges(error) || !CheckForInteriorCrossings(error)) {
     return false;
   }
@@ -956,7 +965,7 @@ bool S2ValidQuery<IndexType>::StartCell(S2Error* error) {
 template <typename IndexType>
 bool S2ValidQuery<IndexType>::PointContained(S2CellId cell_id, int shape_id,
                                              const S2Point& point,
-                                             S2Error* error) {
+                                             S2Error* absl_nonnull error) {
   const S2IndexCellData& cell = CurrentCell();
   for (const S2ClippedShape& clipped : cell.clipped_shapes()) {
     if (clipped.shape_id() == shape_id) {
@@ -984,10 +993,9 @@ bool S2ValidQuery<IndexType>::PointContained(S2CellId cell_id, int shape_id,
 }
 
 template <typename IndexType>
-bool S2ValidQuery<IndexType>::CheckChainOrientation(Iterator& iter,
-                                                    const S2Shape& shape,
-                                                    int shape_id, int chain_id,
-                                                    S2Error* error) {
+bool S2ValidQuery<IndexType>::CheckChainOrientation(
+    Iterator& iter, const S2Shape& shape, int shape_id, int chain_id,
+    S2Error* absl_nonnull error) {
   const S2Shape::Chain& chain = shape.chain(chain_id);
 
   // Given that:
@@ -1065,7 +1073,7 @@ template <typename IndexType>
 bool S2ValidQuery<IndexType>::CheckEdge(const S2Shape& shape,
                                         const S2ClippedShape& clipped,
                                         const EdgeAndIdChain& edge,
-                                        S2Error* error) {
+                                        S2Error* absl_nonnull error) {
   const S2IndexCellData& cell = CurrentCell();
   const int dim = shape.dimension();
 
@@ -1091,7 +1099,7 @@ bool S2ValidQuery<IndexType>::CheckEdge(const S2Shape& shape,
 inline bool CheckVertexCrossings(const S2Point& vertex, const S2Shape& shape,
                                  int shape_id,
                                  const absl::flat_hash_set<int32_t>& edge_ids,
-                                 S2Error* error) {
+                                 S2Error* absl_nonnull error) {
   // Extend S2Shape::Edge to wrap an edge with its chain, id and previous id.
   struct EdgeWithInfo : public S2Shape::Edge {
     EdgeWithInfo(S2Shape::Edge edge, int id, int chain, int prev, int sign)
@@ -1167,7 +1175,7 @@ inline bool CheckVertexCrossings(const S2Point& vertex, const S2Shape& shape,
 }
 
 template <typename IndexType>
-bool S2ValidQuery<IndexType>::Finish(S2Error* error) {
+bool S2ValidQuery<IndexType>::Finish(S2Error* absl_nonnull error) {
   // We've checked edges having interiors on the right, and for crossings at
   // interior points.  The only case left is to check for chains that cross at a
   // vertex.
@@ -1230,7 +1238,7 @@ S2LegacyValidQuery<IndexType>::S2LegacyValidQuery() : Base() {
 }
 
 template <typename IndexType>
-bool S2LegacyValidQuery<IndexType>::Start(S2Error* error) {
+bool S2LegacyValidQuery<IndexType>::Start(S2Error* absl_nonnull error) {
   if (!Base::Start(error)) {
     return false;
   }
@@ -1256,7 +1264,8 @@ bool S2LegacyValidQuery<IndexType>::Start(S2Error* error) {
 template <typename IndexType>
 bool S2LegacyValidQuery<IndexType>::CheckShape(Iterator& iter,
                                                const S2Shape& shape,
-                                               int shape_id, S2Error* error) {
+                                               int shape_id,
+                                               S2Error* absl_nonnull error) {
   // Count the number of empty chains.  Non-empty chains must have at least
   // three vertices.
   if (shape.dimension() == 2) {
@@ -1290,7 +1299,7 @@ bool S2LegacyValidQuery<IndexType>::CheckShape(Iterator& iter,
 }
 
 template <typename IndexType>
-bool S2LegacyValidQuery<IndexType>::StartCell(S2Error* error) {
+bool S2LegacyValidQuery<IndexType>::StartCell(S2Error* absl_nonnull error) {
   // Check for duplicate vertices within a chain.
   const S2IndexCellData& cell = CurrentCell();
   for (const S2ClippedShape& clipped : cell.clipped_shapes()) {
@@ -1321,7 +1330,7 @@ template <typename IndexType>
 bool S2LegacyValidQuery<IndexType>::CheckEdge(const S2Shape& shape,
                                               const S2ClippedShape& clipped,
                                               const EdgeAndIdChain& edge,
-                                              S2Error* error) {
+                                              S2Error* absl_nonnull error) {
   if (!Base::CheckEdge(shape, clipped, edge, error)) {
     return false;
   }

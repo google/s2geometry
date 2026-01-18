@@ -40,6 +40,7 @@
 
 #include "s2/base/casts.h"
 #include "absl/base/attributes.h"
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
@@ -218,7 +219,9 @@ VectorShapeFactory SingletonShapeFactory(std::unique_ptr<S2Shape> shape);
 class WrappedShapeFactory : public S2ShapeIndex::ShapeFactory {
  public:
   // REQUIRES: The given index must persist for the lifetime of this object.
-  explicit WrappedShapeFactory(const S2ShapeIndex* index) : index_(*index) {}
+  explicit WrappedShapeFactory(
+      const S2ShapeIndex* absl_nonnull index ABSL_ATTRIBUTE_LIFETIME_BOUND)
+      : index_(*index) {}
 
   int size() const override { return index_.num_shape_ids(); }
 

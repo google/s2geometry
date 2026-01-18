@@ -1,0 +1,41 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//:__subpackages__"])
+
+cc_library(
+    name = "casts",
+    hdrs = ["casts.h"],
+    deps = [
+        "@abseil-cpp//absl/base:config",
+    ],
+)
+
+cc_library(
+    name = "log_severity",
+    hdrs = ["log_severity.h"],
+    deps = [
+        "@abseil-cpp//absl/base:log_severity",
+    ],
+)
+
+cc_library(
+    name = "malloc_extension",
+    srcs = ["malloc_extension.cc"],
+    hdrs = ["malloc_extension.h"],
+    deps = [
+        "@abseil-cpp//absl/base:core_headers",
+    ],
+)
+
+cc_library(
+    name = "spinlock",
+    hdrs = ["spinlock.h"],
+    deps = [
+        "@abseil-cpp//absl/base:core_headers",
+    ],
+)
+
+cc_library(
+    name = "timer",
+    hdrs = ["timer.h"],
+)

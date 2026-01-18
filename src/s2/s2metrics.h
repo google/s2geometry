@@ -61,15 +61,16 @@ template <int dim> class Metric {
   // Return the minimum level such that the metric is at most the given value,
   // or S2CellId::kMaxLevel if there is no such level. For example,
   // S2::kMaxDiag.GetLevelForMaxValue(0.1) returns the minimum level such
-  // that all cell diagonal lengths are 0.1 or smaller.  The return value
-  // is always a valid level.
+  // that all cell diagonal lengths are 0.1 or smaller.  Requires that the
+  // value is a number (i.e. not NaN).  The return value is always a valid
+  // level.
   int GetLevelForMaxValue(double value) const;
 
   // Return the maximum level such that the metric is at least the given value,
   // or 0 if there is no such level.  For example,
   // S2::kMinWidth.GetLevelForMinValue(0.1) returns the maximum level such that
-  // all cells have a minimum width of 0.1 or larger.  The return value is
-  // always a valid level.
+  // all cells have a minimum width of 0.1 or larger.  Requires that the value
+  // is a number (i.e. not NaN). The return value is always a valid level.
   int GetLevelForMinValue(double value) const;
 
  private:
@@ -166,7 +167,9 @@ extern const double kMaxDiagAspect;
 
 template <int dim>
 int S2::Metric<dim>::GetLevelForMaxValue(double value) const {
-  // Catches non-positive values, including NaN.
+  ABSL_DCHECK(!std::isnan(value));
+  // Catches non-positive values, including NaN.  Be robust to NaN in case
+  // we hit one in prod, since we can do this cheaply.
   if (!(value > 0)) return S2::kMaxCellLevel;
 
   // This code is equivalent to computing a floating-point "level" value and
@@ -181,7 +184,10 @@ int S2::Metric<dim>::GetLevelForMaxValue(double value) const {
 
 template <int dim>
 int S2::Metric<dim>::GetLevelForMinValue(double value) const {
-  // Catches non-positive values, including NaN.
+  ABSL_DCHECK(!std::isnan(value));
+  // Catches non-positive values, including NaN.  The natural extension
+  // of this function to NaN would return 0, not kMaxCellLevel, since
+  // there is no level where the metric is >= NaN.
   if (!(value > 0)) return S2::kMaxCellLevel;
 
   // This code is equivalent to computing a floating-point "level" value and

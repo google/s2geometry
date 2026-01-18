@@ -68,8 +68,16 @@ class R2Rect {
   R2Point hi() const { return R2Point(x().hi(), y().hi()); }
 
   // Methods that allow the R2Rect to be accessed as a vector.
-  const R1Interval& operator[](int i) const { return bounds_[i]; }
-  R1Interval& operator[](int i) { return bounds_[i]; }
+  const R1Interval& operator[](int i) const {
+    ABSL_DCHECK_GE(i, 0);
+    ABSL_DCHECK_LT(i, 2);
+    return bounds_[i];
+  }
+  R1Interval& operator[](int i) {
+    ABSL_DCHECK_GE(i, 0);
+    ABSL_DCHECK_LT(i, 2);
+    return bounds_[i];
+  }
 
   // Return true if the rectangle is valid, which essentially just means
   // that if the bound for either axis is empty then both must be.

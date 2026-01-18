@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
@@ -146,5 +147,79 @@ TEST(EncodedUintVectorTest, RoundtripEncoding) {
 
   EXPECT_EQ(v2.Decode(), values);
 }
+
+template <class T>
+static void BM_DecodeValue(benchmark::State& state) {
+  const int bytes_per_value = state.range(0);
+  constexpr int kNumValues = 1 << 10;  // Must be power of 2.
+  ABSL_DCHECK_EQ(kNumValues & (kNumValues - 1), 0);
+
+  vector<T> values(kNumValues);
+  for (T& x : values) {
+    for (int i = 0; i < bytes_per_value; ++i) {
+      x = (x << 8) | 0xa5;  // Immaterial.
+    }
+  }
+  Encoder encoder;
+  EncodeUintVector<T>(values, &encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  EncodedUintVector<T> actual;
+  ABSL_CHECK(actual.Init(&decoder));
+  int i = 0;
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(actual[i]);
+    i = (i + 1) & (kNumValues - 1);
+  }
+}
+BENCHMARK_TEMPLATE(BM_DecodeValue, uint32_t)
+    ->Arg(0)
+    ->Arg(1)
+    ->Arg(2)
+    ->Arg(3)
+    ->Arg(4);
+BENCHMARK_TEMPLATE(BM_DecodeValue, uint64_t)
+    ->Arg(0)
+    ->Arg(1)
+    ->Arg(2)
+    ->Arg(3)
+    ->Arg(4)
+    ->Arg(5)
+    ->Arg(6)
+    ->Arg(7)
+    ->Arg(8);
+
+template <class T>
+static void BM_LowerBound(benchmark::State& state) {
+  const int num_values = state.range(0);
+  const int bytes_per_value = state.range(1);
+  auto values = MakeSortedTestVector<T>(bytes_per_value, num_values);
+  T limit_value = values.back();
+  Encoder encoder;
+  auto actual = MakeEncodedVector(values, &encoder);
+  T value = 0, delta = 3 * (limit_value / num_values);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(actual.lower_bound(value));
+    if ((value += delta) > limit_value) value -= limit_value;
+  }
+}
+// Use case: S2LaxPolygonShape::cumulative_vertices.
+// Stores one cumulative vertex count per loop.
+BENCHMARK_TEMPLATE(BM_LowerBound, uint32_t)
+    ->ArgPair(10, 2)
+    ->ArgPair(1000, 2)
+    ->ArgPair(1000000, 3)
+    ->ArgPair(1000000, 4);
+
+// Use case: EncodedS2ShapeIndex::cell_ids_.
+// Stores one S2CellId value per cell.
+BENCHMARK_TEMPLATE(BM_LowerBound, uint64_t)
+    ->ArgPair(10, 1)
+    ->ArgPair(1000, 2)
+    ->ArgPair(100000, 3)
+    ->ArgPair(1000000, 4)
+    ->ArgPair(1000000, 5)
+    ->ArgPair(1000000, 6)
+    ->ArgPair(1000000, 7)
+    ->ArgPair(1000000, 8);
 
 }  // namespace s2coding

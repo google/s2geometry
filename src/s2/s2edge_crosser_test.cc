@@ -18,9 +18,13 @@
 #include "s2/s2edge_crosser.h"
 
 #include <cmath>
+#include <random>
+#include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
+#include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/log_streamer.h"
@@ -316,3 +320,76 @@ TEST(S2, CoincidentZeroLengthEdgesThatDontTouch) {
   }
 }
 
+typedef bool CrossingFunction(const S2Point&, const S2Point&,
+                              const S2Point&, const S2Point&);
+void BenchmarkCrossing(benchmark::State& state, CrossingFunction crossing) {
+  // We want to avoid cache effects, so kNumPoints should be small enough so
+  // that the points can be in L1 cache.  sizeof(S2Point) == 24, so 400 will
+  // only take ~9KiB of 64KiB L1 cache.
+  const std::string seed_str =
+      absl::StrCat("BENCHMARK_CROSSING", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+
+  static constexpr int kNumPoints = 400;
+  vector<S2Point> p(kNumPoints);
+  for (int i = 0; i < kNumPoints; ++i) p[i] = s2random::Point(bitgen);
+
+  int num_crossings = 0;
+  int i = 0;
+  for (auto _ : state) {
+    const S2Point& a = p[(i + 0) % kNumPoints];
+    const S2Point& b = p[(i + 1) % kNumPoints];
+    const S2Point& c = p[(i + 2) % kNumPoints];
+    const S2Point& d = p[(i + 3) % kNumPoints];
+    ++i;
+    if (crossing(a, b, c, d)) {
+      ++num_crossings;
+    }
+  }
+  ABSL_VLOG(5) << "Fraction crossing = "
+               << 1.0 * num_crossings / state.iterations();
+  ABSL_VLOG(5) << "iters: " << state.iterations();
+}
+
+void BM_EdgeOrVertexCrossing(benchmark::State& state) {
+  BenchmarkCrossing(state, S2::EdgeOrVertexCrossing);
+}
+BENCHMARK(BM_EdgeOrVertexCrossing);
+
+bool CrossingSignBool(const S2Point& a, const S2Point& b, const S2Point& c,
+                      const S2Point& d) {
+  return S2::CrossingSign(a, b, c, d) > 0;
+}
+void BM_CrossingSign(benchmark::State& state) {
+  BenchmarkCrossing(state, CrossingSignBool);
+}
+BENCHMARK(BM_CrossingSign);
+
+void BM_RobustCrosserEdgesCross(benchmark::State& state) {
+  // Copied from BenchmarkCrossing() above.
+  const std::string seed_str = absl::StrCat(
+      "ROBUSE_CROSSER_EDGES_CROSS", absl::GetFlag(FLAGS_s2_random_seed));
+  std::seed_seq seed(seed_str.begin(), seed_str.end());
+  std::mt19937_64 bitgen(seed);
+  static constexpr int kNumPoints = 400;
+  vector<S2Point> p(kNumPoints);
+  for (int i = 0; i < kNumPoints; ++i) p[i] = s2random::Point(bitgen);
+  // 1/4th of the points will cross ab.
+  const S2Point& a = s2random::Point(bitgen);
+  const S2Point& b = (-a + S2Point(0.1, 0.1, 0.1)).Normalize();
+
+  S2EdgeCrosser crosser(&a, &b, &p[0]);
+  int num_crossings = 0;
+  int i = 0;
+  for (auto _ : state) {
+    const S2Point& d = p[i++ % kNumPoints];
+    if (crosser.CrossingSign(&d) > 0) {
+      ++num_crossings;
+    }
+  }
+  ABSL_VLOG(5) << "Fraction crossing = "
+               << 1.0 * num_crossings / state.iterations();
+  ABSL_VLOG(5) << "num_crossings = " << num_crossings;
+}
+BENCHMARK(BM_RobustCrosserEdgesCross);

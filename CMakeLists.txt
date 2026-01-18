@@ -6,6 +6,7 @@ project(s2-geometry
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
+include(FetchContent)
 include(FindPackageHandleStandardArgs)
 include(GNUInstallDirs)
 
@@ -219,15 +220,6 @@ add_library(s2
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
 
-if (GOOGLETEST_ROOT)
-  add_library(s2testing STATIC
-              src/s2/gmock_matchers.cc
-              src/s2/s2builderutil_testing.cc
-              src/s2/s2shapeutil_testing.cc
-              src/s2/s2testing.cc
-              src/s2/thread_testing.cc)
-endif()
-
 target_link_libraries(
     s2
     absl::absl_vlog_is_on
@@ -250,22 +242,13 @@ target_link_libraries(
     absl::memory
     absl::span
     absl::status
+    absl::statusor
     absl::str_format
     absl::strings
     absl::type_traits
     absl::utility
     absl::vlog_is_on
     ${CMAKE_THREAD_LIBS_INIT})
-
-if (GOOGLETEST_ROOT)
-  target_link_libraries(
-      s2testing
-      absl::check
-      absl::flags
-      absl::log
-      absl::memory
-      absl::strings)
-endif()
 
 # Allow other CMake projects to use this one with:
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
@@ -284,221 +267,58 @@ set_target_properties(s2 PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
     VERSION ${PROJECT_VERSION})
 
-if(S2_ENABLE_INSTALL)
-  # We don't need to install all headers, only those
-  # transitively included by s2 headers we are exporting.
-  install(FILES src/s2/_fp_contract_off.h
-                src/s2/encoded_s2cell_id_vector.h
-                src/s2/encoded_s2point_vector.h
-                src/s2/encoded_s2shape_index.h
-                src/s2/encoded_string_vector.h
-                src/s2/encoded_uint_vector.h
-                src/s2/gmock_matchers.h
-                src/s2/id_set_lexicon.h
-                src/s2/mutable_s2shape_index.h
-                src/s2/r1interval.h
-                src/s2/r2.h
-                src/s2/r2rect.h
-                src/s2/s1angle.h
-                src/s2/s1chord_angle.h
-                src/s2/s1interval.h
-                src/s2/s2boolean_operation.h
-                src/s2/s2buffer_operation.h
-                src/s2/s2builder.h
-                src/s2/s2builder_graph.h
-                src/s2/s2builder_layer.h
-                src/s2/s2builderutil_closed_set_normalizer.h
-                src/s2/s2builderutil_find_polygon_degeneracies.h
-                src/s2/s2builderutil_get_snapped_winding_delta.h
-                src/s2/s2builderutil_graph_shape.h
-                src/s2/s2builderutil_lax_polygon_layer.h
-                src/s2/s2builderutil_lax_polyline_layer.h
-                src/s2/s2builderutil_s2point_vector_layer.h
-                src/s2/s2builderutil_s2polygon_layer.h
-                src/s2/s2builderutil_s2polyline_layer.h
-                src/s2/s2builderutil_s2polyline_vector_layer.h
-                src/s2/s2builderutil_snap_functions.h
-                src/s2/s2builderutil_testing.h
-                src/s2/s2cap.h
-                src/s2/s2cell.h
-                src/s2/s2cell_id.h
-                src/s2/s2cell_index.h
-                src/s2/s2cell_iterator.h
-                src/s2/s2cell_iterator_join.h
-                src/s2/s2cell_range_iterator.h
-                src/s2/s2cell_union.h
-                src/s2/s2centroids.h
-                src/s2/s2chain_interpolation_query.h
-                src/s2/s2closest_cell_query.h
-                src/s2/s2closest_cell_query_base.h
-                src/s2/s2closest_edge_query.h
-                src/s2/s2closest_edge_query_base.h
-                src/s2/s2closest_point_query.h
-                src/s2/s2closest_point_query_base.h
-                src/s2/s2coder.h
-                src/s2/s2contains_point_query.h
-                src/s2/s2contains_vertex_query.h
-                src/s2/s2convex_hull_query.h
-                src/s2/s2coords.h
-                src/s2/s2coords_internal.h
-                src/s2/s2crossing_edge_query.h
-                src/s2/s2debug.h
-                src/s2/s2density_tree.h
-                src/s2/s2density_tree_internal.h
-                src/s2/s2distance_target.h
-                src/s2/s2earth.h
-                src/s2/s2edge_clipping.h
-                src/s2/s2edge_crosser.h
-                src/s2/s2edge_crossings.h
-                src/s2/s2edge_crossings_internal.h
-                src/s2/s2edge_distances.h
-                src/s2/s2edge_tessellator.h
-                src/s2/s2edge_vector_shape.h
-                src/s2/s2error.h
-                src/s2/s2fractal.h
-                src/s2/s2furthest_edge_query.h
-                src/s2/s2hausdorff_distance_query.h
-                src/s2/s2latlng.h
-                src/s2/s2latlng_rect.h
-                src/s2/s2latlng_rect_bounder.h
-                src/s2/s2lax_loop_shape.h
-                src/s2/s2lax_polygon_shape.h
-                src/s2/s2lax_polyline_shape.h
-                src/s2/s2loop.h
-                src/s2/s2loop_measures.h
-                src/s2/s2max_distance_targets.h
-                src/s2/s2measures.h
-                src/s2/s2memory_tracker.h
-                src/s2/s2metrics.h
-                src/s2/s2min_distance_targets.h
-                src/s2/s2padded_cell.h
-                src/s2/s2point.h
-                src/s2/s2point_compression.h
-                src/s2/s2point_index.h
-                src/s2/s2point_region.h
-                src/s2/s2point_span.h
-                src/s2/s2point_vector_shape.h
-                src/s2/s2pointutil.h
-                src/s2/s2polygon.h
-                src/s2/s2polyline.h
-                src/s2/s2polyline_alignment.h
-                src/s2/s2polyline_measures.h
-                src/s2/s2polyline_simplifier.h
-                src/s2/s2predicates.h
-                src/s2/s2predicates_internal.h
-                src/s2/s2projections.h
-                src/s2/s2r2rect.h
-                src/s2/s2random.h
-                src/s2/s2region.h
-                src/s2/s2region_coverer.h
-                src/s2/s2region_intersection.h
-                src/s2/s2region_sharder.h
-                src/s2/s2region_term_indexer.h
-                src/s2/s2region_union.h
-                src/s2/s2shape.h
-                src/s2/s2shape.h
-                src/s2/s2shape_index.h
-                src/s2/s2shape_index_buffered_region.h
-                src/s2/s2shape_index_region.h
-                src/s2/s2shape_measures.h
-                src/s2/s2shape_nesting_query.h
-                src/s2/s2shapeutil_build_polygon_boundaries.h
-                src/s2/s2shapeutil_coding.h
-                src/s2/s2shapeutil_contains_brute_force.h
-                src/s2/s2shapeutil_conversion.h
-                src/s2/s2shapeutil_count_edges.h
-                src/s2/s2shapeutil_count_vertices.h
-                src/s2/s2shapeutil_edge_iterator.h
-                src/s2/s2shapeutil_edge_wrap.h
-                src/s2/s2shapeutil_get_reference_point.h
-                src/s2/s2shapeutil_shape_edge.h
-                src/s2/s2shapeutil_shape_edge_id.h
-                src/s2/s2shapeutil_testing.h
-                src/s2/s2shapeutil_visit_crossing_edge_pairs.h
-                src/s2/s2testing.h
-                src/s2/s2text_format.h
-                src/s2/s2validation_query.h
-                src/s2/s2wedge_relations.h
-                src/s2/s2winding_operation.h
-                src/s2/s2wrapped_shape.h
-                src/s2/sequence_lexicon.h
-                src/s2/thread_testing.h
-                src/s2/value_lexicon.h
-          DESTINATION include/s2)
-  install(FILES src/s2/internal/s2disjoint_set.h
-                src/s2/internal/s2incident_edge_tracker.h
-                src/s2/internal/s2index_cell_data.h
-                src/s2/internal/s2meta.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/internal")
-  install(FILES src/s2/base/casts.h
-                src/s2/base/log_severity.h
-                src/s2/base/malloc_extension.h
-                src/s2/base/spinlock.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
-  install(FILES src/s2/testing/gtest_prod.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/testing")
-  install(FILES src/s2/util/bitmap/bitmap.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bitmap")
-  install(FILES src/s2/util/coding/coder.h
-                src/s2/util/coding/varint.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/coding")
-  install(FILES src/s2/util/endian/endian.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/endian")
-  install(FILES src/s2/util/gtl/compact_array.h
-                src/s2/util/gtl/container_logging.h
-                src/s2/util/gtl/dense_hash_set.h
-                src/s2/util/gtl/densehashtable.h
-                src/s2/util/gtl/hashtable_common.h
-                src/s2/util/gtl/requires.h
-                src/s2/util/gtl/unaligned.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/gtl")
-  install(FILES src/s2/util/hash/mix.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/hash")
-  install(FILES src/s2/util/math/mathutil.h
-                src/s2/util/math/matrix3x3.h
-                src/s2/util/math/vector.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math")
-  install(FILES src/s2/util/math/exactfloat/bignum.h
-                src/s2/util/math/exactfloat/exactfloat.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math/exactfloat")
-  install(FILES src/s2/util/units/length-units.h
-                src/s2/util/units/physical-units.h
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
-
-  if (GOOGLETEST_ROOT)
-    set(S2_TARGETS s2 s2testing)
-  else()
-    set(S2_TARGETS s2)
-  endif()
-
-  install(TARGETS ${S2_TARGETS}
-          RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-
-  # Create an export type "s2Targets" detailing the targetable artifacts created
-  # by this project.
-  install(TARGETS s2 EXPORT s2Targets)
-  # Install the export targets as a CMake config file in the share/s2 folder so
-  # that they can referenced  by downstream projects as `s2::s2` after a
-  # successful `find_package` call.
-  install(EXPORT s2Targets
-          NAMESPACE s2::
-          FILE s2Targets.cmake
-          DESTINATION share/s2/)
-endif() # S2_ENABLE_INSTALL
-
 if (BUILD_TESTS)
   find_package(OpenSSL REQUIRED)
 
-  if (NOT GOOGLETEST_ROOT)
-    message(FATAL_ERROR "BUILD_TESTS requires GOOGLETEST_ROOT")
-  endif()
-  message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
+  # We could use a pre-installed benchmark with
+  # `find_package(benchmark QUIET)` then, `if (NOT benchmark_FOUND)`, but
+  # that could run into trouble if benchmark isn't PIC, but
+  # s2geometry is.  benchmark isn't PIC by default, but s2geometry is
+  # when building a shared lib.  Always build benchmark for simplicity.
+  message(STATUS "Downloading and building benchmark...")
+  FetchContent_Declare(
+      benchmark
+      # https://github.com/google/benchmark/releases/tag/v1.9.4
+      URL https://github.com/google/benchmark/archive/eddb0241389718a23a42db6af5f0164b6e0139af.zip
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  )
+  # Don't install benchmark when s2geometry is installed.
+  set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+  set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(benchmark)
 
-  add_subdirectory(${GOOGLETEST_ROOT}/googlemock build_gmock)
-  include_directories(${GOOGLETEST_ROOT}/googlemock/include)
-  include_directories(${GOOGLETEST_ROOT}/googletest/include)
+  # https://google.github.io/googletest/quickstart-cmake.html#set-up-a-project
+  message(STATUS "Downloading googletest...")
+  FetchContent_Declare(
+      googletest
+      # https://github.com/google/googletest/releases/tag/v1.17.0
+      URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  )
+  FetchContent_MakeAvailable(googletest)
+  include(GoogleTest)
+
+  add_library(s2testing STATIC
+              src/s2/gmock_matchers.cc
+              src/s2/s2builderutil_testing.cc
+              src/s2/s2shapeutil_testing.cc
+              src/s2/s2testing.cc
+              src/s2/thread_testing.cc)
+
+  target_link_libraries(
+      s2testing
+      absl::check
+      absl::flags
+      absl::log
+      absl::memory
+      absl::strings
+      GTest::gmock)
+
+  add_library(test_main
+              OBJECT src/s2/testing/test_main.cc)
+  target_link_libraries(test_main
+                        PRIVATE benchmark::benchmark
+                        PRIVATE GTest::gtest)
 
   set(S2TestFiles
       src/s2/encoded_s2cell_id_vector_test.cc
@@ -647,8 +467,12 @@ if (BUILD_TESTS)
         absl::status
         absl::strings
         absl::synchronization
-        gmock_main)
-    add_test(${test} ${test})
+        benchmark::benchmark
+        test_main)
+    # Compared to `add_test()`, displays progress and success/failure of each
+    # test case rather than just the binary, so we see
+    # `S2Cell.TestSubdivide ... PASSED`.  Also lists disabled tests.
+    gtest_discover_tests(${test})
   endforeach()
 
   target_link_libraries(
@@ -664,6 +488,213 @@ endif()
 if (SWIG_FOUND AND Python3_FOUND)
   add_subdirectory("src/python" python)
 endif()
+
+if(S2_ENABLE_INSTALL)
+  # We don't need to install all headers, only those
+  # transitively included by s2 headers we are exporting.
+  install(FILES src/s2/_fp_contract_off.h
+                src/s2/encoded_s2cell_id_vector.h
+                src/s2/encoded_s2point_vector.h
+                src/s2/encoded_s2shape_index.h
+                src/s2/encoded_string_vector.h
+                src/s2/encoded_uint_vector.h
+                src/s2/gmock_matchers.h
+                src/s2/id_set_lexicon.h
+                src/s2/mutable_s2shape_index.h
+                src/s2/r1interval.h
+                src/s2/r2.h
+                src/s2/r2rect.h
+                src/s2/s1angle.h
+                src/s2/s1chord_angle.h
+                src/s2/s1interval.h
+                src/s2/s2boolean_operation.h
+                src/s2/s2buffer_operation.h
+                src/s2/s2builder.h
+                src/s2/s2builder_graph.h
+                src/s2/s2builder_layer.h
+                src/s2/s2builderutil_closed_set_normalizer.h
+                src/s2/s2builderutil_find_polygon_degeneracies.h
+                src/s2/s2builderutil_get_snapped_winding_delta.h
+                src/s2/s2builderutil_graph_shape.h
+                src/s2/s2builderutil_lax_polygon_layer.h
+                src/s2/s2builderutil_lax_polyline_layer.h
+                src/s2/s2builderutil_s2point_vector_layer.h
+                src/s2/s2builderutil_s2polygon_layer.h
+                src/s2/s2builderutil_s2polyline_layer.h
+                src/s2/s2builderutil_s2polyline_vector_layer.h
+                src/s2/s2builderutil_snap_functions.h
+                src/s2/s2builderutil_testing.h
+                src/s2/s2cap.h
+                src/s2/s2cell.h
+                src/s2/s2cell_id.h
+                src/s2/s2cell_index.h
+                src/s2/s2cell_iterator.h
+                src/s2/s2cell_iterator_join.h
+                src/s2/s2cell_range_iterator.h
+                src/s2/s2cell_union.h
+                src/s2/s2centroids.h
+                src/s2/s2chain_interpolation_query.h
+                src/s2/s2closest_cell_query.h
+                src/s2/s2closest_cell_query_base.h
+                src/s2/s2closest_edge_query.h
+                src/s2/s2closest_edge_query_base.h
+                src/s2/s2closest_point_query.h
+                src/s2/s2closest_point_query_base.h
+                src/s2/s2coder.h
+                src/s2/s2contains_point_query.h
+                src/s2/s2contains_vertex_query.h
+                src/s2/s2convex_hull_query.h
+                src/s2/s2coords.h
+                src/s2/s2coords_internal.h
+                src/s2/s2crossing_edge_query.h
+                src/s2/s2debug.h
+                src/s2/s2density_tree.h
+                src/s2/s2density_tree_internal.h
+                src/s2/s2distance_target.h
+                src/s2/s2earth.h
+                src/s2/s2edge_clipping.h
+                src/s2/s2edge_crosser.h
+                src/s2/s2edge_crossings.h
+                src/s2/s2edge_crossings_internal.h
+                src/s2/s2edge_distances.h
+                src/s2/s2edge_tessellator.h
+                src/s2/s2edge_vector_shape.h
+                src/s2/s2error.h
+                src/s2/s2fractal.h
+                src/s2/s2furthest_edge_query.h
+                src/s2/s2hausdorff_distance_query.h
+                src/s2/s2latlng.h
+                src/s2/s2latlng_rect.h
+                src/s2/s2latlng_rect_bounder.h
+                src/s2/s2lax_loop_shape.h
+                src/s2/s2lax_polygon_shape.h
+                src/s2/s2lax_polyline_shape.h
+                src/s2/s2loop.h
+                src/s2/s2loop_measures.h
+                src/s2/s2max_distance_targets.h
+                src/s2/s2measures.h
+                src/s2/s2memory_tracker.h
+                src/s2/s2metrics.h
+                src/s2/s2min_distance_targets.h
+                src/s2/s2padded_cell.h
+                src/s2/s2point.h
+                src/s2/s2point_array.h
+                src/s2/s2point_compression.h
+                src/s2/s2point_index.h
+                src/s2/s2point_region.h
+                src/s2/s2point_span.h
+                src/s2/s2point_vector_shape.h
+                src/s2/s2pointutil.h
+                src/s2/s2polygon.h
+                src/s2/s2polyline.h
+                src/s2/s2polyline_alignment.h
+                src/s2/s2polyline_measures.h
+                src/s2/s2polyline_simplifier.h
+                src/s2/s2predicates.h
+                src/s2/s2predicates_internal.h
+                src/s2/s2projections.h
+                src/s2/s2r2rect.h
+                src/s2/s2random.h
+                src/s2/s2region.h
+                src/s2/s2region_coverer.h
+                src/s2/s2region_intersection.h
+                src/s2/s2region_sharder.h
+                src/s2/s2region_term_indexer.h
+                src/s2/s2region_union.h
+                src/s2/s2shape.h
+                src/s2/s2shape.h
+                src/s2/s2shape_index.h
+                src/s2/s2shape_index_buffered_region.h
+                src/s2/s2shape_index_region.h
+                src/s2/s2shape_measures.h
+                src/s2/s2shape_nesting_query.h
+                src/s2/s2shapeutil_build_polygon_boundaries.h
+                src/s2/s2shapeutil_coding.h
+                src/s2/s2shapeutil_contains_brute_force.h
+                src/s2/s2shapeutil_conversion.h
+                src/s2/s2shapeutil_count_edges.h
+                src/s2/s2shapeutil_count_vertices.h
+                src/s2/s2shapeutil_edge_iterator.h
+                src/s2/s2shapeutil_edge_wrap.h
+                src/s2/s2shapeutil_get_reference_point.h
+                src/s2/s2shapeutil_shape_edge.h
+                src/s2/s2shapeutil_shape_edge_id.h
+                src/s2/s2shapeutil_testing.h
+                src/s2/s2shapeutil_visit_crossing_edge_pairs.h
+                src/s2/s2testing.h
+                src/s2/s2text_format.h
+                src/s2/s2validation_query.h
+                src/s2/s2wedge_relations.h
+                src/s2/s2winding_operation.h
+                src/s2/s2wrapped_shape.h
+                src/s2/sequence_lexicon.h
+                src/s2/thread_testing.h
+                src/s2/value_lexicon.h
+          DESTINATION include/s2)
+  install(FILES src/s2/internal/s2disjoint_set.h
+                src/s2/internal/s2incident_edge_tracker.h
+                src/s2/internal/s2index_cell_data.h
+                src/s2/internal/s2meta.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/internal")
+  install(FILES src/s2/base/casts.h
+                src/s2/base/log_severity.h
+                src/s2/base/malloc_extension.h
+                src/s2/base/spinlock.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
+  install(FILES src/s2/testing/gtest_prod.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/testing")
+  install(FILES src/s2/util/bitmap/bitmap.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bitmap")
+  install(FILES src/s2/util/coding/coder.h
+                src/s2/util/coding/varint.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/coding")
+  install(FILES src/s2/util/endian/endian.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/endian")
+  install(FILES src/s2/util/gtl/compact_array.h
+                src/s2/util/gtl/container_logging.h
+                src/s2/util/gtl/dense_hash_set.h
+                src/s2/util/gtl/densehashtable.h
+                src/s2/util/gtl/hashtable_common.h
+                src/s2/util/gtl/requires.h
+                src/s2/util/gtl/unaligned.h
+                src/s2/util/gtl/value_or_die.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/gtl")
+  install(FILES src/s2/util/hash/mix.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/hash")
+  install(FILES src/s2/util/math/mathutil.h
+                src/s2/util/math/matrix3x3.h
+                src/s2/util/math/vector.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math")
+  install(FILES src/s2/util/math/exactfloat/bignum.h
+                src/s2/util/math/exactfloat/exactfloat.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math/exactfloat")
+  install(FILES src/s2/util/units/length-units.h
+                src/s2/util/units/physical-units.h
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
+
+  if (BUILD_TESTS)
+    set(S2_TARGETS s2 s2testing)
+  else()
+    set(S2_TARGETS s2)
+  endif()
+
+  install(TARGETS ${S2_TARGETS}
+          RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+
+  # Create an export type "s2Targets" detailing the targetable artifacts created
+  # by this project.
+  install(TARGETS s2 EXPORT s2Targets)
+  # Install the export targets as a CMake config file in the share/s2 folder so
+  # that they can referenced  by downstream projects as `s2::s2` after a
+  # successful `find_package` call.
+  install(EXPORT s2Targets
+          NAMESPACE s2::
+          FILE s2Targets.cmake
+          DESTINATION share/s2/)
+endif() # S2_ENABLE_INSTALL
+
 
 include(CMakePackageConfigHelpers)
 

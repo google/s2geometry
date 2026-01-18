@@ -37,6 +37,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/types/span.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
@@ -144,7 +145,7 @@ class LaxPolygonLayer : public S2Builder::Layer {
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   void Init(S2LaxPolygonShape* polygon, LabelSetIds* label_set_ids,
@@ -154,7 +155,7 @@ class LaxPolygonLayer : public S2Builder::Layer {
                           std::vector<std::vector<S2Point>>* loops) const;
   void AppendEdgeLabels(const Graph& g,
                         absl::Span<const Graph::EdgeLoop> edge_loops);
-  void BuildDirected(Graph g, S2Error* error);
+  void BuildDirected(Graph g, S2Error* absl_nonnull error);
 
   S2LaxPolygonShape* polygon_;
   LabelSetIds* label_set_ids_;
@@ -176,7 +177,7 @@ class IndexedLaxPolygonLayer : public S2Builder::Layer {
     return layer_.graph_options();
   }
 
-  void Build(const Graph& g, S2Error* error) override {
+  void Build(const Graph& g, S2Error* absl_nonnull error) override {
     layer_.Build(g, error);
     if (error->ok() && !polygon_->is_empty()) {
       index_->Add(std::move(polygon_));

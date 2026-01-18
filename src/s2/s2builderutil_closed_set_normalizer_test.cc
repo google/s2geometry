@@ -24,6 +24,7 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/base/nullability.h"
 #include "absl/strings/string_view.h"
 
 #include "s2/mutable_s2shape_index.h"
@@ -242,7 +243,7 @@ TEST_F(NormalizeTest, DuplicateEdgeMerging) {
 
 // If this code changes, please update the header file comments to match.
 bool ComputeUnion(const S2ShapeIndex& a, const S2ShapeIndex& b,
-                  MutableS2ShapeIndex* index, S2Error* error) {
+                  MutableS2ShapeIndex* index, S2Error* absl_nonnull error) {
   IndexedS2PolylineVectorLayer::Options polyline_options;
   polyline_options.set_edge_type(EdgeType::UNDIRECTED);
   polyline_options.set_polyline_type(Graph::PolylineType::WALK);

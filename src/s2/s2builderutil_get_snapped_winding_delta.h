@@ -20,6 +20,7 @@
 
 #include <functional>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
@@ -98,7 +99,7 @@ using InputEdgeFilter = std::function<bool (S2Builder::Graph::InputEdgeId)>;
 //
 //  public:
 //   ...
-//   void Build(const Graph& g, S2Error* error) {
+//   void Build(const Graph& g, S2Error* absl_nonnull error) {
 //     // Find the positions of the reference vertex before and after snapping.
 //     S2Point ref_in = builder_.input_edge(ref_input_edge_id_).v0;
 //     Graph::VertexId ref_v =
@@ -135,10 +136,11 @@ using InputEdgeFilter = std::function<bool (S2Builder::Graph::InputEdgeId)>;
 //         use the alternate version below.  (Most clients only need to call
 //         GetSnappedWindingDelta() once per graph because the winding numbers
 //         of other points can be computed by counting signed edge crossings.)
-int GetSnappedWindingDelta(
-    const S2Point& ref_in, S2Builder::Graph::VertexId ref_v,
-    const InputEdgeFilter &input_edge_filter, const S2Builder& builder,
-    const S2Builder::Graph& g, S2Error* error);
+int GetSnappedWindingDelta(const S2Point& ref_in,
+                           S2Builder::Graph::VertexId ref_v,
+                           const InputEdgeFilter& input_edge_filter,
+                           const S2Builder& builder, const S2Builder::Graph& g,
+                           S2Error* absl_nonnull error);
 
 // This version can be used when GetSnappedWindingDelta() needs to be called
 // many times on the same graph.  It is faster than the function above, but
@@ -154,8 +156,8 @@ int GetSnappedWindingDelta(
 int GetSnappedWindingDelta(
     const S2Point& ref_in, S2Builder::Graph::VertexId ref_v,
     absl::Span<const S2Builder::Graph::EdgeId> incident_edges,
-    const InputEdgeFilter &input_edge_filter, const S2Builder& builder,
-    const S2Builder::Graph& g, S2Error* error);
+    const InputEdgeFilter& input_edge_filter, const S2Builder& builder,
+    const S2Builder::Graph& g, S2Error* absl_nonnull error);
 
 // Returns the first vertex of the snapped edge chain for the given input
 // edge, or -1 if this input edge does not exist in the graph "g".

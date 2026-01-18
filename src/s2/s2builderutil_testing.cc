@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/strings/str_format.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
@@ -67,7 +68,7 @@ string IndexMatchingLayer::ToString(const EdgeVector& edges) {
   return msg;
 }
 
-void IndexMatchingLayer::Build(const Graph& g, S2Error* error) {
+void IndexMatchingLayer::Build(const Graph& g, S2Error* absl_nonnull error) {
   vector<S2Shape::Edge> actual, expected;
   for (int e = 0; e < g.num_edges(); ++e) {
     const Graph::Edge& edge = g.edge(e);

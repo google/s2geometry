@@ -55,6 +55,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/s1angle.h"
@@ -752,11 +753,11 @@ void S2BufferOperation::AddShapeIndex(const S2ShapeIndex& index) {
     max_dimension = max(max_dimension, shape->dimension());
     BufferShape(*shape);
   }
-  ref_winding_ += MakeS2ContainsPointQuery(&index).Contains(ref_point_);
+  ref_winding_ += S2ContainsPointQuery(&index).Contains(ref_point_);
   num_polygon_layers_ += (max_dimension == 2);
 }
 
-bool S2BufferOperation::Build(S2Error* error) {
+bool S2BufferOperation::Build(S2Error* absl_nonnull error) {
   if (buffer_sign_ < 0 && num_polygon_layers_ > 1) {
     *error = S2Error::FailedPrecondition(
         "Negative buffer radius requires at most one polygon layer");

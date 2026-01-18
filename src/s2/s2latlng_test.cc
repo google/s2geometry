@@ -22,6 +22,7 @@
 #include <limits>
 #include <string>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
 #include "absl/base/macros.h"
@@ -245,3 +246,22 @@ TEST(S2LatLng, SupportsAbslHash) {
     S2LatLng::FromDegrees(-90, -180),
   }));
 }
+
+static void BM_ToPoint(benchmark::State& state) {
+  S2LatLng ll(S1Angle::E7(0x150bc888), S1Angle::E7(0x5099d63f));
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(ll);
+    benchmark::DoNotOptimize(ll.ToPoint());
+  }
+}
+BENCHMARK(BM_ToPoint);
+
+static void BM_GetDistance(benchmark::State& state) {
+  S2LatLng x = S2LatLng::FromDegrees(25.0, -78.0);
+  S2LatLng y = S2LatLng::FromDegrees(35.0, 56.0);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(x);
+    benchmark::DoNotOptimize(x.GetDistance(y));
+  }
+}
+BENCHMARK(BM_GetDistance);

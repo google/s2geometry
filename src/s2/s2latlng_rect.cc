@@ -38,6 +38,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2region.h"
 
 using std::fabs;
 using std::max;
@@ -71,7 +72,7 @@ S2LatLngRect S2LatLngRect::FromPointPair(const S2LatLng& p1,
                                                 p2.lng().radians()));
 }
 
-S2LatLngRect* S2LatLngRect::Clone() const {
+S2Region* S2LatLngRect::Clone() const {
   return new S2LatLngRect(*this);
 }
 
@@ -319,7 +320,7 @@ S2Cap S2LatLngRect::GetCapBound() const {
   // maximum cap size is achieved at one of the rectangle vertices.  For
   // rectangles that are larger than 180 degrees, we punt and always return a
   // bounding cap centered at one of the two poles.
-  if (lng_.GetLength() < 2 * M_PI) {
+  if (lng_.GetLength() <= M_PI) {
     S2Cap mid_cap(GetCenter().ToPoint(), S1Angle::Zero());
     for (int k = 0; k < 4; ++k) {
       mid_cap.AddPoint(GetVertex(k).ToPoint());

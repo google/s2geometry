@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
@@ -89,7 +90,7 @@ class LaxPolylineLayer : public S2Builder::Layer {
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(const Graph& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* absl_nonnull error) override;
 
  private:
   void Init(S2LaxPolylineShape* polyline, LabelSetIds* label_set_ids,
@@ -115,7 +116,7 @@ class IndexedLaxPolylineLayer : public S2Builder::Layer {
     return layer_.graph_options();
   }
 
-  void Build(const Graph& g, S2Error* error) override {
+  void Build(const Graph& g, S2Error* absl_nonnull error) override {
     layer_.Build(g, error);
     if (error->ok() && polyline_->num_vertices() > 0) {
       index_->Add(std::move(polyline_));

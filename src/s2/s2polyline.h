@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "absl/base/macros.h"
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
@@ -38,6 +39,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
+#include "s2/s2point_array.h"
 #include "s2/s2point_span.h"
 #include "s2/s2region.h"
 #include "s2/s2shape.h"
@@ -61,7 +63,10 @@ class S2Polyline final : public S2Region {
   // or Decode().
   S2Polyline();
 
-  // S2Polyline is movable, but only privately copyable.
+  // S2Polyline is copyable and movable.  The complexity of copying is linear
+  // in the number of vertices.
+  S2Polyline(const S2Polyline&);
+  S2Polyline& operator=(const S2Polyline&);
   S2Polyline(S2Polyline&&) noexcept;
   S2Polyline& operator=(S2Polyline&&) noexcept;
 
@@ -72,13 +77,13 @@ class S2Polyline final : public S2Region {
   // Convenience constructors to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
   //
-  //   S2Polyline* line = new S2Polyline(vertices, S2Debug::DISABLE);
+  //   S2Polyline line(vertices, S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
-  //   S2Polyline* line = new S2Polyline;
-  //   line->set_s2debug_override(S2Debug::DISABLE);
-  //   line->Init(vertices);
+  //   S2Polyline line;
+  //   line.set_s2debug_override(S2Debug::DISABLE);
+  //   line.Init(vertices);
   //
   // The main reason to use this constructors is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
@@ -134,7 +139,7 @@ class S2Polyline final : public S2Region {
   // appropriately.  Otherwise returns false and leaves "error" unchanged.
   //
   // REQUIRES: error != nullptr
-  bool FindValidationError(S2Error* error) const;
+  bool FindValidationError(S2Error* absl_nonnull error) const;
 
   int num_vertices() const { return num_vertices_; }
   const S2Point& vertex(int k) const {
@@ -413,10 +418,6 @@ class S2Polyline final : public S2Region {
   };
 
  private:
-  // Internal copy constructor used only by Clone() that makes a deep copy of
-  // its argument.
-  S2Polyline(const S2Polyline& src);
-
   // Initializes this polyline from input polyline using the given S2Builder.
   void InitFromBuilder(const S2Polyline& polyline, S2Builder* builder);
 
@@ -442,9 +443,7 @@ class S2Polyline final : public S2Region {
   // would be somewhat more expensive (due to division by `sizeof(S2Point) ==
   // 24`, although this is typically implemented with a multiply and shift).
   int num_vertices_ = 0;
-  std::unique_ptr<S2Point[]> vertices_;
-
-  void operator=(const S2Polyline&) = delete;
+  s2internal::UniqueS2PointArray vertices_;
 };
 
 #endif  // S2_S2POLYLINE_H_

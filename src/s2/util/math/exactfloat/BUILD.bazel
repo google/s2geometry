@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 cc_library(
     name = "bignum",
@@ -24,7 +24,6 @@ cc_library(
     ],
     deps = [
         ":bignum",
-        "//s2/base:logging",
         "@abseil-cpp//absl/container:inlined_vector",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/log:absl_log",
@@ -33,7 +32,10 @@ cc_library(
         "@abseil-cpp//absl/random:random",
     ] + select({
         "//:use_openssl_setting": ["@openssl//:crypto"],
-        "//conditions:default": ["@boringssl//:crypto"],
+        "//conditions:default": [
+            "@abseil-cpp//absl/container:fixed_array",
+            "@boringssl//:crypto",
+        ],
     }),
 )
 
@@ -57,11 +59,13 @@ cc_test(
     srcs = ["exactfloat_test.cc"],
     deps = [
         ":exactfloat",
+        "//s2/testing:test_main",
         "//s2/util/math:vector",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/base:no_destructor",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/log:absl_log",
         "@abseil-cpp//absl/random",
-        "@googletest//:gtest_main",
     ],
 )
 
@@ -70,6 +74,7 @@ cc_test(
     srcs = ["exactfloat_underflow_test.cc"],
     deps = [
         ":exactfloat",
+        "//s2/testing:test_main",
         "@abseil-cpp//absl/random:random",
         "@googletest//:gtest_main",
     ],

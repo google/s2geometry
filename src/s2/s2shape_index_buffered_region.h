@@ -73,6 +73,12 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
   S2ShapeIndexBufferedRegion(const S2ShapeIndex* index, S1Angle radius)
       : S2ShapeIndexBufferedRegion(index, S1ChordAngle(radius)) {}
 
+  S2ShapeIndexBufferedRegion(const S2ShapeIndexBufferedRegion&) = default;
+  S2ShapeIndexBufferedRegion& operator=(const S2ShapeIndexBufferedRegion&) =
+      default;
+  S2ShapeIndexBufferedRegion(S2ShapeIndexBufferedRegion&&) = default;
+  S2ShapeIndexBufferedRegion& operator=(S2ShapeIndexBufferedRegion&&) = default;
+
   // Equivalent to the constructor above.
   void Init(const S2ShapeIndex* index, S1ChordAngle radius);
 
@@ -81,10 +87,6 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
-
-  // Clone() returns a *shallow* copy; it does not make a copy of the
-  // underlying S2ShapeIndex.
-  S2ShapeIndexBufferedRegion* Clone() const override;
 
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
@@ -108,6 +110,13 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
   bool Contains(const S2Point& p) const override;
 
  private:
+  // Implements the S2Region interface.  Note that the copy constructor should
+  // be used instead.
+  //
+  // Clone() returns a *shallow* copy; it does not make a copy of the
+  // underlying S2ShapeIndex.
+  S2Region* Clone() const override;
+
   S1ChordAngle radius_;
 
   // In order to handle (radius_ == 0) correctly, we need to test whether
