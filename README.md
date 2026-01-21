@@ -59,6 +59,8 @@ This issue may require revision of boringssl or exactfloat.
 *   [Abseil](https://github.com/abseil/abseil-cpp) LTS
     [`20250814`](https://github.com/abseil/abseil-cpp/releases/tag/20250814.1)
     (standard library extensions). This exact version must be used.
+*   [googletest testing framework >= 1.10](https://github.com/google/googletest)
+    (to build tests and example programs, optional)
 *   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 
 On Ubuntu, all of these other than abseil can be installed via apt-get:
@@ -128,6 +130,13 @@ On macOS, `sysctl -n hw.logicalcpu` is the equivalent of `nproc`.
 Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
 Enable the python interface with `-DWITH_PYTHON=ON`.
+
+# For Testing
+
+If BUILD_TESTS is 'on' (the default), then OpenSSL must be available to build
+some tests:
+
+*   [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 
 If OpenSSL is installed in a non-standard location set `OPENSSL_ROOT_DIR`
 before running configure, for example on macOS:
@@ -208,7 +217,7 @@ python -m build
 
 The resulting wheel will be in the `dist` directory.
 
-> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR`; 
+> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR`;
 > see above for more information.
 
 ## Other S2 implementations

@@ -61,7 +61,6 @@ add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 if (NOT TARGET absl::base)
     find_package(absl REQUIRED)
 endif()
-find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 
@@ -216,13 +215,13 @@ add_library(s2
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/coding/coder.cc
             src/s2/util/coding/varint.cc
+            src/s2/util/math/exactfloat/bignum.cc
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
 
 target_link_libraries(
     s2
-    ${OPENSSL_LIBRARIES}
     absl::absl_vlog_is_on
     absl::base
     absl::btree
@@ -269,6 +268,8 @@ set_target_properties(s2 PROPERTIES
     VERSION ${PROJECT_VERSION})
 
 if (BUILD_TESTS)
+  find_package(OpenSSL REQUIRED)
+
   # We could use a pre-installed benchmark with
   # `find_package(benchmark QUIET)` then, `if (NOT benchmark_FOUND)`, but
   # that could run into trouble if benchmark isn't PIC, but
@@ -441,6 +442,7 @@ if (BUILD_TESTS)
       src/s2/s2wrapped_shape_test.cc
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc
+      src/s2/util/math/exactfloat/bignum_test.cc
       src/s2/util/math/exactfloat/exactfloat_test.cc
       src/s2/util/math/exactfloat/exactfloat_underflow_test.cc)
 
@@ -472,6 +474,14 @@ if (BUILD_TESTS)
     # `S2Cell.TestSubdivide ... PASSED`.  Also lists disabled tests.
     gtest_discover_tests(${test})
   endforeach()
+
+  target_link_libraries(
+    bignum_test
+    ${OPENSSL_LIBRARIES})
+
+  target_include_directories(
+    bignum_test PRIVATE ${OPENSSL_INCLUDE_DIR})
+
 endif()
 
 if (BUILD_EXAMPLES AND TARGET s2testing)
@@ -658,7 +668,8 @@ if(S2_ENABLE_INSTALL)
                 src/s2/util/math/matrix3x3.h
                 src/s2/util/math/vector.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math")
-  install(FILES src/s2/util/math/exactfloat/exactfloat.h
+  install(FILES src/s2/util/math/exactfloat/bignum.h
+                src/s2/util/math/exactfloat/exactfloat.h
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math/exactfloat")
   install(FILES src/s2/util/units/length-units.h
                 src/s2/util/units/physical-units.h

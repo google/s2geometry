@@ -17,6 +17,8 @@
 
 #include "s2/util/math/exactfloat/exactfloat.h"
 
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -132,14 +134,14 @@ double scalbln(double a, long exp) {
 // Here we fix the rounding functions to match MPFloat, which clamps out of
 // range values and returns the maximum possible value for NaN.
 
-#define FIX_INT_ROUNDING(T, fname)                      \
-  T fname(double a) {                                   \
+#define FIX_INT_ROUNDING(T, fname)                           \
+  T fname(double a) {                                        \
     if (std::isnan(a)) return std::numeric_limits<T>::max(); \
-    if (a <= std::numeric_limits<T>::min())             \
-      return std::numeric_limits<T>::min();             \
-    if (a >= std::numeric_limits<T>::max())             \
-      return std::numeric_limits<T>::max();             \
-    return ::fname(a);                                  \
+    if (a <= std::numeric_limits<T>::min())                  \
+      return std::numeric_limits<T>::min();                  \
+    if (a >= std::numeric_limits<T>::max())                  \
+      return std::numeric_limits<T>::max();                  \
+    return ::fname(a);                                       \
   }
 
 FIX_INT_ROUNDING(long, lrint)
@@ -265,7 +267,7 @@ class ExactFloatTest : public ::testing::Test {
   // Expect "actual" to have the given value when converted to a "double".
   // Two values are considered equivalent if they have the same bit pattern or
   // they are both NaN.  (So for example, +0 and -0 are not equivalent.)
-  void ExpectSame(double expected, const ExactFloat &xf_actual) {
+  void ExpectSame(double expected, const ExactFloat& xf_actual) {
     double actual = static_cast<double>(xf_actual);
     if (std::isnan(expected)) {
       EXPECT_TRUE(std::isnan(actual));
@@ -280,13 +282,13 @@ class ExactFloatTest : public ::testing::Test {
 
   // Like ExpectSame() but also check that "actual" has the expected precision.
   void ExpectSameWithPrec(double expected_value, int expected_prec,
-                          const ExactFloat &xf_actual) {
+                          const ExactFloat& xf_actual) {
     ExpectSame(expected_value, xf_actual);
     EXPECT_EQ(expected_prec, xf_actual.prec());
   }
 
   // Log an error when a math intrinsic does not return the expected result.
-  static void AddMathcallFailure(const testing::Message &call_msg,
+  static void AddMathcallFailure(const testing::Message& call_msg,
                                  double expected, double actual) {
     ADD_FAILURE() << call_msg << "\nExpected (glibc): " << ExactFloat(expected)
                   << "\nActual (ExactFloat): " << ExactFloat(actual)
@@ -297,8 +299,8 @@ class ExactFloatTest : public ::testing::Test {
   // Given two versions "f" and "mp_f" of the unary function called "fname",
   // check that their results agree to within the given number of ulps for a
   // range of test arguments.
-  void TestMathcall1(const char *fname, double f(double),
-                     ExactFloat mp_f(const ExactFloat &), uint64_t ulps) {
+  void TestMathcall1(const char* fname, double f(double),
+                     ExactFloat mp_f(const ExactFloat&), uint64_t ulps) {
     for (double a : *special_double_values_) {
       double expected = f(a);
       double actual = static_cast<double>(mp_f(ExactFloat(a)));
@@ -313,8 +315,8 @@ class ExactFloatTest : public ::testing::Test {
   // Given two versions "f" and "mp_f" of the binary function called "fname",
   // check that their results agree to within the given number of ulps for a
   // range of test arguments.
-  void TestMathcall2(const char *fname, double f(double, double),
-                     ExactFloat mp_f(const ExactFloat &, const ExactFloat &),
+  void TestMathcall2(const char* fname, double f(double, double),
+                     ExactFloat mp_f(const ExactFloat&, const ExactFloat&),
                      uint64_t ulps) {
     for (double a : *special_double_values_) {
       for (double b : *special_double_values_) {
@@ -333,7 +335,7 @@ class ExactFloatTest : public ::testing::Test {
   // function "mp_f", check that they return the same result on a range of
   // test arguments.
   template <typename ResultType>
-  void TestFn(const char *fname, ResultType f_dbl(double),
+  void TestFn(const char* fname, ResultType f_dbl(double),
               ResultType f_xf(const ExactFloat&)) {
     for (double a : *special_double_values_) {
       ResultType expected = f_dbl(a);
@@ -350,8 +352,8 @@ class ExactFloatTest : public ::testing::Test {
   // returns the integer type ResultType, check that they return the same
   // value for a range of test arguments.
   template <typename ResultType>
-  void TestIntMathcall1(const char *fname, ResultType f(double),
-                        ResultType mp_f(const ExactFloat &)) {
+  void TestIntMathcall1(const char* fname, ResultType f(double),
+                        ResultType mp_f(const ExactFloat&)) {
     for (double a : *special_double_values_) {
       ResultType expected = f(a);
       ResultType actual = mp_f(ExactFloat(a));
@@ -368,8 +370,8 @@ class ExactFloatTest : public ::testing::Test {
   // integer argument), check that they return the same result for a range of
   // test arguments.  "ExpType" is the type of the integer argument.
   template <typename ExpType>
-  void TestLdexpCall(const char *fname, double f(double, ExpType),
-                     ExactFloat mp_f(const ExactFloat &, ExpType)) {
+  void TestLdexpCall(const char* fname, double f(double, ExpType),
+                     ExactFloat mp_f(const ExactFloat&, ExpType)) {
     static constexpr ExpType kUnsignedExpValues[] = {
         // Doesn't test with numeric_limits<ExpType>::min() because it's
         // undefined
@@ -455,6 +457,12 @@ TEST_F(ExactFloatTest, Constructors) {
   // Copy constructor.
   ExactFloat e = c;
   ExpectSameWithPrec(-125, 7, e);
+}
+
+TEST_F(ExactFloatTest, IntMinConstruction) {
+  // Ensure that construction with INT_MIN works properly.
+  ExactFloat f = INT_MIN;
+  ExpectSame(INT_MIN, f);
 }
 
 TEST_F(ExactFloatTest, Constants) {
@@ -632,7 +640,7 @@ TEST_F(ExactFloatTest, RoundToMaxPrec) {
 // corresponding C++ operator.
 #define TEST_MATHOP1(op_name, op)                                \
   double op_name(double a) { return op(a); }                     \
-  ExactFloat mp_##op_name(const ExactFloat &a) { return op(a); } \
+  ExactFloat mp_##op_name(const ExactFloat& a) { return op(a); } \
   TEST_F(ExactFloatTest, op_name) {                              \
     TestMathcall1(#op_name, op_name, mp_##op_name, 0);           \
   }
@@ -644,7 +652,7 @@ TEST_MATHOP1(minus, -)
 // corresponding C++ operator.
 #define TEST_MATHOP2(op_name, op)                                     \
   double op_name(double a, double b) { return (a)op(b); }             \
-  ExactFloat mp_##op_name(const ExactFloat &a, const ExactFloat &b) { \
+  ExactFloat mp_##op_name(const ExactFloat& a, const ExactFloat& b) { \
     return (a)op(b);                                                  \
   }                                                                   \
   TEST_F(ExactFloatTest, op_name) {                                   \
@@ -668,7 +676,7 @@ TEST_MATHOP2(not_greater, <=);
     (a) op(b);                                                        \
     return a;                                                         \
   }                                                                   \
-  ExactFloat mp_##op_name(const ExactFloat &a, const ExactFloat &b) { \
+  ExactFloat mp_##op_name(const ExactFloat& a, const ExactFloat& b) { \
     ExactFloat x = a;                                                 \
     x op(b);                                                          \
     return x;                                                         \
@@ -687,7 +695,7 @@ TEST_ASSIGNOP(times_equals, *=);
 #define TEST_MATHCALL1(func, ulps)                                       \
   /* We define a wrapper function around ExactFloat version of "func" */ \
   /* so that we can take its address (gcc can't find it otherwise). */   \
-  ExactFloat mp_##func(const ExactFloat &a) { return func(a); }          \
+  ExactFloat mp_##func(const ExactFloat& a) { return func(a); }          \
   TEST_F(ExactFloatTest, func) { TestMathcall1(#func, func, mp_##func, ulps); }
 
 // Test all the unary math instrinsics (in the same order as the .h file).
@@ -704,7 +712,7 @@ TEST_MATHCALL1(round, 0)
 // Check that the ExactFloat and glibc versions of "func" always return the
 // same value to within the given number of ulps.
 #define TEST_MATHCALL2(func, ulps)                                 \
-  ExactFloat mp_##func(const ExactFloat &a, const ExactFloat &b) { \
+  ExactFloat mp_##func(const ExactFloat& a, const ExactFloat& b) { \
     return func(a, b);                                             \
   }                                                                \
   TEST_F(ExactFloatTest, func) { TestMathcall2(#func, func, mp_##func, ulps); }
@@ -720,7 +728,7 @@ TEST_MATHCALL2(copysign, 0)
 // integer value.
 
 #define TEST_INTEGER_MATHCALL1(ResultType, func)                \
-  ResultType mp_##func(const ExactFloat &a) { return func(a); } \
+  ResultType mp_##func(const ExactFloat& a) { return func(a); } \
   TEST_F(ExactFloatTest, func) { TestIntMathcall1(#func, func, mp_##func); }
 
 TEST_INTEGER_MATHCALL1(long, lrint);
@@ -740,11 +748,11 @@ int frexp_exp(double a) {
   (void)frexp(a, &exp_part);
   return exp_part;
 }
-ExactFloat mp_frexp_frac(const ExactFloat &a) {
+ExactFloat mp_frexp_frac(const ExactFloat& a) {
   int exp_part;
   return frexp(a, &exp_part);
 }
-int mp_frexp_exp(const ExactFloat &a) {
+int mp_frexp_exp(const ExactFloat& a) {
   int exp_part;
   (void)frexp(a, &exp_part);
   return exp_part;
@@ -760,7 +768,7 @@ TEST_F(ExactFloatTest, frexp) {
 // ldexp(), scalbn(), scalbln()
 
 #define TEST_LDEXP_CALL(ExpType, func)                     \
-  ExactFloat mp_##func(const ExactFloat &a, ExpType exp) { \
+  ExactFloat mp_##func(const ExactFloat& a, ExpType exp) { \
     return func(a, exp);                                   \
   }                                                        \
   TEST_F(ExactFloatTest, func) { TestLdexpCall(#func, func, mp_##func); }
@@ -773,10 +781,8 @@ TEST_LDEXP_CALL(long, scalbln);
 #endif
 // Test a zero-argument ExactFloat member function against a corresponding
 // one-argument reference function.
-#define TEST_FN_VS_REF(ResultType, fn_xf, fn_dbl)       \
-  TEST_F(ExactFloatTest, fn_xf) {                                   \
-    TestFn<ResultType>(#fn_xf, fn_dbl, fn_xf); \
-  }
+#define TEST_FN_VS_REF(ResultType, fn_xf, fn_dbl) \
+  TEST_F(ExactFloatTest, fn_xf) { TestFn<ResultType>(#fn_xf, fn_dbl, fn_xf); }
 
 // "Reference versions" of various zero-argument methods.
 bool ref_iszero(double a) { return a == 0; }
@@ -794,8 +800,8 @@ TEST_FN_VS_REF(int, xf_sgn, ref_sgn)
 
 // Test a zero-argument ExactFloat member function against a corresponding
 // one-argument std:: function.
-#define TEST_FN_VS_STD_FN(ResultType, fn) \
-  ResultType ref_##fn(double a) { return std::fn(a); }  \
+#define TEST_FN_VS_STD_FN(ResultType, fn)              \
+  ResultType ref_##fn(double a) { return std::fn(a); } \
   TEST_FN_VS_REF(ResultType, fn, ref_##fn)
 
 TEST_FN_VS_STD_FN(bool, isinf)
@@ -803,9 +809,7 @@ TEST_FN_VS_STD_FN(bool, isnan)
 TEST_FN_VS_STD_FN(bool, isfinite)
 TEST_FN_VS_STD_FN(bool, signbit)
 
-TEST(FpClassify, Nan) {
-  EXPECT_EQ(fpclassify(ExactFloat(NAN)), FP_NAN);
-}
+TEST(FpClassify, Nan) { EXPECT_EQ(fpclassify(ExactFloat(NAN)), FP_NAN); }
 
 TEST(FpClassify, Infinity) {
   EXPECT_EQ(fpclassify(ExactFloat(INFINITY)), FP_INFINITE);
@@ -904,7 +908,7 @@ TEST_F(ExactFloatTest, Vector3_Part3) {
   EXPECT_EQ(1, y.z());
   y.x(3);
   EXPECT_EQ(MyVec3(3, 4, 1), y);
-  ExactFloat *y_data = y.Data();
+  ExactFloat* y_data = y.Data();
   y_data[2] = 12;
   EXPECT_EQ(MyVec3(3, 4, 12), y);
   EXPECT_EQ(y.Data()[1], ExactFloat(4));
