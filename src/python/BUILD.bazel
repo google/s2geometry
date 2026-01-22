@@ -1,0 +1,49 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
+
+package(default_visibility = ["//visibility:private"])
+
+# ========================================
+# Python Package
+# ========================================
+
+py_library(
+    name = "s2geometry_pybind",
+    srcs = ["s2geometry_pybind/__init__.py"],
+    data = [
+        ":s2geometry_bindings",
+    ],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+)
+
+# ========================================
+# C++ Bindings
+# ========================================
+
+pybind_extension(
+    name = "s2geometry_bindings",
+    srcs = ["module.cc"],
+    deps = [
+        ":s2point_bindings",
+    ],
+)
+
+pybind_library(
+    name = "s2point_bindings",
+    srcs = ["s2point_bindings.cc"],
+    deps = [
+        "//:s2",
+    ],
+)
+
+# ========================================
+# Python Tests
+# ========================================
+
+py_test(
+    name = "s2point_test",
+    srcs = ["s2point_test.py"],
+    deps = [":s2geometry_pybind"],
+)
