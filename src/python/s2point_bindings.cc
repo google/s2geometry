@@ -12,14 +12,23 @@ void bind_s2point(py::module& m) {
       .def(py::init<double, double, double>(),
            py::arg("x"), py::arg("y"), py::arg("z"),
            "Construct S2Point from x, y, z coordinates")
+      .def(py::init([](py::tuple t) {
+        if (t.size() != 3) {
+          throw py::value_error("Tuple must have exactly 3 elements");
+        }
+        return S2Point(t[0].cast<double>(), t[1].cast<double>(), t[2].cast<double>());
+      }), py::arg("coords"), "Construct S2Point from a tuple of (x, y, z) coordinates")
 
-      // Accessors
+      // Properties
       .def_property_readonly("x", py::overload_cast<>(&S2Point::x, py::const_),
                              "x coordinate")
       .def_property_readonly("y", py::overload_cast<>(&S2Point::y, py::const_),
                              "y coordinate")
       .def_property_readonly("z", py::overload_cast<>(&S2Point::z, py::const_),
                              "z coordinate")
+      .def("data", [](const S2Point& self) {
+        return py::make_tuple(self.x(), self.y(), self.z());
+      }, "Return coordinates as a tuple (x, y, z)")
 
       // Vector operations
       .def("norm", &S2Point::Norm, "Return the Euclidean norm (length)")
@@ -31,7 +40,9 @@ void bind_s2point(py::module& m) {
       .def("cross_prod", [](const S2Point& self, const S2Point& other) -> S2Point {
         return self.CrossProd(other);
       }, py::arg("other"), "Return the cross product with another point")
-      .def("angle", &S2Point::Angle, py::arg("other"),
+      .def("angle", [](const S2Point& self, const S2Point& other) {
+        return self.Angle(other);
+      }, py::arg("other"),
            "Return the angle to another point")
 
       // Operators
