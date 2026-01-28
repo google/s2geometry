@@ -284,7 +284,7 @@ if (BUILD_TESTS)
   )
   # Don't install benchmark when s2geometry is installed.
   set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
-  set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+  set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(benchmark)
 
   # https://google.github.io/googletest/quickstart-cmake.html#set-up-a-project
