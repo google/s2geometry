@@ -31,14 +31,14 @@ print(sum_point)
 The Python bindings follow the C++ API closely but with Pythonic conventions:
 
 **Naming Conventions:**
-- Core classes exist within the top-level module; we intend to define submodules for utility classes.
+- Core classes exist within the top-level module; we may define submodules for utility classes.
 - Class names remain unchanged (e.g., `S2Point`, `S1Angle`, `R1Interval`)
 - Method names are converted to snake_case (converted from UpperCamelCase C++ function names)
 
 **Properties vs. Methods:**
 - Simple coordinate accessors are properties: `point.x`, `point.y`, `interval.lo`, `interval.hi`
 - If the C++ class has a trivial set_foo method for the property, then the Python property is mutable (otherwise it is a read-only property).
-- Other functions are not properties: `angle.radians()`, `angle.degrees()`, `interval.get_length()`
+- Other functions are not properties: `angle.radians()`, `angle.degrees()`, `interval.length()`
 
 **Invalid/Unnormalized Values:**
 - Some constructors accept invalid values or unnormalized values.
@@ -48,16 +48,18 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 - In **C++** invalid values will typically trigger (`ABSL_DCHECK`) when compiled with debug options.
 - In **Python bindings** debug assertions (`ABSL_DCHECK`) are disabled, matching the production optimized C++ behavior.
 
-**Type Conversions:**
-- Python floats map to C++ `double`
-- Functions that accept angles as `double` expect values in **radians** (same as C++ interface)
+**Documentation:**
+- Python docstrings provide essential information about parameters, return values, and key behaviors
+- For comprehensive documentation including edge cases and algorithmic details, refer to the C++ header files
+- The C++ documentation is the authoritative source of truth
 
 **Operators:**
 - Standard Python operators work as expected: `+`, `-`, `*`, `==`, `!=`, `<`, `>` (for C++ classes that implement those operators)
 
 **String Representations:**
-- `repr()` outputs developer-centric representations: `S1Angle.from_degrees(45.0)`
-- `str()` outputs simpler human-readable representations (e.g. `45.0 degrees`)
+- `repr()` prefixes the class name and delegates to C++ `operator<<` for the value
+- `str()` delegates to C++ `operator<<` for a cleaner output
+- Example: `repr(S1Interval(0.0, 2.0))` returns `'S1Interval([0, 2])'` while `str()` returns `'[0, 2]'`
 
 **Vector Inheritance:**
 - In C++, various geometry classes inherit from or expose vector types (e.g., `S2Point` inherits from `Vector3_d`, `R2Point` is a type alias for `Vector2_d`, `R1Interval` returns bounds as `Vector2_d`)
@@ -131,7 +133,7 @@ To add bindings for a new class:
 
 ### Binding File Organization
 
-Use the following sections to organize functions within the bindings files and tests:
+Use the following sections to organize functions within the bindings files and tests. Secondarily, follow the order in which functions are declared in the C++ headers.
 
 1. **Constructors** - Default constructors and constructors with parameters
 2. **Factory methods** - Static factory methods (e.g., `from_degrees`, `from_radians`, `zero`, `invalid`)
@@ -140,5 +142,5 @@ Use the following sections to organize functions within the bindings files and t
 5. **Geometric operations** - All other methods including conversions, computations, containment checks, set operations, normalization, and distance calculations
 6. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
 7. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
-8. **String representation** - `__repr__`, `__str__`, and string conversion methods like `to_string_in_degrees`
+8. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`
 9. **Module-level functions** - Standalone functions (e.g., trigonometric functions for S1Angle)

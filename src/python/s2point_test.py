@@ -138,9 +138,10 @@ class TestS2Point(unittest.TestCase):
 
     # String representation
 
-    def test_repr(self):
+    def test_string_representation(self):
         p = s2.S2Point(1.0, 2.0, 3.0)
-        self.assertEqual(repr(p), "S2Point(1.000000, 2.000000, 3.000000)")
+        self.assertEqual(repr(p), "S2Point([1, 2, 3])")
+        self.assertEqual(str(p), "[1, 2, 3]")
 
 
 if __name__ == "__main__":

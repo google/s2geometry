@@ -190,6 +190,7 @@ class S1Interval {
   // considered to start at an arbitrary point on the unit circle, thus any
   // interval with (length <= 2*max_error) matches the empty interval, and any
   // interval with (length >= 2*Pi - 2*max_error) matches the full interval.
+  // Note: default value is duplicated in Python bindings (s1interval_bindings.cc)
   bool ApproxEquals(const S1Interval& y, double max_error = 1e-15) const;
 
   // Low-level methods to modify one endpoint of an existing S1Interval.

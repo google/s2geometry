@@ -112,17 +112,17 @@ class TestS1Interval(unittest.TestCase):
 
     # Geometric operations
 
-    def test_get_center(self):
+    def test_center(self):
         interval = s2.S1Interval(0.0, math.pi)
-        self.assertAlmostEqual(interval.get_center(), math.pi / 2)
+        self.assertAlmostEqual(interval.center(), math.pi / 2)
 
-    def test_get_length(self):
+    def test_length(self):
         interval = s2.S1Interval(0.0, math.pi)
-        self.assertAlmostEqual(interval.get_length(), math.pi)
+        self.assertAlmostEqual(interval.length(), math.pi)
 
-    def test_get_complement_center(self):
+    def test_complement_center(self):
         interval = s2.S1Interval(0.0, math.pi / 2)
-        complement_center = interval.get_complement_center()
+        complement_center = interval.complement_center()
         self.assertIsNotNone(complement_center)
 
     def test_contains_point(self):
@@ -176,8 +176,8 @@ class TestS1Interval(unittest.TestCase):
     def test_expanded(self):
         interval = s2.S1Interval(0.5, 1.5)
         expanded = interval.expanded(0.5)
-        self.assertAlmostEqual(expanded.get_length(), 
-                             interval.get_length() + 1.0)
+        self.assertAlmostEqual(expanded.length(), 
+                             interval.length() + 1.0)
 
     def test_union(self):
         interval1 = s2.S1Interval(0.0, 1.0)
@@ -200,18 +200,27 @@ class TestS1Interval(unittest.TestCase):
         self.assertFalse(complement.contains(math.pi / 4))
         self.assertTrue(complement.contains(math.pi))
 
-    def test_get_directed_hausdorff_distance(self):
+    def test_directed_hausdorff_distance(self):
         interval1 = s2.S1Interval(0.0, 1.0)
         interval2 = s2.S1Interval(0.5, 1.5)
-        distance = interval1.get_directed_hausdorff_distance(interval2)
+        distance = interval1.directed_hausdorff_distance(interval2)
         self.assertIsNotNone(distance)
 
     def test_approx_equals(self):
         interval1 = s2.S1Interval(0.0, 2.0)
         interval2 = s2.S1Interval(0.0, 2.0)
-        interval3 = s2.S1Interval(0.0, 2.5)
+        interval3 = s2.S1Interval(0.0, 2.0 + 1e-16)  # Very small difference
+        interval4 = s2.S1Interval(0.0, 2.1)  # Larger difference
+        
+        # Test with default max_error (1e-15)
         self.assertTrue(interval1.approx_equals(interval2))
-        self.assertFalse(interval1.approx_equals(interval3))
+        self.assertTrue(interval1.approx_equals(interval3))  # Within default tolerance
+        self.assertFalse(interval1.approx_equals(interval4))  # Outside default tolerance
+        
+        # Test with explicit max_error values
+        self.assertTrue(interval1.approx_equals(interval3, 1e-15))
+        self.assertFalse(interval1.approx_equals(interval4, 0.05))
+        self.assertTrue(interval1.approx_equals(interval4, 0.2))
 
     # Operators
 
@@ -226,16 +235,18 @@ class TestS1Interval(unittest.TestCase):
 
     def test_string_representation(self):
         interval = s2.S1Interval(0.0, 2.0)
-        self.assertEqual(repr(interval), "S1Interval(0.000000, 2.000000)")
-        self.assertEqual(str(interval), "[0.000000, 2.000000]")
+        self.assertEqual(repr(interval), "S1Interval([0, 2])")
+        self.assertEqual(str(interval), "[0, 2]")
 
         empty = s2.S1Interval.empty()
-        self.assertEqual(repr(empty), "S1Interval(3.141593, -3.141593)")
-        self.assertEqual(str(empty), "[∅]")
-
+        # Empty interval has lo=pi, hi=-pi
+        self.assertEqual(repr(empty), "S1Interval([3.14159, -3.14159])")
+        self.assertEqual(str(empty), "[3.14159, -3.14159]")
+        
         full = s2.S1Interval.full()
-        self.assertEqual(repr(full), "S1Interval(-3.141593, 3.141593)")
-        self.assertEqual(str(full), "[0, 2π)")
+        # Full interval spans from -pi to pi
+        self.assertEqual(repr(full), "S1Interval([-3.14159, 3.14159])")
+        self.assertEqual(str(full), "[-3.14159, 3.14159]")
 
 
 if __name__ == "__main__":
