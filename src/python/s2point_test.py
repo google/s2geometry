@@ -1,11 +1,13 @@
 """Tests for S2Point pybind11 bindings."""
 
+import math
 import unittest
 import s2geometry_pybind as s2
 
-
 class TestS2Point(unittest.TestCase):
     """Test cases for S2Point bindings."""
+
+    # Constructors
 
     def test_default_constructor(self):
         p = s2.S2Point()
@@ -18,6 +20,39 @@ class TestS2Point(unittest.TestCase):
         self.assertEqual(p.x, 1.0)
         self.assertEqual(p.y, 2.0)
         self.assertEqual(p.z, 3.0)
+
+    def test_unnormalized_point(self):
+        # Unnormalized points are accepted by the constructor.
+        p = s2.S2Point(3.0, 4.0, 0.0)
+        self.assertAlmostEqual(p.x, 3.0)
+        self.assertAlmostEqual(p.y, 4.0)
+        self.assertAlmostEqual(p.z, 0.0)
+        self.assertAlmostEqual(p.norm(), 5.0)  # Not on unit sphere
+        
+        # User may call normalize() to obtain a unit vector.
+        normalized = p.normalize()
+        self.assertAlmostEqual(normalized.norm(), 1.0)
+
+    def test_constructor_from_tuple(self):
+        p = s2.S2Point((1.0, 2.0, 3.0))
+        self.assertEqual(p.x, 1.0)
+        self.assertEqual(p.y, 2.0)
+        self.assertEqual(p.z, 3.0)
+
+    def test_constructor_from_tuple_wrong_length(self):
+        with self.assertRaises(ValueError):
+            s2.S2Point((1.0, 2.0))
+        with self.assertRaises(ValueError):
+            s2.S2Point((1.0, 2.0, 3.0, 4.0))
+
+    # Properties
+
+    def test_data(self):
+        p = s2.S2Point(1.0, 2.0, 3.0)
+        coords = p.data()
+        self.assertEqual(coords, (1.0, 2.0, 3.0))
+
+    # Vector operations.
 
     def test_norm(self):
         p = s2.S2Point(3.0, 4.0, 0.0)
@@ -46,6 +81,13 @@ class TestS2Point(unittest.TestCase):
         self.assertAlmostEqual(cross.x, 0.0)
         self.assertAlmostEqual(cross.y, 0.0)
         self.assertAlmostEqual(cross.z, 1.0)
+
+    def test_angle(self):
+        p1 = s2.S2Point(1.0, 0.0, 0.0)
+        p2 = s2.S2Point(0.0, 1.0, 0.0)
+        self.assertAlmostEqual(p1.angle(p2), math.pi / 2)
+
+    # Operators
 
     def test_addition(self):
         p1 = s2.S2Point(1.0, 2.0, 3.0)
@@ -94,9 +136,12 @@ class TestS2Point(unittest.TestCase):
         self.assertEqual(p1, p2)
         self.assertNotEqual(p1, p3)
 
-    def test_repr(self):
+    # String representation
+
+    def test_string_representation(self):
         p = s2.S2Point(1.0, 2.0, 3.0)
-        self.assertEqual(repr(p), "S2Point(1.000000, 2.000000, 3.000000)")
+        self.assertEqual(repr(p), "S2Point([1, 2, 3])")
+        self.assertEqual(str(p), "[1, 2, 3]")
 
 
 if __name__ == "__main__":
