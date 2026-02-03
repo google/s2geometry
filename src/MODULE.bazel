@@ -14,7 +14,7 @@ bazel_dep(name = "rules_cc", version = "0.2.16")
 
 # Development dependencies (only needed for tests)
 bazel_dep(name = "boringssl", version = "0.20251124.0", dev_dependency = True)
-bazel_dep(name = "openssl", version = "3.5.4.bcr.1", dev_dependency = True)
+bazel_dep(name = "openssl", version = "3.5.5.bcr.0", dev_dependency = True)
 bazel_dep(name = "google_benchmark", version = "1.9.5", dev_dependency = True)
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 
