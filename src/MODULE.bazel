@@ -8,7 +8,7 @@ module(
 )
 
 # Production dependencies
-bazel_dep(name = "abseil-cpp", version = "20250814.1")
+bazel_dep(name = "abseil-cpp", version = "20260107.1")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
 
