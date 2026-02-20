@@ -729,7 +729,6 @@ cc_test(
 cc_test(
     name = "s2cell_test",
     srcs = [":s2/s2cell_test.cc"],
-    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",

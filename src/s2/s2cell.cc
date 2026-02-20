@@ -310,8 +310,13 @@ bool S2Cell::Contains(const S2Point& p) const {
   //
   // is always true.  To do this, we need to account for the error when
   // converting from (u,v) coordinates to (s,t) coordinates.  At least in the
-  // case of S2_QUADRATIC_PROJECTION, the total error is at most DBL_EPSILON.
-  return uv_.Expanded(DBL_EPSILON).Contains(uv);
+  // case of S2_QUADRATIC_PROJECTION, the total error is at most
+  // (5/3) * DBL_EPSILON.
+  // See
+  // https://github.com/google/s2geometry/issues/463#issuecomment-3488383557.
+  // TODO: Expand explanation here and document error bounds on other
+  // functions.
+  return uv_.Expanded((5/3.) * DBL_EPSILON).Contains(uv);
 }
 
 void S2Cell::Encode(Encoder* const encoder) const {

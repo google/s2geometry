@@ -8,13 +8,13 @@ module(
 )
 
 # Production dependencies
-bazel_dep(name = "abseil-cpp", version = "20250814.1")
+bazel_dep(name = "abseil-cpp", version = "20260107.1")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
 
 # Development dependencies (only needed for tests)
-bazel_dep(name = "boringssl", version = "0.20251124.0", dev_dependency = True)
-bazel_dep(name = "openssl", version = "3.5.4.bcr.1", dev_dependency = True)
+bazel_dep(name = "boringssl", version = "0.20260211.0", dev_dependency = True)
+bazel_dep(name = "openssl", version = "3.5.5.bcr.0", dev_dependency = True)
 bazel_dep(name = "google_benchmark", version = "1.9.5", dev_dependency = True)
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 
@@ -23,7 +23,7 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 # https://github.com/pybind/pybind11_bazel/blob/master/MODULE.bazel
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "pybind11_bazel", version = "3.0.0")
-bazel_dep(name = "rules_python", version = "1.8.2")
+bazel_dep(name = "rules_python", version = "1.8.4")
 
 # Extensions
 cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension", dev_dependency = True)
