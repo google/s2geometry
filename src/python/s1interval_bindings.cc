@@ -7,34 +7,50 @@
 
 namespace py = pybind11;
 
+namespace {
+
+void MaybeThrowInvalidPoint(double p) {
+  if (!S1Interval::IsValidPoint(p)) throw py::value_error("Invalid S1 point");
+}
+
+}  // namespace
+
 void bind_s1interval(py::module& m) {
   py::class_<S1Interval>(m, "S1Interval")
       // Constructors
       .def(py::init<>(), "Default constructor creates an empty interval")
-      .def(py::init<double, double>(),
+      .def(py::init([](double lo, double hi) {
+             MaybeThrowInvalidPoint(lo);
+             MaybeThrowInvalidPoint(hi);
+             return S1Interval(lo, hi);
+           }),
            py::arg("lo"), py::arg("hi"),
            "Constructor that accepts the endpoints of the interval.\n\n"
-           "Both endpoints must be in the range -Pi to Pi inclusive.")
+           "Both endpoints must be in the range -Pi to Pi inclusive.\n"
+           "Raises ValueError if either bound is outside that range.")
 
       // Static factory methods
       .def_static("empty", &S1Interval::Empty, "Returns the empty interval")
       .def_static("full", &S1Interval::Full, "Returns the full interval")
       .def_static("from_point", &S1Interval::FromPoint, py::arg("p"),
                   "Constructs an interval containing a single point")
-      .def_static("from_point_pair", &S1Interval::FromPointPair,
+      .def_static("from_point_pair",
+                  [](double p1, double p2) {
+                    MaybeThrowInvalidPoint(p1);
+                    MaybeThrowInvalidPoint(p2);
+                    return S1Interval::FromPointPair(p1, p2);
+                  },
                   py::arg("p1"), py::arg("p2"),
                   "Constructs the minimal interval containing two points")
 
       // Properties
-      .def_property("lo", &S1Interval::lo, &S1Interval::set_lo, "Lower bound")
-      .def_property("hi", &S1Interval::hi, &S1Interval::set_hi, "Upper bound")
+      .def_property_readonly("lo", &S1Interval::lo, "Lower bound")
+      .def_property_readonly("hi", &S1Interval::hi, "Upper bound")
       .def("bounds", [](const S1Interval& self) {
         return py::make_tuple(self.lo(), self.hi());
       }, "Return bounds as a tuple (lo, hi)")
 
       // Predicates
-      .def("is_valid", &S1Interval::is_valid,
-           "An interval is valid if neither bound exceeds Pi in absolute value")
       .def("is_full", &S1Interval::is_full,
            "Return true if the interval contains all points on the unit circle")
       .def("is_empty", &S1Interval::is_empty,
@@ -53,12 +69,16 @@ void bind_s1interval(py::module& m) {
            "Return the midpoint of the complement of the interval.\n\n"
            "For full and empty intervals, the result is arbitrary. For a\n"
            "singleton interval, the result is its antipodal point on S1.")
-      .def("contains", py::overload_cast<double>(&S1Interval::Contains, py::const_),
-           py::arg("p"),
+      .def("contains", [](const S1Interval& self, double p) {
+               MaybeThrowInvalidPoint(p);
+               return self.Contains(p);
+             }, py::arg("p"),
            "Return true if the interval (which is closed) contains the point 'p'")
-      .def("interior_contains", py::overload_cast<double>(
-               &S1Interval::InteriorContains, py::const_),
-           py::arg("p"), "Return true if the interior of the interval contains the point 'p'")
+      .def("interior_contains", [](const S1Interval& self, double p) {
+               MaybeThrowInvalidPoint(p);
+               return self.InteriorContains(p);
+             }, py::arg("p"),
+           "Return true if the interior of the interval contains the point 'p'")
       .def("contains", py::overload_cast<const S1Interval&>(
                &S1Interval::Contains, py::const_),
            py::arg("other"),
@@ -72,10 +92,17 @@ void bind_s1interval(py::module& m) {
       .def("interior_intersects", &S1Interval::InteriorIntersects,
            py::arg("other"),
            "Return true if the interior of this interval contains any point of 'y'")
-      .def("add_point", &S1Interval::AddPoint, py::arg("p"),
+      .def("add_point", [](S1Interval& self, double p) {
+               MaybeThrowInvalidPoint(p);
+               self.AddPoint(p);
+             }, py::arg("p"),
            "Expand the interval to contain the given point 'p'.\n\n"
            "The point should be an angle in the range [-Pi, Pi].")
-      .def("project", &S1Interval::Project, py::arg("p"),
+      .def("project", [](const S1Interval& self, double p) {
+               if (self.is_empty()) throw py::value_error("Invalid S1Interval");
+               MaybeThrowInvalidPoint(p);
+               return self.Project(p);
+             }, py::arg("p"),
            "Return the closest point in the interval to 'p'.\n\n"
            "The interval must be non-empty.")
       .def("expanded", &S1Interval::Expanded, py::arg("margin"),

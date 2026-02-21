@@ -37,16 +37,13 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 
 **Properties vs. Methods:**
 - Simple coordinate accessors are properties: `point.x`, `point.y`, `interval.lo`, `interval.hi`
-- If the C++ class has a trivial set_foo method for the property, then the Python property is mutable (otherwise it is a read-only property).
+- Properties are always read-only. To create a modified object, use a constructor or factory method.
 - Other functions are not properties: `angle.radians()`, `angle.degrees()`, `interval.length()`
 
-**Invalid/Unnormalized Values:**
-- Some constructors accept invalid values or unnormalized values.
-- Examples: 
-  - `S1Interval(0.0, 4.0)` with `4.0 > π` creates interval where `is_valid()` is `False`
-  - `S2Point(3.0, 4.0, 0.0)` creates an unnormalized point outside of the unit sphere; use `normalize()` to normalize.
-- In **C++** invalid values will typically trigger (`ABSL_DCHECK`) when compiled with debug options.
-- In **Python bindings** debug assertions (`ABSL_DCHECK`) are disabled, matching the production optimized C++ behavior.
+**Invalid Values:**
+- Invalid inputs to constructions or functions raises `ValueError`.
+- Example: `S1Interval(0.0, 4.0)` raises `ValueError` because `4.0 > π`.
+- Note: In C++, these conditions trigger `ABSL_DCHECK` assertions. The bindings prevent these assertions from firing by pre-validating inputs.
 
 **Documentation:**
 - Python docstrings provide essential information about parameters, return values, and key behaviors

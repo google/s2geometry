@@ -25,7 +25,6 @@ py_library(
 pybind_extension(
     name = "s2geometry_bindings",
     srcs = ["module.cc"],
-    copts = ["-DNDEBUG"],
     deps = [
         ":s1interval_bindings",
         ":s2point_bindings",
@@ -35,7 +34,6 @@ pybind_extension(
 pybind_library(
     name = "s1interval_bindings",
     srcs = ["s1interval_bindings.cc"],
-    copts = ["-DNDEBUG"],
     deps = [
         "//:s2",
     ],
@@ -44,7 +42,6 @@ pybind_library(
 pybind_library(
     name = "s2point_bindings",
     srcs = ["s2point_bindings.cc"],
-    copts = ["-DNDEBUG"],
     deps = [
         "//:s2",
     ],

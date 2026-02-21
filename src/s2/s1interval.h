@@ -208,6 +208,10 @@ class S1Interval {
   void set_lo(double p);
   void set_hi(double p);
 
+  // Returns true if the given value is a valid S1 point, i.e. it is
+  // in the range [-Pi, Pi].
+  static bool IsValidPoint(double p) { return std::fabs(p) <= M_PI; }
+
  private:
   enum ArgsChecked { ARGS_CHECKED };
 

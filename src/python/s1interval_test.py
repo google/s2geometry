@@ -26,7 +26,6 @@ class TestS1Interval(unittest.TestCase):
         interval = s2.S1Interval(-math.pi, 0.0)
         self.assertEqual(interval.lo, math.pi)  # -π converted to π
         self.assertEqual(interval.hi, 0.0)
-        self.assertTrue(interval.is_valid())
         self.assertTrue(interval.is_inverted())
 
     # Static factory methods
@@ -48,12 +47,25 @@ class TestS1Interval(unittest.TestCase):
         pair_interval = s2.S1Interval.from_point_pair(0.5, 2.0)
         self.assertTrue(pair_interval.contains(1.0))
 
+    def test_from_point_pair_invalid_raises(self):
+        with self.assertRaises(ValueError):
+            s2.S1Interval.from_point_pair(0.5, 4.0)  # 4.0 > π
+        with self.assertRaises(ValueError):
+            s2.S1Interval.from_point_pair(-4.0, 0.5)  # -4.0 < -π
+
     # Properties
 
     def test_properties_lo_hi(self):
         interval = s2.S1Interval(0.0, math.pi / 2)
         self.assertAlmostEqual(interval.lo, 0.0)
         self.assertAlmostEqual(interval.hi, math.pi / 2)
+
+    def test_lo_hi_are_readonly(self):
+        interval = s2.S1Interval(0.0, math.pi / 2)
+        with self.assertRaises(AttributeError):
+            interval.lo = 0.5
+        with self.assertRaises(AttributeError):
+            interval.hi = 0.5
 
     def test_bounds(self):
         interval = s2.S1Interval(0.5, 2.0)
@@ -64,29 +76,17 @@ class TestS1Interval(unittest.TestCase):
 
     # Predicates
 
-    def test_is_valid_with_normal_interval(self):
-        valid = s2.S1Interval(0.0, math.pi)
-        self.assertTrue(valid.is_valid())
-
-    def test_is_valid_with_empty_interval(self):
-        empty = s2.S1Interval.empty()
-        self.assertTrue(empty.is_valid())
-
-    def test_is_valid_with_full_interval(self):
-        full = s2.S1Interval.full()
-        self.assertTrue(full.is_valid())
-
     def test_invalid_bounds_too_large(self):
-        invalid = s2.S1Interval(0.0, 4.0)  # 4.0 > π
-        self.assertFalse(invalid.is_valid())
+        with self.assertRaises(ValueError):
+            s2.S1Interval(0.0, 4.0)  # 4.0 > π
 
     def test_invalid_bounds_too_small(self):
-        invalid = s2.S1Interval(-4.0, 0.0)  # -4.0 < -π
-        self.assertFalse(invalid.is_valid())
+        with self.assertRaises(ValueError):
+            s2.S1Interval(-4.0, 0.0)  # -4.0 < -π
 
     def test_invalid_both_bounds_out_of_range(self):
-        invalid = s2.S1Interval(-4.0, 4.0)
-        self.assertFalse(invalid.is_valid())
+        with self.assertRaises(ValueError):
+            s2.S1Interval(-4.0, 4.0)
 
     def test_is_full_and_empty(self):
         empty = s2.S1Interval.empty()
@@ -132,11 +132,21 @@ class TestS1Interval(unittest.TestCase):
         self.assertTrue(interval.contains(math.pi))
         self.assertFalse(interval.contains(-math.pi / 2))
 
+    def test_contains_point_invalid_raises(self):
+        interval = s2.S1Interval(0.0, math.pi)
+        with self.assertRaises(ValueError):
+            interval.contains(4.0)  # 4.0 > π
+
     def test_interior_contains_point(self):
         interval = s2.S1Interval(0.0, math.pi)
         self.assertTrue(interval.interior_contains(math.pi / 2))
         self.assertFalse(interval.interior_contains(0.0))
         self.assertFalse(interval.interior_contains(math.pi))
+
+    def test_interior_contains_point_invalid_raises(self):
+        interval = s2.S1Interval(0.0, math.pi)
+        with self.assertRaises(ValueError):
+            interval.interior_contains(4.0)  # 4.0 > π
 
     def test_contains_interval(self):
         interval1 = s2.S1Interval(0.0, math.pi)
@@ -169,9 +179,23 @@ class TestS1Interval(unittest.TestCase):
         interval.add_point(1.5)
         self.assertTrue(interval.contains(1.5))
 
+    def test_add_point_invalid_raises(self):
+        interval = s2.S1Interval(0.0, 1.0)
+        with self.assertRaises(ValueError):
+            interval.add_point(4.0)  # 4.0 > π
+
     def test_project(self):
         interval = s2.S1Interval(0.0, 1.5)
         self.assertAlmostEqual(interval.project(1.0), 1.0)  # Point inside interval
+
+    def test_project_on_empty_raises(self):
+        with self.assertRaises(ValueError):
+            s2.S1Interval.empty().project(1.0)
+
+    def test_project_invalid_point_raises(self):
+        interval = s2.S1Interval(0.0, 1.5)
+        with self.assertRaises(ValueError):
+            interval.project(4.0)  # 4.0 > π
 
     def test_expanded(self):
         interval = s2.S1Interval(0.5, 1.5)
