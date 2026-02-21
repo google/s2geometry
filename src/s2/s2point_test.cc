@@ -134,4 +134,18 @@ TEST(S2Point, FRoundWorks) {
   S2Point a(1.4, 1.5, 1.6);
   EXPECT_THAT(a.FRound(), Eq(S2Point(1, 2, 2)));
 }
+
+TEST(S2Point, UnnormalizedPointAccepted) {
+  // Unnormalized points are accepted by the constructor.
+  S2Point p(3.0, 4.0, 0.0);
+  EXPECT_EQ(p.x(), 3.0);
+  EXPECT_EQ(p.y(), 4.0);
+  EXPECT_EQ(p.z(), 0.0);
+  EXPECT_DOUBLE_EQ(p.Norm(), 5.0);  // Not on unit sphere
+  
+  // User may call Normalize() to obtain a unit vector.
+  S2Point normalized = p.Normalize();
+  EXPECT_DOUBLE_EQ(normalized.Norm(), 1.0);
+}
+
 }  // namespace
