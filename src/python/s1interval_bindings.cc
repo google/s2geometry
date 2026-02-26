@@ -10,7 +10,7 @@ namespace py = pybind11;
 namespace {
 
 void MaybeThrowInvalidPoint(double p) {
-  if (!S1Interval::IsValidPoint(p)) throw py::value_error("Invalid S1 point");
+  if (!S1Interval::IsValidPoint(p)) throw py::value_error("Invalid S1 point: " + std::to_string(p));
 }
 
 }  // namespace
