@@ -69,14 +69,14 @@ bool S1Interval::FastContains(double p) const {
 
 bool S1Interval::Contains(double p) const {
   // Works for empty, full, and singleton intervals.
-  ABSL_DCHECK_LE(fabs(p), M_PI);
+  ABSL_DCHECK(IsValidPoint(p));
   if (p == -M_PI) p = M_PI;
   return FastContains(p);
 }
 
 bool S1Interval::InteriorContains(double p) const {
   // Works for empty, full, and singleton intervals.
-  ABSL_DCHECK_LE(fabs(p), M_PI);
+  ABSL_DCHECK(IsValidPoint(p));
   if (p == -M_PI) p = M_PI;
 
   if (is_inverted()) {
@@ -162,7 +162,7 @@ double S1Interval::GetDirectedHausdorffDistance(const S1Interval& y) const {
 }
 
 void S1Interval::AddPoint(double p) {
-  ABSL_DCHECK_LE(fabs(p), M_PI);
+  ABSL_DCHECK(IsValidPoint(p));
   if (p == -M_PI) p = M_PI;
 
   if (FastContains(p)) return;
@@ -184,7 +184,7 @@ void S1Interval::AddPoint(double p) {
 
 double S1Interval::Project(double p) const {
   ABSL_DCHECK(!is_empty());
-  ABSL_DCHECK_LE(fabs(p), M_PI);
+  ABSL_DCHECK(IsValidPoint(p));
   if (p == -M_PI) p = M_PI;
   if (FastContains(p)) return p;
   // Compute distance from p to each endpoint.
@@ -194,8 +194,8 @@ double S1Interval::Project(double p) const {
 }
 
 S1Interval S1Interval::FromPointPair(double p1, double p2) {
-  ABSL_DCHECK_LE(fabs(p1), M_PI);
-  ABSL_DCHECK_LE(fabs(p2), M_PI);
+  ABSL_DCHECK(IsValidPoint(p1));
+  ABSL_DCHECK(IsValidPoint(p2));
   if (p1 == -M_PI) p1 = M_PI;
   if (p2 == -M_PI) p2 = M_PI;
   if (PositiveDistance(p1, p2) <= M_PI) {

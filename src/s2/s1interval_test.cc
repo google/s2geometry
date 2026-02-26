@@ -113,6 +113,19 @@ TEST_F(S1IntervalTestBase, SimplePredicates) {
   EXPECT_TRUE(mipi.is_valid() && !mipi.is_empty() && !mipi.is_inverted());
 }
 
+TEST(S1IntervalTest, IsValidPoint) {
+  // Valid angles: endpoints of the allowed range and interior values.
+  EXPECT_TRUE(S1Interval::IsValidPoint(0));
+  EXPECT_TRUE(S1Interval::IsValidPoint(M_PI));
+  EXPECT_TRUE(S1Interval::IsValidPoint(-M_PI));
+
+  // Invalid: strictly outside [-Pi, Pi].
+  EXPECT_FALSE(S1Interval::IsValidPoint(M_PI + 1e-15));
+  EXPECT_FALSE(S1Interval::IsValidPoint(-M_PI - 1e-15));
+  EXPECT_FALSE(S1Interval::IsValidPoint(4.0));
+  EXPECT_FALSE(S1Interval::IsValidPoint(-4.0));
+}
+
 TEST_F(S1IntervalTestBase, AlmostEmptyOrFull) {
   // Test that rounding errors don't cause intervals that are almost empty or
   // full to be considered empty or full.  The following value is the greatest
