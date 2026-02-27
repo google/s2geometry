@@ -10,7 +10,9 @@ namespace py = pybind11;
 namespace {
 
 void MaybeThrowInvalidPoint(double p) {
-  if (!S1Interval::IsValidPoint(p)) throw py::value_error("Invalid S1 point: " + std::to_string(p));
+  if (!S1Interval::IsValidPoint(p)) {
+     throw py::value_error("Invalid S1 point: " + std::to_string(p));
+  }
 }
 
 }  // namespace
@@ -129,8 +131,10 @@ void bind_s1interval(py::module& m) {
            "by at most 'max_error' (radians) to match the other interval.")
 
       // Operators
-      .def(py::self == py::self, "Return true if two intervals contain the same set of points")
-      .def(py::self != py::self, "Return true if two intervals do not contain the same set of points")
+      .def(py::self == py::self,
+          "Return true if two intervals contain the same set of points")
+      .def(py::self != py::self,
+          "Return true if two intervals do not contain the same set of points")
 
       // String representation
       .def("__repr__", [](const S1Interval& i) {

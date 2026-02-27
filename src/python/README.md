@@ -44,6 +44,9 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 - Invalid inputs to constructions or functions raises `ValueError`.
 - Example: `S1Interval(0.0, 4.0)` raises `ValueError` because `4.0 > π`.
 - Note: In C++, these conditions trigger `ABSL_DCHECK` assertions. The bindings prevent these assertions from firing by pre-validating inputs.
+- Note: Python bindings check for invalid inputs and throw C++ exceptions which are caught by
+  pybind and converted to Python exceptions. Exceptions are normally prohibited by the C++
+  style guide, but this is the preferred approach for pybind.
 
 **Documentation:**
 - Python docstrings provide essential information about parameters, return values, and key behaviors
