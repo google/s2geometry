@@ -52,7 +52,7 @@ class TestS2Point(unittest.TestCase):
         coords = p.data()
         self.assertEqual(coords, (1.0, 2.0, 3.0))
 
-    # Vector operations.
+    # Vector operations
 
     def test_norm(self):
         p = s2.S2Point(3.0, 4.0, 0.0)
