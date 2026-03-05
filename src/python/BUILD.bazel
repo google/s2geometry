@@ -26,8 +26,35 @@ pybind_extension(
     name = "s2geometry_bindings",
     srcs = ["module.cc"],
     deps = [
+        ":r1interval_bindings",
+        ":r2point_bindings",
+        ":r2rect_bindings",
         ":s1interval_bindings",
         ":s2point_bindings",
+    ],
+)
+
+pybind_library(
+    name = "r1interval_bindings",
+    srcs = ["r1interval_bindings.cc"],
+    deps = [
+        "//:s2",
+    ],
+)
+
+pybind_library(
+    name = "r2point_bindings",
+    srcs = ["r2point_bindings.cc"],
+    deps = [
+        "//:s2",
+    ],
+)
+
+pybind_library(
+    name = "r2rect_bindings",
+    srcs = ["r2rect_bindings.cc"],
+    deps = [
+        "//:s2",
     ],
 )
 
@@ -50,6 +77,24 @@ pybind_library(
 # ========================================
 # Python Tests
 # ========================================
+
+py_test(
+    name = "r1interval_test",
+    srcs = ["r1interval_test.py"],
+    deps = [":s2geometry_pybind"],
+)
+
+py_test(
+    name = "r2point_test",
+    srcs = ["r2point_test.py"],
+    deps = [":s2geometry_pybind"],
+)
+
+py_test(
+    name = "r2rect_test",
+    srcs = ["r2rect_test.py"],
+    deps = [":s2geometry_pybind"],
+)
 
 py_test(
     name = "s1interval_test",
