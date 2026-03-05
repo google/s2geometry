@@ -14,9 +14,10 @@ void MaybeThrowInvalidRect(const R2Point& lo, const R2Point& hi) {
   bool x_empty = lo.x() > hi.x();
   bool y_empty = lo.y() > hi.y();
   if (x_empty != y_empty) {
-    throw py::value_error(
-        "Invalid R2Rect: x and y intervals must be both empty or both "
-        "non-empty");
+    std::ostringstream oss;
+    oss << "Invalid R2Rect: x and y intervals must be both empty or both "
+        << "non-empty, got lo=" << lo << " hi=" << hi;
+    throw py::value_error(oss.str());
   }
 }
 
