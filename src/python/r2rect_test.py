@@ -158,16 +158,16 @@ class TestR2Rect(unittest.TestCase):
 
     def test_contains_point(self):
         rect = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(2.0, 2.0))
-        self.assertTrue(rect.contains(s2.R2Point(1.0, 1.0)))   # interior
-        self.assertTrue(rect.contains(s2.R2Point(0.0, 0.0)))   # corner
-        self.assertTrue(rect.contains(s2.R2Point(2.0, 2.0)))   # corner
-        self.assertFalse(rect.contains(s2.R2Point(3.0, 1.0)))  # outside
+        self.assertTrue(rect.contains_point(s2.R2Point(1.0, 1.0)))   # interior
+        self.assertTrue(rect.contains_point(s2.R2Point(0.0, 0.0)))   # corner
+        self.assertTrue(rect.contains_point(s2.R2Point(2.0, 2.0)))   # corner
+        self.assertFalse(rect.contains_point(s2.R2Point(3.0, 1.0)))  # outside
 
     def test_interior_contains_point(self):
         rect = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(2.0, 2.0))
-        self.assertTrue(rect.interior_contains(s2.R2Point(1.0, 1.0)))
-        self.assertFalse(rect.interior_contains(s2.R2Point(0.0, 0.0)))
-        self.assertFalse(rect.interior_contains(s2.R2Point(2.0, 1.0)))
+        self.assertTrue(rect.interior_contains_point(s2.R2Point(1.0, 1.0)))
+        self.assertFalse(rect.interior_contains_point(s2.R2Point(0.0, 0.0)))
+        self.assertFalse(rect.interior_contains_point(s2.R2Point(2.0, 1.0)))
 
     def test_contains_rect(self):
         outer = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(4.0, 4.0))

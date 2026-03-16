@@ -42,11 +42,11 @@ void bind_r1interval(py::module& m) {
       .def("length", &R1Interval::GetLength,
            "Return the length of the interval.\n\n"
            "The length of an empty interval is negative.")
-      .def("contains", py::overload_cast<double>(
+      .def("contains_point", py::overload_cast<double>(
                &R1Interval::Contains, py::const_),
            py::arg("p"),
            "Return true if the interval contains the point 'p'")
-      .def("interior_contains", py::overload_cast<double>(
+      .def("interior_contains_point", py::overload_cast<double>(
                &R1Interval::InteriorContains, py::const_),
            py::arg("p"),
            "Return true if the interior of the interval contains the point 'p'")

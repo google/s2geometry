@@ -51,7 +51,7 @@ class TestR1Interval(unittest.TestCase):
         interval = s2.R1Interval.from_point_pair(5.0, 2.0)
         self.assertEqual(interval.lo, 2.0)
         self.assertEqual(interval.hi, 5.0)
-        self.assertTrue(interval.contains(3.0))
+        self.assertTrue(interval.contains_point(3.0))
 
     def test_from_point_pair_ordered(self):
         interval = s2.R1Interval.from_point_pair(2.0, 5.0)
@@ -101,17 +101,17 @@ class TestR1Interval(unittest.TestCase):
 
     def test_contains_point(self):
         interval = s2.R1Interval(1.0, 3.0)
-        self.assertTrue(interval.contains(1.0))   # lo boundary
-        self.assertTrue(interval.contains(2.0))   # interior
-        self.assertTrue(interval.contains(3.0))   # hi boundary
-        self.assertFalse(interval.contains(0.5))  # below
-        self.assertFalse(interval.contains(3.5))  # above
+        self.assertTrue(interval.contains_point(1.0))   # lo boundary
+        self.assertTrue(interval.contains_point(2.0))   # interior
+        self.assertTrue(interval.contains_point(3.0))   # hi boundary
+        self.assertFalse(interval.contains_point(0.5))  # below
+        self.assertFalse(interval.contains_point(3.5))  # above
 
     def test_interior_contains_point(self):
         interval = s2.R1Interval(1.0, 3.0)
-        self.assertFalse(interval.interior_contains(1.0))  # lo boundary
-        self.assertTrue(interval.interior_contains(2.0))   # interior
-        self.assertFalse(interval.interior_contains(3.0))  # hi boundary
+        self.assertFalse(interval.interior_contains_point(1.0))  # lo boundary
+        self.assertTrue(interval.interior_contains_point(2.0))   # interior
+        self.assertFalse(interval.interior_contains_point(3.0))  # hi boundary
 
     def test_contains_interval(self):
         outer = s2.R1Interval(1.0, 5.0)

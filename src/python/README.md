@@ -57,8 +57,7 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 - Standard Python operators work as expected: `+`, `-`, `*`, `==`, `!=`, `<`, `>` (for C++ classes that implement those operators)
 
 **Method Overloads:**
-- Some methods accept more than one type for the same argument. For example, `R2Rect.contains()` accepts either an `R2Point` or another `R2Rect`.
-- When a C++ class has overloads with significantly different behavior, the Python bindings use distinct method names instead. For example, `R2Rect` provides `vertex(k)` for CCW vertex index and `vertex_ij(i, j)` for axis-direction vertex access.
+- Instead of Python overloads, C++ overloaded methods are exposed under distinct names. For different argument types, the short name is used for the same-type argument and a longer name for other types (e.g., `R2Rect.contains(other: R2Rect)` and `R2Rect.contains_point(p: R2Point)`). For overloads with significantly different behavior, descriptive names are chosen (e.g., `R2Rect.vertex(k)` for CCW vertex index and `R2Rect.vertex_ij(i, j)` for axis-direction vertex access).
 
 **Default Values:**
 - Some methods have default parameter values (e.g., `approx_equals(other, max_error=1e-15)`). These defaults are re-defined in the Python bindings and are expected to match the C++ defaults.

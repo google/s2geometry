@@ -104,11 +104,11 @@ void bind_r2rect(py::module& m) {
       .def("size", &R2Rect::GetSize,
            "Return the width and height of the rectangle.\n\n"
            "Empty rectangles have a negative width and height.")
-      .def("contains", py::overload_cast<const R2Point&>(
+      .def("contains_point", py::overload_cast<const R2Point&>(
                &R2Rect::Contains, py::const_),
            py::arg("p"),
            "Return true if the rectangle contains the given point")
-      .def("interior_contains", py::overload_cast<const R2Point&>(
+      .def("interior_contains_point", py::overload_cast<const R2Point&>(
                &R2Rect::InteriorContains, py::const_),
            py::arg("p"),
            "Return true if the interior of the rectangle contains the given "
