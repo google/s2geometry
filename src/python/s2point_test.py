@@ -4,7 +4,6 @@ import math
 import unittest
 import s2geometry_pybind as s2
 
-
 class TestS2Point(unittest.TestCase):
     """Test cases for S2Point bindings."""
 

@@ -71,12 +71,12 @@ void bind_s1interval(py::module& m) {
            "Return the midpoint of the complement of the interval.\n\n"
            "For full and empty intervals, the result is arbitrary. For a\n"
            "singleton interval, the result is its antipodal point on S1.")
-      .def("contains", [](const S1Interval& self, double p) {
+      .def("contains_point", [](const S1Interval& self, double p) {
                MaybeThrowInvalidPoint(p);
                return self.Contains(p);
              }, py::arg("p"),
            "Return true if the interval (which is closed) contains the point 'p'")
-      .def("interior_contains", [](const S1Interval& self, double p) {
+      .def("interior_contains_point", [](const S1Interval& self, double p) {
                MaybeThrowInvalidPoint(p);
                return self.InteriorContains(p);
              }, py::arg("p"),

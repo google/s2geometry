@@ -45,7 +45,7 @@ class TestS1Interval(unittest.TestCase):
 
     def test_from_point_pair(self):
         pair_interval = s2.S1Interval.from_point_pair(0.5, 2.0)
-        self.assertTrue(pair_interval.contains(1.0))
+        self.assertTrue(pair_interval.contains_point(1.0))
 
     def test_from_point_pair_invalid_raises(self):
         with self.assertRaises(ValueError):
@@ -127,26 +127,26 @@ class TestS1Interval(unittest.TestCase):
 
     def test_contains_point(self):
         interval = s2.S1Interval(0.0, math.pi)
-        self.assertTrue(interval.contains(math.pi / 2))
-        self.assertTrue(interval.contains(0.0))
-        self.assertTrue(interval.contains(math.pi))
-        self.assertFalse(interval.contains(-math.pi / 2))
+        self.assertTrue(interval.contains_point(math.pi / 2))
+        self.assertTrue(interval.contains_point(0.0))
+        self.assertTrue(interval.contains_point(math.pi))
+        self.assertFalse(interval.contains_point(-math.pi / 2))
 
     def test_contains_point_invalid_raises(self):
         interval = s2.S1Interval(0.0, math.pi)
         with self.assertRaises(ValueError):
-            interval.contains(4.0)  # 4.0 > π
+            interval.contains_point(4.0)  # 4.0 > π
 
     def test_interior_contains_point(self):
         interval = s2.S1Interval(0.0, math.pi)
-        self.assertTrue(interval.interior_contains(math.pi / 2))
-        self.assertFalse(interval.interior_contains(0.0))
-        self.assertFalse(interval.interior_contains(math.pi))
+        self.assertTrue(interval.interior_contains_point(math.pi / 2))
+        self.assertFalse(interval.interior_contains_point(0.0))
+        self.assertFalse(interval.interior_contains_point(math.pi))
 
     def test_interior_contains_point_invalid_raises(self):
         interval = s2.S1Interval(0.0, math.pi)
         with self.assertRaises(ValueError):
-            interval.interior_contains(4.0)  # 4.0 > π
+            interval.interior_contains_point(4.0)  # 4.0 > π
 
     def test_contains_interval(self):
         interval1 = s2.S1Interval(0.0, math.pi)
@@ -177,7 +177,7 @@ class TestS1Interval(unittest.TestCase):
     def test_add_point(self):
         interval = s2.S1Interval(0.0, 1.0)
         interval.add_point(1.5)
-        self.assertTrue(interval.contains(1.5))
+        self.assertTrue(interval.contains_point(1.5))
 
     def test_add_point_invalid_raises(self):
         interval = s2.S1Interval(0.0, 1.0)
@@ -207,8 +207,8 @@ class TestS1Interval(unittest.TestCase):
         interval1 = s2.S1Interval(0.0, 1.0)
         interval2 = s2.S1Interval(0.5, 1.5)
         union = interval1.union(interval2)
-        self.assertTrue(union.contains(0.5))
-        self.assertTrue(union.contains(1.2))
+        self.assertTrue(union.contains_point(0.5))
+        self.assertTrue(union.contains_point(1.2))
 
     def test_intersection(self):
         interval1 = s2.S1Interval(0.0, 2.0)
@@ -221,8 +221,8 @@ class TestS1Interval(unittest.TestCase):
         interval = s2.S1Interval(0.0, math.pi / 2)
         complement = interval.complement()
         self.assertTrue(complement.is_inverted())
-        self.assertFalse(complement.contains(math.pi / 4))
-        self.assertTrue(complement.contains(math.pi))
+        self.assertFalse(complement.contains_point(math.pi / 4))
+        self.assertTrue(complement.contains_point(math.pi))
 
     def test_directed_hausdorff_distance(self):
         interval1 = s2.S1Interval(0.0, 1.0)
