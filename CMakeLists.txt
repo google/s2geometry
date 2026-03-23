@@ -77,13 +77,19 @@ if (WITH_PYTHON)
     find_package(Python3 COMPONENTS Interpreter Development.Module)
 endif()
 
+# Platform-specific.
+if (WIN32)
+    # Make sure Windows doesn't define min/max macros that interfere with STL
+    add_definitions(-DNOMINMAX)
+endif()
+
+# Compiler-specific (MSVC/clang/...).
 if (MSVC)
     # Use unsigned characters
     add_definitions(-J)
     # Make sure cmath header defines things like M_PI
+    # C++20 defines `std::numbers::pi`, but we want to work with C++17.
     add_definitions(-D_USE_MATH_DEFINES)
-    # Make sure Windows doesn't define min/max macros that interfere with STL
-    add_definitions(-DNOMINMAX)
 else()
     # Avoid megabytes of warnings like:
     # util/math/vector.h:178:16: warning: optimization attribute on
