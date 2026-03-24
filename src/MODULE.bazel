@@ -22,7 +22,7 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 # The platforms dependency is needed for pybind_extension rules. See:
 # https://github.com/pybind/pybind11_bazel/blob/master/MODULE.bazel
 bazel_dep(name = "platforms", version = "1.0.0")
-bazel_dep(name = "pybind11_bazel", version = "3.0.0")
+bazel_dep(name = "pybind11_bazel", version = "3.0.1")
 bazel_dep(name = "rules_python", version = "1.9.0-rc1")
 
 # Extensions
