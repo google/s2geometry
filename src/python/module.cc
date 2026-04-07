@@ -6,6 +6,7 @@ namespace py = pybind11;
 void bind_r1interval(py::module& m);
 void bind_r2point(py::module& m);
 void bind_r2rect(py::module& m);
+void bind_s1angle(py::module& m);
 void bind_s1interval(py::module& m);
 void bind_s2point(py::module& m);
 
@@ -18,4 +19,5 @@ PYBIND11_MODULE(s2geometry_bindings, m) {
   bind_r2rect(m);
   bind_s1interval(m);
   bind_s2point(m);
+  bind_s1angle(m);
 }
