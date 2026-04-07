@@ -33,6 +33,7 @@ pybind_extension(
         ":s1interval_bindings",
         ":s2point_bindings",
         ":s2latlng_bindings",
+        ":s2cell_id_bindings",
     ],
 )
 
@@ -94,6 +95,14 @@ pybind_library(
     ],
 )
 
+pybind_library(
+    name = "s2cell_id_bindings",
+    srcs = ["s2cell_id_bindings.cc"],
+    deps = [
+        "//:s2",
+    ],
+)
+
 # ========================================
 # Python Tests
 # ========================================
@@ -137,5 +146,11 @@ py_test(
 py_test(
     name = "s2latlng_test",
     srcs = ["s2latlng_test.py"],
+    deps = [":s2geometry_pybind"],
+)
+
+py_test(
+    name = "s2cell_id_test",
+    srcs = ["s2cell_id_test.py"],
     deps = [":s2geometry_pybind"],
 )

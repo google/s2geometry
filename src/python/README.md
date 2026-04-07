@@ -76,6 +76,10 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 - C++ functions that accept or return a vector object use a Python tuple (of length matching the vector dimension)
 - Array indexing operators (e.g., `point[0]`) are not currently supported
 
+**Iterators:**
+- Some classes support `__iter__` for traversal (e.g., `for c in S2CellId.cells(level=5):`) or expose methods that return iterables.
+- Iterables support forward iteration, `len()`, indexing, `in`, and `reversed()` unless otherwise noted.
+
 **Serialization:**
 - The C++ Encoder/Decoder serialization functions are not currently supported
 
@@ -145,10 +149,12 @@ Use the following sections to organize functions within the bindings files and t
 
 1. **Constructors** - Default constructors and constructors with parameters
 2. **Factory methods** - Static factory methods (e.g., `from_degrees`, `from_radians`, `zero`, `invalid`)
-3. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
-4. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
-5. **Geometric operations** - All other methods including conversions, computations, containment checks, set operations, normalization, and distance calculations
-6. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
-7. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
-8. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`
-9. **Module-level functions** - Standalone functions (e.g., trigonometric functions for S1Angle)
+3. **Constants** - Class-level constants (e.g., `S2CellId.kMaxLevel`, `S2CellId.kNumFaces`)
+4. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
+5. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
+6. **Geometric operations** - Conversions, computations, containment checks, set operations, normalization, and distance calculations
+7. **Traversal** - Methods for navigating hierarchies and iterating over related cells (e.g., `parent`, `child`, `children()`, `cells()`, neighbor methods)
+8. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
+9. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
+10. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`
+11. **Module-level functions** - Standalone functions (e.g., trigonometric functions for S1Angle)

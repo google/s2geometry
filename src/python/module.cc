@@ -10,6 +10,7 @@ void bind_s1angle(py::module& m);
 void bind_s1interval(py::module& m);
 void bind_s2point(py::module& m);
 void bind_s2latlng(py::module& m);
+void bind_s2cell_id(py::module& m);
 
 PYBIND11_MODULE(s2geometry_bindings, m) {
   m.doc() = "S2 Geometry Python bindings using pybind11";
@@ -32,4 +33,5 @@ PYBIND11_MODULE(s2geometry_bindings, m) {
 
   // Deps: s1angle, s2point
   bind_s2latlng(m);
+  bind_s2cell_id(m);
 }
