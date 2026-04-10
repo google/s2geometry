@@ -142,12 +142,12 @@ class TestS1Angle(unittest.TestCase):
     def test_abs(self):
         pos = s2.S1Angle.from_degrees(45.0)
         neg = s2.S1Angle.from_degrees(-45.0)
-        self.assertAlmostEqual(pos.abs().degrees(), 45.0)
-        self.assertAlmostEqual(neg.abs().degrees(), 45.0)
+        self.assertAlmostEqual(abs(pos).degrees(), 45.0)
+        self.assertAlmostEqual(abs(neg).degrees(), 45.0)
 
     def test_abs_zero(self):
         a = s2.S1Angle.zero()
-        self.assertEqual(a.abs().radians(), 0.0)
+        self.assertEqual(abs(a).radians(), 0.0)
 
     def test_normalized(self):
         a = s2.S1Angle.from_degrees(270.0)
@@ -161,18 +161,6 @@ class TestS1Angle(unittest.TestCase):
         # Normalized range is (-180, 180]; -180 maps to 180.
         a = s2.S1Angle.from_degrees(-180.0)
         self.assertAlmostEqual(a.normalized().degrees(), 180.0)
-
-    def test_sin_cos(self):
-        a = s2.S1Angle.from_degrees(90.0)
-        s, c = a.sin_cos()
-        self.assertAlmostEqual(s, 1.0)
-        self.assertAlmostEqual(c, 0.0)
-
-    def test_sin_cos_zero(self):
-        a = s2.S1Angle.zero()
-        s, c = a.sin_cos()
-        self.assertAlmostEqual(s, 0.0)
-        self.assertAlmostEqual(c, 1.0)
 
     # Operators
 
@@ -280,11 +268,6 @@ class TestS1Angle(unittest.TestCase):
         a = s2.S1Angle.from_degrees(45.0)
         self.assertAlmostEqual(s2.tan(a), 1.0)
 
-    def test_sin_cos_consistency(self):
-        a = s2.S1Angle.from_degrees(60.0)
-        s, c = a.sin_cos()
-        self.assertAlmostEqual(s2.sin(a), s)
-        self.assertAlmostEqual(s2.cos(a), c)
 
 
 if __name__ == "__main__":

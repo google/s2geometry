@@ -12,7 +12,7 @@ namespace py = pybind11;
 namespace {
 
 void MaybeThrowNotNormalized(const S1Angle& angle) {
-  if (!angle.IsNormalizedAngle()) {
+  if (!angle.IsNormalized()) {
     throw py::value_error("Angle " + std::to_string(angle.degrees()) +
                           " degrees is not in the normalized range (-180, 180]");
   }
@@ -96,15 +96,10 @@ void bind_s1angle(py::module& m) {
            "Return the E7 representation (degrees * 1e7, rounded).\n\n"
            "The angle must be in the normalized range (-180, 180] degrees.\n"
            "Raises ValueError if out of range.")
-      .def("abs", &S1Angle::abs, "Return the absolute value of the angle")
+      .def("__abs__", &S1Angle::abs,
+           "Return the absolute value of the angle")
       .def("normalized", &S1Angle::Normalized,
            "Return the angle normalized to the range (-180, 180] degrees")
-      .def("sin_cos", [](const S1Angle& self) {
-               auto sc = self.SinCos();
-               return py::make_tuple(sc.sin, sc.cos);
-           },
-           "Return (sin, cos) of the angle as a tuple.\n\n"
-           "This may be more efficient than calling sin and cos separately.")
 
       // Operators
       .def(py::self == py::self, "Return true if angles are exactly equal")

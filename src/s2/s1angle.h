@@ -130,10 +130,6 @@ class S1Angle {
   int32_t e6() const;
   int32_t e7() const;
 
-  // Returns true if the angle is in the normalized range (-180, 180]
-  // degrees, which is the valid input range for e5(), e6(), and e7().
-  bool IsNormalizedAngle() const;
-
   // Return the absolute value of an angle.
   S1Angle abs() const;
   friend S1Angle abs(S1Angle a);
@@ -195,6 +191,10 @@ class S1Angle {
   // calling sin() and cos() separately.
   SinCosPair SinCos() const;
 
+  // Returns true if the angle is in the normalized range (-180, 180]
+  // degrees, which is the valid input range for e5(), e6(), and e7().
+  bool IsNormalized() const;
+
   // Return the angle normalized to the range (-180, 180] degrees.
   S1Angle Normalized() const;
 
@@ -245,7 +245,7 @@ inline constexpr double S1Angle::degrees() const {
 // between Degrees, E6, and E7 are exact when the arguments are integers.
 
 inline int32_t S1Angle::e5() const {
-  // TODO(user,b/298298095): Tighten this to (-180, 180] (see IsNormalizedAngle).
+  // TODO(user,b/298298095): Tighten this to (-180, 180] (see IsNormalized).
   ABSL_DCHECK_LE(std::numeric_limits<int32_t>::min() / 1e5, degrees());
   ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32_t>::max() / 1e5);
   return MathUtil::Round<int32_t>(1e5 * degrees());
@@ -263,7 +263,7 @@ inline int32_t S1Angle::e7() const {
   return MathUtil::Round<int32_t>(1e7 * degrees());
 }
 
-inline bool S1Angle::IsNormalizedAngle() const {
+inline bool S1Angle::IsNormalized() const {
   return radians() > -M_PI && radians() <= M_PI;
 }
 
