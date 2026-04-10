@@ -75,6 +75,11 @@ if (WITH_PYTHON)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
     find_package(Python3 COMPONENTS Interpreter Development.Module)
+    find_package(PythonExtensions REQUIRED)
+    add_library(SwigBindings MODULE src/python)
+    set_target_properties(SwigBindings PROPERTIES LINKER_LANGUAGE CXX)
+    python_extension_module(SwigBindings )
+    install(TARGETS SwigBindings LIBRARY DESTINATION s2geometry)
 endif()
 
 if (MSVC)
