@@ -94,3 +94,51 @@ jobs:
           --test_verbose_timeout_warnings \
           //...
       working-directory: src
+  python:
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          # `large` is x86-64 and `xlarge` is AArch64.
+          - macos-latest-large
+          # macos-latest-xlarge may timeout.
+          # https://github.com/google/s2geometry/issues/409
+          - macos-latest-xlarge
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-tags: true
+          persist-credentials: false
+      - uses: pypa/cibuildwheel@8d2b08b68458a16aeb24b64e68a09ab1c8e82084 # v3.4.1
+        with:
+          package-dir: ./
+          output-dir: dist/
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: dist-${{ runner.os }}-${{ runner.arch }}
+          path: ./dist/
+  python-publish:
+    if: (github.event_name == 'release') && (github.event.action == 'released')
+    needs: [python]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      attestations: write
+    # Requires environment protection rules in GitHub Settings:
+    # Settings > Environments > pypi > Add required reviewers
+    environment:
+      name: pypi
+      url: https://pypi.org/p/s2geometry
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: dist*
+          path: dist/
+          merge-multiple: true
+      - uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-path: "dist/*"
+      # To upload to PyPI without a token, add this workflow file as a Trusted Publisher in the project settings on the PyPI website
+      - uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0

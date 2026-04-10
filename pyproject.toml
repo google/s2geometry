@@ -36,10 +36,10 @@ test = [
 
 [build-system]
 requires = [
-    "wheel",
+    "cmake_build_extension",
     "setuptools",
     "setuptools_scm[toml]",
-    "cmake_build_extension",
+    "swig",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -60,3 +60,6 @@ namespaces = false
 # The same as the default.  See #450.
 # https://setuptools-scm.readthedocs.io/en/latest/config/#setuptools_scm._config.DEFAULT_TAG_REGEX
 tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
+ 
+[tool.cibuildwheel]
+test-command = "python -c 'import s2geometry'"
