@@ -110,6 +110,9 @@ jobs:
         with:
           name: dist-${{ runner.os }}-${{ runner.arch }}
           path: ./dist/
+      - run: uv venv
+      - run: uv pip install ./dist/*.whl
+      - run: source .venv/bin/activate && python -c "import s2geometry"
   python-publish:
     if: (github.event_name == 'release') && (github.event.action == 'released')
     needs: [python]
