@@ -29,6 +29,7 @@ pybind_extension(
         ":r1interval_bindings",
         ":r2point_bindings",
         ":r2rect_bindings",
+        ":s1angle_bindings",
         ":s1interval_bindings",
         ":s2point_bindings",
     ],
@@ -59,6 +60,14 @@ pybind_library(
 )
 
 pybind_library(
+    name = "s1angle_bindings",
+    srcs = ["s1angle_bindings.cc"],
+    deps = [
+        "//:s2",
+    ],
+)
+
+pybind_library(
     name = "s1interval_bindings",
     srcs = ["s1interval_bindings.cc"],
     deps = [
@@ -81,6 +90,12 @@ pybind_library(
 py_test(
     name = "r1interval_test",
     srcs = ["r1interval_test.py"],
+    deps = [":s2geometry_pybind"],
+)
+
+py_test(
+    name = "s1angle_test",
+    srcs = ["s1angle_test.py"],
     deps = [":s2geometry_pybind"],
 )
 
