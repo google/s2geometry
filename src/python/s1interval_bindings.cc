@@ -1,8 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 
-#include <sstream>
-
+#include "absl/strings/str_cat.h"
 #include "s2/s1interval.h"
 
 namespace py = pybind11;
@@ -11,7 +10,7 @@ namespace {
 
 void MaybeThrowInvalidPoint(double p) {
   if (!S1Interval::IsValidPoint(p)) {
-     throw py::value_error("Invalid S1 point: " + std::to_string(p));
+     throw py::value_error(absl::StrCat("Invalid S1 point: ", p));
   }
 }
 

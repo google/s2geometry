@@ -63,6 +63,7 @@ pybind_library(
     srcs = ["s1interval_bindings.cc"],
     deps = [
         "//:s2",
+	 "@abseil-cpp//absl/strings",
     ],
 )
 
