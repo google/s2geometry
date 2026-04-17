@@ -34,6 +34,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set NUM_CORES
+        run: |
+          NUM_CORES=$(getconf _NPROCESSORS_ONLN)
+          echo "NUM_CORES=$NUM_CORES" >> $GITHUB_ENV
+          echo "Detected $NUM_CORES cores"
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
         with:
@@ -48,13 +53,10 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           ..
         working-directory: build/
-      - run: cmake --build . --parallel 45
+      - run: cmake --build . --parallel ${{ env.NUM_CORES }}
         working-directory: build/
       - if: always()
-        run: cmake --build . --parallel 45 --target=test
-        env:
-          CTEST_OUTPUT_ON_FAILURE: ON
-          CTEST_PARALLEL_LEVEL: 45
+        run: ctest --parallel ${{ env.NUM_CORES }} --output-on-failure
         working-directory: build/
   bazel:
     runs-on: ubuntu-latest
@@ -82,7 +84,7 @@ jobs:
     - name: Build and Test
       run: |
         bazel test \
-          --jobs=45 --keep_going \
+          --keep_going \
           --test_verbose_timeout_warnings --test_output=errors \
           //...
       working-directory: src
