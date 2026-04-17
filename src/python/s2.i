@@ -48,14 +48,10 @@
 %define absl_nonnull %enddef
 %define absl_nullable %enddef
 
-// SWIG <3.0 does not understand these C++11 keywords (unsure of exact version).
-#if SWIG_VERSION < 0x030000
-%define constexpr const %enddef
-%define override %enddef
-#endif
-
-// Still not supported by SWIG 3.0.12.
+// TODO: Remove when Ubuntu 22 is unsupported, ~2027-05-01.
+#if SWIG_VERSION < 0x042000
 %define final %enddef
+#endif
 
 %include "coder.i"
 %include "s2_common.i"
