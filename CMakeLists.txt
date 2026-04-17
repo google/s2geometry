@@ -59,7 +59,22 @@ add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 # add_subdirectory(absl-submbodule)
 # add_subdirectory(s2-submodule)
 if (NOT TARGET absl::base)
-    find_package(absl REQUIRED)
+    option(FETCH_ABSEIL "Download and build abseil-cpp" OFF)
+    if (FETCH_ABSEIL)
+        message(STATUS "Downloading and building abseil-cpp...")
+        FetchContent_Declare(
+            absl
+            URL https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.1.zip
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        )
+        set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
+        set(ABSL_ENABLE_INSTALL ON CACHE BOOL "" FORCE)
+        set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(absl)
+    else()
+        find_package(absl REQUIRED)
+    endif()
 endif()
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)

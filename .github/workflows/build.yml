@@ -33,17 +33,19 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
     steps:
-      - uses: zacharyburnett/setup-abseil-cpp@5386866b5b554e420966aa7f31a477ad92f185d2 # Not a release, but has #423 fix.
-        with:
-          cmake-build-args: "-DCMAKE_CXX_STANDARD=17 -DABSL_PROPAGATE_CXX_STD=ON -DABSL_ENABLE_INSTALL=ON -DBUILD_TESTING=off -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
-          abseil-version: "20250814.1"
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        with:
+          key: ${{ github.job }}-${{ matrix.runs-on }}
       - run: mkdir build
       - run: >
           cmake
           -DWITH_PYTHON=yes
+          -DFETCH_ABSEIL=ON
           -DCMAKE_CXX_STANDARD=17
-          -DCMAKE_PREFIX_PATH=/usr/local/
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           ..
         working-directory: build/
       - run: cmake --build . --parallel 45
