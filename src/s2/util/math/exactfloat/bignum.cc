@@ -15,7 +15,7 @@
 
 #include "s2/util/math/exactfloat/bignum.h"
 
-#ifdef __x86_64__
+#if defined(__x86_64__) && (defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 9) || defined(__ADX__))
 #include <immintrin.h>
 #endif
 
@@ -292,7 +292,7 @@ inline Bigit AddBigit(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 // Godbolt link for comparison:
 //   https://godbolt.org/z/cGnnfMbMn  (no intrinsics)
 //   https://godbolt.org/z/jnM1Y3Tjs  (intrinsics)
-#ifdef __x86_64__
+#if defined(__x86_64__) && (defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 9) || defined(__ADX__))
   static_assert(sizeof(Bigit) == sizeof(unsigned long long));
   Bigit out;
   *carry =
@@ -311,7 +311,7 @@ inline Bigit AddBigit(Bigit a, Bigit b, Bigit* absl_nonnull carry) {
 inline Bigit SubBigit(Bigit a, Bigit b, Bigit* absl_nonnull borrow) {
   ABSL_DCHECK_LE(*borrow, Bigit(1));
   // See notes in AddBigit on why using an intrinsic is the right choice here.
-#ifdef __x86_64__
+#if defined(__x86_64__) && (defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 9) || defined(__ADX__))
   Bigit out;
   *borrow = _subborrow_u64(static_cast<char>(*borrow), a, b,
                            reinterpret_cast<unsigned long long*>(&out));
