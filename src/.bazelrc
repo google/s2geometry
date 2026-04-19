@@ -1,3 +1,18 @@
 # Enable Bzlmod for every Bazel command
 common --enable_bzlmod
 common --cxxopt=-std=c++20
+
+# Options to build with address sanitizer support.
+#
+# Example usage:
+#   bazel build -c dbg --config=asan <targets>
+#
+# _GLIBCXX_SANITIZE_VECTOR is required to enable sanitizer checks in libstdc++
+build:asan --strip=never
+build:asan --copt=-fsanitize=address
+build:asan --copt=-DADDRESS_SANITIZER
+build:asan --copt=-D_GLIBCXX_SANITIZE_VECTOR
+build:asan --copt=-O1
+build:asan --copt=-g
+build:asan --copt=-fno-omit-frame-pointer
+build:asan --linkopt=-fsanitize=address
