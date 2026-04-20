@@ -63,3 +63,7 @@ tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*
  
 [tool.cibuildwheel]
 test-command = "python -c 'import s2geometry'"
+
+[tool.cibuildwheel.macos]
+# skip wheel delocation (command can't find the binary)
+repair-wheel-command = ""
