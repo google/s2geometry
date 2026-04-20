@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.18)
 
+# avoids error: aligned allocation function of type 'void *(std::size_t, std::align_val_t)' is only available on macOS 10.13 or newer
+# see https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md#macos
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
+
 project(s2-geometry
         VERSION 0.12.0)
 
