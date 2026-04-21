@@ -1,3 +1,9 @@
 # Enable Bzlmod for every Bazel command
 common --enable_bzlmod
 common --cxxopt=-std=c++20
+common --announce_rc
+
+# CI-specific flags
+common:ci --color=yes
+build:ci --show_progress_rate_limit=10
+test:ci --test_output=errors

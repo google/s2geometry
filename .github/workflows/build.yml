@@ -74,20 +74,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-    - name: Setup Bazel ${{ matrix.bazel }}
+    - name: Setup Bazel
       uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86  # v0.19.0
       with:
         # Avoid downloading Bazel every time.
         bazelisk-cache: true
-        # Store build cache per workflow.
-        disk-cache: ${{ github.workflow }}
-        # Share repository cache between workflows.
+        # Share caches between workflows.
+        disk-cache: true
         repository-cache: true
+        # The Bazel workspace is in the src directory.
+        workspace-root: src
 
     - name: Build and Test
       run: |
         bazel test \
+          --config=ci \
           --keep_going \
-          --test_verbose_timeout_warnings --test_output=errors \
+          --test_verbose_timeout_warnings \
           //...
       working-directory: src
