@@ -197,10 +197,9 @@ or on macOS:
 ```
 sudo port install swig
 ```
-Version 4.0 is required, but it should be easy to make it work 3.0 or probably
-even 2.0.
+SWIG version 4.0 is required.
 
-Python 3 is required.
+[Python 3.10 is required](https://github.com/google/oss-policies-info/blob/main/foundational-python-support-matrix.md).
 
 ### Creating wheels
 First, make a virtual environment and install `build` into it:

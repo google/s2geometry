@@ -84,12 +84,10 @@ if (NOT TARGET absl::vlog_is_on)
 endif()
 
 if (WITH_PYTHON)
-    # Should be easy to make it work with swig3, but some args to %pythonprepend
-    # seem to be different and were changed.
     find_package(SWIG 4.0)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
-    find_package(Python3 COMPONENTS Interpreter Development.Module)
+    find_package(Python3 3.10 COMPONENTS Interpreter Development.Module)
 endif()
 
 if (MSVC)

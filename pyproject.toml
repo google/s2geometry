@@ -12,7 +12,7 @@ authors = [
     { name = "Tiago Brito", email = "tiago.brito@90poe.io" },
     { name = "Zachary Burnett", email = "zachary.r.burnett@gmail.com" },
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: POSIX",
