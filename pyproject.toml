@@ -29,7 +29,7 @@ content-type = "text/plain"
 [project.urls]
 Source = "https://github.com/google/s2geometry"
 
-[project.optional-dependencies]
+[dependency-groups]
 test = [
     "pytest",
 ]
@@ -62,7 +62,8 @@ namespaces = false
 tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
  
 [tool.cibuildwheel]
-test-command = "python -c 'import s2geometry'"
+test-groups = ["test"]
+test-command = "pytest {project}/src/python/s2geometry_test.py"
 
 [tool.cibuildwheel.macos]
 # skip wheel delocation (command can't find the binary)
