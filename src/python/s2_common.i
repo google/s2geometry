@@ -73,16 +73,6 @@ public:
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *interior};
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *output};
 
-%typemap(in) absl::string_view {
-  if (PyUnicode_Check($input)) {
-    $1 = absl::string_view(PyUnicode_AsUTF8($input));
-  } else {
-    SWIG_exception(SWIG_TypeError, "string expected");
-  }
-}
-%typemap(typecheck) absl::string_view = char *;
-
-
 %typemap(in, numinputs=0) S2CellId *OUTPUT_ARRAY_4(S2CellId temp[4]) {
   $1 = temp;
 }
