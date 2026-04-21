@@ -35,9 +35,12 @@
     $1 = (void *) PyByteArray_AsString($input);
     $2 = PyByteArray_Size($input);
   } else {
+    // TODO: When Py_LIMITED_API is raised to 3.13+ (2028), replace
+    // %S/(PyObject*)Py_TYPE() with %T in PyErr_Format calls for bare type
+    // names (e.g. "int" vs "<class 'int'>").
     PyErr_Format(PyExc_TypeError,
-                 "bytes or bytearray needed, %s found",
-                 $input->ob_type->tp_name);
+                 "bytes or bytearray needed, %S found",
+                 (PyObject*)Py_TYPE($input));
     return nullptr;
   }
 };
@@ -48,7 +51,8 @@
     $2 = PyByteArray_Size($input);
   } else {
     PyErr_Format(PyExc_TypeError,
-                 "bytearray needed, %s found", $input->ob_type->tp_name);
+                 "bytearray needed, %S found",
+                 (PyObject*)Py_TYPE($input));
     return nullptr;
   }
 };
@@ -76,7 +80,8 @@
       return new Decoder(PyByteArray_AsString(obj), PyByteArray_Size(obj));
     }
     PyErr_Format(PyExc_TypeError,
-                 "bytes or bytearray needed, %s found", obj->ob_type->tp_name);
+                 "bytes or bytearray needed, %S found",
+                 (PyObject*)Py_TYPE(obj));
     return nullptr;
   }
 }

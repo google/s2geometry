@@ -35,7 +35,14 @@ set_property(SOURCE s2.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(s2geometry LANGUAGE python SOURCES s2.i)
 
-swig_link_libraries(s2geometry Python3::Module s2)
+if (WITH_PYTHON_LIMITED_API)
+    swig_link_libraries(s2geometry Python3::SABIModule s2)
+    # https://www.swig.org/Doc4.2/Python.html#Python_stable_abi
+    target_compile_definitions(s2geometry PRIVATE Py_LIMITED_API=0x030a0000)
+else()
+    swig_link_libraries(s2geometry Python3::Module s2)
+endif()
+
 enable_testing()
 add_test(NAME s2geometry_test COMMAND
          ${Python3_EXECUTABLE}

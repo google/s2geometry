@@ -35,6 +35,8 @@ option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
 option(BUILD_TESTS "Build s2 unittests." ON)
 
 option(WITH_PYTHON "Add python interface" OFF)
+# Requires SWIG >= 4.2 and CMake >= 3.26.
+option(WITH_PYTHON_LIMITED_API "Use Python Limited API for SWIG" OFF)
 add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
 
 option(S2_USE_SYSTEM_INCLUDES
@@ -84,10 +86,19 @@ if (NOT TARGET absl::vlog_is_on)
 endif()
 
 if (WITH_PYTHON)
-    find_package(SWIG 4.0 REQUIRED)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
-    find_package(Python3 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+    if (WITH_PYTHON_LIMITED_API)
+        # Development.SABIModule requires CMake 3.26; be explicit.
+        cmake_minimum_required(VERSION 3.26)
+        find_package(Python3 3.10 COMPONENTS Interpreter Development.SABIModule REQUIRED)
+        # SWIG requires 4.2 for stable ABI support.
+        # https://www.swig.org/Doc4.2/Python.html#Python_stable_abi
+        find_package(SWIG 4.2 REQUIRED)
+    else()
+        find_package(Python3 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+        find_package(SWIG 4.0 REQUIRED)
+    endif()
 endif()
 
 if (MSVC)
