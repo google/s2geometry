@@ -84,10 +84,10 @@ if (NOT TARGET absl::vlog_is_on)
 endif()
 
 if (WITH_PYTHON)
-    find_package(SWIG 4.0)
+    find_package(SWIG 4.0 REQUIRED)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
-    find_package(Python3 3.10 COMPONENTS Interpreter Development.Module)
+    find_package(Python3 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
 endif()
 
 if (MSVC)
@@ -501,7 +501,7 @@ if (BUILD_EXAMPLES AND TARGET s2testing)
   add_subdirectory("doc/examples" examples)
 endif()
 
-if (SWIG_FOUND AND Python3_FOUND)
+if (WITH_PYTHON)
   add_subdirectory("src/python" python)
 endif()
 

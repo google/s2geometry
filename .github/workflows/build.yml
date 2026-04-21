@@ -43,6 +43,9 @@ jobs:
         uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
         with:
           key: ${{ github.job }}-${{ matrix.runs-on }}
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install swig
       - run: mkdir build
       - run: >
           cmake
