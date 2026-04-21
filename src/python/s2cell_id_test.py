@@ -138,8 +138,8 @@ class TestS2CellId(unittest.TestCase):
         ll2 = cell.to_lat_lng()
         # The cell center may not exactly match the original point due to
         # quantization to the cell center.
-        self.assertAlmostEqual(ll.lat.degrees(), ll2.lat.degrees(), places=5)
-        self.assertAlmostEqual(ll.lng.degrees(), ll2.lng.degrees(), places=5)
+        self.assertAlmostEqual(ll.lat.degrees, ll2.lat.degrees, places=5)
+        self.assertAlmostEqual(ll.lng.degrees, ll2.lng.degrees, places=5)
 
     def test_get_center_st(self):
         cell = s2.S2CellId.from_face(0)

@@ -4,9 +4,9 @@
 
 #include <cstdint>
 #include <sstream>
-#include <string>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng.h"
 
@@ -22,17 +22,16 @@ void MaybeThrowNotValid(S2CellId id) {
 
 void MaybeThrowLevelOutOfRange(int level, int min, int max) {
   if (level < min || level > max) {
-    throw py::value_error("Level " + std::to_string(level) +
-                          " out of range [" + std::to_string(min) +
-                          ", " + std::to_string(max) + "]");
+    throw py::value_error(
+        absl::StrCat("Level ", level, " out of range [", min, ", ", max, "]"));
   }
 }
 
 void MaybeThrowFaceOutOfRange(int face) {
   if (face < 0 || face >= S2CellId::kNumFaces) {
-    throw py::value_error("Face " + std::to_string(face) +
-                          " out of range [0, " +
-                          std::to_string(S2CellId::kNumFaces - 1) + "]");
+    throw py::value_error(
+        absl::StrCat("Face ", face, " out of range [0, ",
+                     S2CellId::kNumFaces - 1, "]"));
   }
 }
 
@@ -50,8 +49,8 @@ void MaybeThrowIfFace(S2CellId id) {
 
 void MaybeThrowChildPositionOutOfRange(int position) {
   if (position < 0 || position > 3) {
-    throw py::value_error("Child position " + std::to_string(position) +
-                          " out of range [0, 3]");
+    throw py::value_error(
+        absl::StrCat("Child position ", position, " out of range [0, 3]"));
   }
 }
 
@@ -69,7 +68,7 @@ struct S2CellIdRange {
     int64_t len = size();
     if (i < 0) i += len;
     if (i < 0 || i >= len) {
-      throw py::index_error("index " + std::to_string(i) + " out of range");
+      throw py::index_error(absl::StrCat("index ", i, " out of range"));
     }
     return begin.advance(i);
   }
