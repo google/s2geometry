@@ -32,6 +32,7 @@ Source = "https://github.com/google/s2geometry"
 [dependency-groups]
 test = [
     "pytest",
+    "abi3audit"
 ]
 
 [build-system]
@@ -63,7 +64,7 @@ tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*
  
 [tool.cibuildwheel]
 test-groups = ["test"]
-test-command = "pytest {project}/src/python/s2geometry_test.py"
+test-command = "pytest {project}/src/python/s2geometry_test.py && abi3audit --strict --report {project}/dist/*.whl"
 
 [tool.cibuildwheel.macos]
 # skip wheel delocation (command can't find the binary)
