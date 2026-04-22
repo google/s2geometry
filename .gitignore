@@ -1,3 +1,6 @@
 bazel-*
 build/
 MODULE.bazel.lock
+
+# compiled module
+src/s2geometry*
