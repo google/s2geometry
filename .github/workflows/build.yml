@@ -95,6 +95,7 @@ jobs:
           //...
       working-directory: src
   python:
+    timeout-minutes: 30
     strategy:
       matrix:
         runs-on:
@@ -122,6 +123,7 @@ jobs:
   python-publish:
     if: (github.event_name == 'release') && (github.event.action == 'released')
     needs: [python]
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       id-token: write
