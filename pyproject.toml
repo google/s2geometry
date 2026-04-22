@@ -32,7 +32,6 @@ Source = "https://github.com/google/s2geometry"
 [dependency-groups]
 test = [
     "pytest",
-    "abi3audit"
 ]
 
 [build-system]
@@ -66,6 +65,7 @@ tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*
 # we only need to build with CPython 3.10 (because of the limited API / stable ABI)
 build = "cp310-*"
 test-groups = ["test"]
+test-requires = ["abi3audit"]
 test-command = "pytest {project}/src/python/s2geometry_test.py && abi3audit --strict --report {project}/dist/*.whl"
 
 [tool.cibuildwheel.macos]
