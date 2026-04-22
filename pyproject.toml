@@ -69,5 +69,7 @@ test-requires = ["abi3audit"]
 test-command = "pytest {project}/src/python/s2geometry_test.py && abi3audit --strict --report {project}/dist/*.whl"
 
 [tool.cibuildwheel.macos]
-# skip wheel delocation (command can't find the binary)
+# skip wheel delocation on macOS because of the following errors on both architectures:
+# delocate.libsana.DelocationError: Failed to find any binary with the required architecture: 'arm64'
+# delocate.libsana.DelocationError: Failed to find any binary with the required architecture: 'x86_64'
 repair-wheel-command = ""
