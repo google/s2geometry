@@ -30,13 +30,7 @@ cc_library(
         "@abseil-cpp//absl/numeric:bits",
         "@abseil-cpp//absl/numeric:int128",
         "@abseil-cpp//absl/random:random",
-    ] + select({
-        "//:use_openssl_setting": ["@openssl//:crypto"],
-        "//conditions:default": [
-            "@abseil-cpp//absl/container:fixed_array",
-            "@boringssl//:crypto",
-        ],
-    }),
+    ],
 )
 
 cc_test(
@@ -49,9 +43,11 @@ cc_test(
         "@abseil-cpp//absl/random:bit_gen_ref",
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/strings:strings",
-        "@boringssl//:crypto",
         "@googletest//:gtest_main",
-    ],
+    ] + select({
+        "//:use_openssl_setting": ["@openssl//:crypto"],
+        "//conditions:default": ["@boringssl//:crypto"],
+    }),
 )
 
 cc_test(
