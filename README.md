@@ -30,9 +30,11 @@ complete functionality.
 
 ## Build
 
-This bazel build requires 7.0.0 – bzlmod default. Builds were tested using 
-C++20 as set in .bazelrc. This setup relies on abseil-cpp, boringssl, and 
-googletest from the bazel central repository as set in MODULE.bazel.
+This bazel build requires
+[Bazel 8 or newer](https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md#compilers-tools-build-systems).
+Builds were tested using C++20 as set in .bazelrc. This setup relies on
+abseil-cpp and googletest from the bazel central repository as set in
+MODULE.bazel.
 
 To build and test using bazel, from within s2geometry/src, run:
 

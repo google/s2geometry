@@ -2,7 +2,7 @@ module(
     name = "s2geometry",
     version = "head",
     bazel_compatibility = [
-        ">=7.0.0",
+        ">=8.0.0",
     ],
     compatibility_level = 1,
 )
