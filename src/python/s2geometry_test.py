@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import math
 import unittest
 from collections import defaultdict
 
@@ -834,6 +835,704 @@ class PyWrapS2TestCase(unittest.TestCase):
     a = s2.S2CellId(12345)
     self.assertEqual("0/000000000000000000000001200130", str(a))
 
+class S1AngleTest(unittest.TestCase):
+  def testE5(self):
+    a = s2.S1Angle.E5(1000000)
+    self.assertAlmostEqual(10.0, a.degrees())
+
+  def testE6(self):
+    a = s2.S1Angle.E6(10000000)
+    self.assertAlmostEqual(10.0, a.degrees())
+
+  def testE7(self):
+    a = s2.S1Angle.E7(100000000)
+    self.assertAlmostEqual(10.0, a.degrees())
+
+  def testAccessors_e6_e7(self):
+    a = s2.S1Angle.Degrees(45.0)
+    self.assertEqual(45000000, a.e6())
+    self.assertEqual(450000000, a.e7())
+
+  def testUnsignedE6(self):
+    a = s2.S1Angle.UnsignedE6(10000000)
+    self.assertAlmostEqual(10.0, a.degrees())
+
+  def testNormalize(self):
+    a = s2.S1Angle.Degrees(360 + 45)
+    a.Normalize()
+    self.assertAlmostEqual(45.0, a.degrees())
+
+  def testNormalized(self):
+    a = s2.S1Angle.Degrees(360 + 45)
+    b = a.Normalized()
+    self.assertAlmostEqual(45.0, b.degrees())
+
+  def testAbs(self):
+    a = s2.S1Angle.Degrees(-45.0)
+    b = a.abs()
+    self.assertAlmostEqual(45.0, b.degrees())
+
+  def testRadiansAccessor(self):
+    a = s2.S1Angle.Degrees(180.0)
+    self.assertAlmostEqual(3.14159265, a.radians(), places=5)
+
+class S2CapTest(unittest.TestCase):
+  def testEmpty(self):
+    cap = s2.S2Cap.Empty()
+    self.assertTrue(cap.is_empty())
+
+  def testFull(self):
+    cap = s2.S2Cap.Full()
+    self.assertTrue(cap.is_valid())
+    self.assertFalse(cap.is_empty())
+
+  def testFromPoint(self):
+    p = s2.S2LatLng.FromDegrees(1.0, 2.0).ToPoint()
+    cap = s2.S2Cap.FromPoint(p)
+    self.assertTrue(cap.is_valid())
+    self.assertTrue(cap.Contains(p))
+
+  def testFromCenterHeight(self):
+    p = s2.S2LatLng.FromDegrees(1.0, 2.0).ToPoint()
+    cap = s2.S2Cap.FromCenterHeight(p, 0.5)
+    self.assertTrue(cap.is_valid())
+    self.assertAlmostEqual(0.5, cap.height())
+
+  def testCenterAndHeight(self):
+    center = s2.S2LatLng.FromDegrees(2.0, 3.0).ToPoint()
+    cap = s2.S2Cap(center, s2.S1Angle.Degrees(1.0))
+    c = cap.center()
+    self.assertIsInstance(c, s2.S2Point)
+    self.assertGreater(cap.height(), 0.0)
+
+  def testGetCentroid(self):
+    center = s2.S2LatLng.FromDegrees(2.0, 3.0).ToPoint()
+    cap = s2.S2Cap(center, s2.S1Angle.Degrees(1.0))
+    centroid = cap.GetCentroid()
+    self.assertIsInstance(centroid, s2.S2Point)
+
+  def testExpanded(self):
+    center = s2.S2LatLng.FromDegrees(2.0, 3.0).ToPoint()
+    cap = s2.S2Cap(center, s2.S1Angle.Degrees(1.0))
+    expanded = cap.Expanded(s2.S1Angle.Degrees(1.0))
+    self.assertGreater(expanded.height(), cap.height())
+
+  def testUnion(self):
+    p1 = s2.S2LatLng.FromDegrees(1.0, 1.0).ToPoint()
+    p2 = s2.S2LatLng.FromDegrees(10.0, 10.0).ToPoint()
+    cap1 = s2.S2Cap(p1, s2.S1Angle.Degrees(1.0))
+    cap2 = s2.S2Cap(p2, s2.S1Angle.Degrees(1.0))
+    union = cap1.Union(cap2)
+    self.assertTrue(union.Contains(p1))
+    self.assertTrue(union.Contains(p2))
+
+  def testIntersects(self):
+    p1 = s2.S2LatLng.FromDegrees(1.0, 1.0).ToPoint()
+    cap1 = s2.S2Cap(p1, s2.S1Angle.Degrees(5.0))
+    cap2 = s2.S2Cap(p1, s2.S1Angle.Degrees(1.0))
+    self.assertTrue(cap1.Intersects(cap2))
+
+  def testEncodeDecode(self):
+    center = s2.S2LatLng.FromDegrees(2.0, 3.0).ToPoint()
+    cap = s2.S2Cap(center, s2.S1Angle.Degrees(1.0))
+    encoder = s2.Encoder()
+    cap.Encode(encoder)
+    decoder = s2.Decoder(encoder.buffer())
+    cap2 = s2.S2Cap()
+    self.assertTrue(cap2.Decode(decoder))
+    # S2Cap.ApproxEquals is not exposed via SWIG, so compare heights.
+    self.assertAlmostEqual(cap.height(), cap2.height())
+
+  def testAddPoint(self):
+    cap = s2.S2Cap.Empty()
+    p = s2.S2LatLng.FromDegrees(1.0, 2.0).ToPoint()
+    cap.AddPoint(p)
+    self.assertTrue(cap.Contains(p))
+
+class S2CellTest(unittest.TestCase):
+  def testApproxArea(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10))
+    self.assertGreater(cell.ApproxArea(), 0.0)
+
+  def testExactArea(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10))
+    self.assertGreater(cell.ExactArea(), 0.0)
+
+  def testAverageArea(self):
+    area = s2.S2Cell.AverageArea(10)
+    self.assertGreater(area, 0.0)
+
+  def testGetCenter(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10))
+    center = cell.GetCenter()
+    self.assertIsInstance(center, s2.S2Point)
+
+  def testGetVertex(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10))
+    v = cell.GetVertex(0)
+    self.assertIsInstance(v, s2.S2Point)
+
+  def testGetS2LatLngEdge(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10))
+    edge = cell.GetS2LatLngEdge(0)
+    self.assertIsInstance(edge, s2.S2LatLng)
+
+  def testFaceAndLevel(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10)
+    cell = s2.S2Cell(cell_id)
+    self.assertEqual(10, cell.level())
+    self.assertIn(cell.face(), range(6))
+
+  def testIdRoundTrip(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10)
+    cell = s2.S2Cell(cell_id)
+    self.assertEqual(cell_id, cell.id())
+
+  def testEncodeDecode(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(0, 0)).parent(10))
+    encoder = s2.Encoder()
+    cell.Encode(encoder)
+    decoder = s2.Decoder(encoder.buffer())
+    cell2 = s2.S2Cell()
+    self.assertTrue(cell2.Decode(decoder))
+    self.assertEqual(cell.id(), cell2.id())
+
+class S2CellIdTest(unittest.TestCase):
+  def testBeginEnd(self):
+    begin = s2.S2CellId.Begin(0)
+    end = s2.S2CellId.End(0)
+    self.assertTrue(begin.is_valid())
+    self.assertLess(begin, end)
+
+  def testChildBeginEnd(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    begin = cell_id.child_begin()
+    end = cell_id.child_end()
+    self.assertLess(begin, end)
+
+  def testIsLeaf(self):
+    leaf = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0))
+    self.assertTrue(leaf.is_leaf())
+    non_leaf = leaf.parent(10)
+    self.assertFalse(non_leaf.is_leaf())
+
+  def testIsFace(self):
+    face = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(0)
+    self.assertTrue(face.is_face())
+    non_face = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    self.assertFalse(non_face.is_face())
+
+  def testPos(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0))
+    pos = cell_id.pos()
+    self.assertIsInstance(pos, int)
+
+  def testRangeMinMax(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    rmin = cell_id.range_min()
+    rmax = cell_id.range_max()
+    self.assertLess(rmin, rmax)
+
+  def testNextPrev(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    nxt = cell_id.next()
+    prv = cell_id.prev()
+    self.assertNotEqual(cell_id, nxt)
+    self.assertNotEqual(cell_id, prv)
+    self.assertEqual(cell_id, nxt.prev())
+    self.assertEqual(cell_id, prv.next())
+
+  def testKMaxLevel(self):
+    self.assertEqual(30, s2.S2CellId.kMaxLevel)
+
+class S2CellUnionTest(unittest.TestCase):
+  def testApproxArea(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    cu = s2.S2CellUnion()
+    cu.Init([cell_id.id()])
+    self.assertGreater(cu.ApproxArea(), 0.0)
+
+  def testDenormalize(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    cu = s2.S2CellUnion()
+    cu.Init([cell_id.id()])
+    denormed = cu.Denormalize(0, 1)
+    self.assertGreater(len(denormed), 0)
+
+  def testCellId(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    cu = s2.S2CellUnion()
+    cu.Init([cell_id.id()])
+    self.assertEqual(cell_id, cu.cell_id(0))
+
+  def testEncodeDecode(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(1.0, 2.0)).parent(10)
+    cu = s2.S2CellUnion()
+    cu.Init([cell_id.id()])
+    encoder = s2.Encoder()
+    cu.Encode(encoder)
+    decoder = s2.Decoder(encoder.buffer())
+    cu2 = s2.S2CellUnion()
+    self.assertTrue(cu2.Decode(decoder))
+    self.assertEqual(cu.num_cells(), cu2.num_cells())
+
+class S2LoopTest(unittest.TestCase):
+  def _makeLoop(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    return s2.S2Loop(cell)
+
+  def testClone(self):
+    loop = self._makeLoop()
+    clone = loop.Clone()
+    self.assertTrue(loop.Equals(clone))
+
+  def testEncodeDecode(self):
+    loop = self._makeLoop()
+    encoder = s2.Encoder()
+    loop.Encode(encoder)
+    decoder = s2.Decoder(encoder.buffer())
+    loop2 = s2.S2Loop()
+    self.assertTrue(loop2.Decode(decoder))
+    self.assertTrue(loop.Equals(loop2))
+
+  def testGetCentroid(self):
+    loop = self._makeLoop()
+    centroid = loop.GetCentroid()
+    self.assertIsInstance(centroid, s2.S2Point)
+
+  def testGetDistance(self):
+    loop = self._makeLoop()
+    p = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    d = loop.GetDistance(p)
+    self.assertIsInstance(d, s2.S1Angle)
+
+  def testIntersects(self):
+    loop1 = self._makeLoop()
+    loop2 = self._makeLoop()
+    self.assertTrue(loop1.Intersects(loop2))
+
+  def testProject(self):
+    loop = self._makeLoop()
+    p = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    projected = loop.Project(p)
+    self.assertIsInstance(projected, s2.S2Point)
+
+  def testIsEmpty(self):
+    loop = self._makeLoop()
+    self.assertFalse(loop.is_empty())
+
+  def testSign(self):
+    loop = self._makeLoop()
+    sign = loop.sign()
+    self.assertEqual(1, sign)
+
+  def testVertex(self):
+    loop = self._makeLoop()
+    v = loop.vertex(0)
+    self.assertIsInstance(v, s2.S2Point)
+
+class S2PolylineTest(unittest.TestCase):
+  def _makePolyline(self):
+    line = s2.S2Polyline()
+    line.InitFromS2LatLngs([s2.S2LatLng.FromDegrees(0.0, 0.0),
+                            s2.S2LatLng.FromDegrees(1.0, 1.0)])
+    return line
+
+  def testClone(self):
+    line = self._makePolyline()
+    clone = line.Clone()
+    self.assertTrue(line.ApproxEquals(clone))
+
+  def testEncodeDecode(self):
+    line = self._makePolyline()
+    encoder = s2.Encoder()
+    line.Encode(encoder)
+    decoder = s2.Decoder(encoder.buffer())
+    line2 = s2.S2Polyline()
+    self.assertTrue(line2.Decode(decoder))
+    self.assertTrue(line.ApproxEquals(line2))
+
+  def testApproxEquals(self):
+    line1 = self._makePolyline()
+    line2 = self._makePolyline()
+    self.assertTrue(line1.ApproxEquals(line2))
+
+  def testGetSuffix(self):
+    line = self._makePolyline()
+    point, next_vertex = line.GetSuffix(0.5)
+    self.assertIsInstance(point, s2.S2Point)
+    self.assertIsInstance(next_vertex, int)
+
+  def testInterpolateAndUnInterpolate(self):
+    line = self._makePolyline()
+    p = line.Interpolate(0.5)
+    self.assertIsInstance(p, s2.S2Point)
+    f = line.UnInterpolate(p, 1)
+    self.assertAlmostEqual(0.5, f, places=5)
+
+  def testIntersects(self):
+    line1 = s2.S2Polyline()
+    line1.InitFromS2LatLngs([s2.S2LatLng.FromDegrees(-1.0, 0.0),
+                             s2.S2LatLng.FromDegrees(1.0, 0.0)])
+    line2 = s2.S2Polyline()
+    line2.InitFromS2LatLngs([s2.S2LatLng.FromDegrees(0.0, -1.0),
+                             s2.S2LatLng.FromDegrees(0.0, 1.0)])
+    self.assertTrue(line1.Intersects(line2))
+
+  def testIsOnRight(self):
+    line = self._makePolyline()
+    p = s2.S2LatLng.FromDegrees(0.0, 1.0).ToPoint()
+    result = line.IsOnRight(p)
+    self.assertIsInstance(result, bool)
+
+  def testIsValid(self):
+    line = self._makePolyline()
+    self.assertTrue(line.IsValid())
+
+  def testProject(self):
+    line = self._makePolyline()
+    p = s2.S2LatLng.FromDegrees(0.5, 0.5).ToPoint()
+    projected = line.Project(p)
+    self.assertIsInstance(projected[0], s2.S2Point)
+
+  def testReverse(self):
+    line = self._makePolyline()
+    v0_before = s2.S2LatLng(line.vertex(0)).ToStringInDegrees()
+    line.Reverse()
+    v_last = s2.S2LatLng(line.vertex(0)).ToStringInDegrees()
+    self.assertNotEqual(v0_before, v_last)
+
+  def testNumVertices(self):
+    line = self._makePolyline()
+    self.assertEqual(2, line.num_vertices())
+
+  def testVertex(self):
+    line = self._makePolyline()
+    v = line.vertex(0)
+    self.assertIsInstance(v, s2.S2Point)
+
+class S2EarthTest(unittest.TestCase):
+  def testGetDistanceLatLng(self):
+    a = s2.S2LatLng.FromDegrees(0.0, 0.0)
+    b = s2.S2LatLng.FromDegrees(1.0, 0.0)
+    # GetDistance returns an opaque SWIG Meters* object.
+    d = s2.S2Earth.GetDistance(a, b)
+    self.assertTrue(d is not None)
+
+  def testGetDistanceS2Point(self):
+    a = s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()
+    b = s2.S2LatLng.FromDegrees(1.0, 0.0).ToPoint()
+    # GetDistance returns an opaque SWIG Meters* object.
+    d = s2.S2Earth.GetDistance(a, b)
+    self.assertTrue(d is not None)
+
+  def testGetDistanceKmLatLng(self):
+    a = s2.S2LatLng.FromDegrees(0.0, 0.0)
+    b = s2.S2LatLng.FromDegrees(1.0, 0.0)
+    km = s2.S2Earth.GetDistanceKm(a, b)
+    self.assertGreater(km, 100.0)
+
+  def testGetDistanceKmS2Point(self):
+    a = s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()
+    b = s2.S2LatLng.FromDegrees(1.0, 0.0).ToPoint()
+    km = s2.S2Earth.GetDistanceKm(a, b)
+    self.assertGreater(km, 100.0)
+
+  def testGetDistanceMetersLatLng(self):
+    a = s2.S2LatLng.FromDegrees(0.0, 0.0)
+    b = s2.S2LatLng.FromDegrees(1.0, 0.0)
+    m = s2.S2Earth.GetDistanceMeters(a, b)
+    self.assertGreater(m, 100000.0)
+
+  def testGetDistanceMetersS2Point(self):
+    a = s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()
+    b = s2.S2LatLng.FromDegrees(1.0, 0.0).ToPoint()
+    m = s2.S2Earth.GetDistanceMeters(a, b)
+    self.assertGreater(m, 100000.0)
+
+  def testGetInitialBearing(self):
+    a = s2.S2LatLng.FromDegrees(0.0, 0.0)
+    b = s2.S2LatLng.FromDegrees(1.0, 0.0)
+    bearing = s2.S2Earth.GetInitialBearing(a, b)
+    self.assertIsInstance(bearing, s2.S1Angle)
+
+  def testRadiusMethods(self):
+    km = s2.S2Earth.RadiusKm()
+    self.assertAlmostEqual(6371.01, km, places=1)
+    m = s2.S2Earth.RadiusMeters()
+    self.assertAlmostEqual(6371010.0, m, places=-1)
+
+  def testAltitudeMethods(self):
+    hm = s2.S2Earth.HighestAltitudeMeters()
+    self.assertGreater(hm, 0.0)
+    lom = s2.S2Earth.LowestAltitudeMeters()
+    self.assertLess(lom, 0.0)
+
+  def testMetersToRadians(self):
+    r = s2.S2Earth.MetersToRadians(1000.0)
+    self.assertGreater(r, 0.0)
+
+  def testRadiansToKm(self):
+    km = s2.S2Earth.RadiansToKm(0.001)
+    self.assertGreater(km, 0.0)
+
+  def testSquareConversions(self):
+    sr = s2.S2Earth.SquareKmToSteradians(1.0)
+    self.assertGreater(sr, 0.0)
+    sr2 = s2.S2Earth.SquareMetersToSteradians(1000000.0)
+    self.assertGreater(sr2, 0.0)
+    km2 = s2.S2Earth.SteradiansToSquareKm(sr)
+    self.assertAlmostEqual(1.0, km2, places=5)
+    m2 = s2.S2Earth.SteradiansToSquareMeters(sr2)
+    self.assertAlmostEqual(1000000.0, m2, places=0)
+
+  def testToDistance(self):
+    a = s2.S1Angle.Degrees(1.0)
+    # ToDistance returns an opaque SWIG Meters* object.
+    d = s2.S2Earth.ToDistance(a)
+    self.assertTrue(d is not None)
+
+  def testToDistanceChordAngle(self):
+    ca = s2.S1ChordAngle(s2.S1Angle.Degrees(1.0))
+    # ToDistance returns an opaque SWIG Meters* object.
+    d = s2.S2Earth.ToDistance(ca)
+    self.assertTrue(d is not None)
+
+  def testToKm(self):
+    a = s2.S1Angle.Degrees(1.0)
+    km = s2.S2Earth.ToKm(a)
+    self.assertGreater(km, 100.0)
+
+  def testToKmChordAngle(self):
+    ca = s2.S1ChordAngle(s2.S1Angle.Degrees(1.0))
+    km = s2.S2Earth.ToKm(ca)
+    self.assertGreater(km, 100.0)
+
+  def testToMeters(self):
+    a = s2.S1Angle.Degrees(1.0)
+    m = s2.S2Earth.ToMeters(a)
+    self.assertGreater(m, 100000.0)
+
+  def testToMetersChordAngle(self):
+    ca = s2.S1ChordAngle(s2.S1Angle.Degrees(1.0))
+    m = s2.S2Earth.ToMeters(ca)
+    self.assertGreater(m, 100000.0)
+
+class S2LatLngTest(unittest.TestCase):
+  def testFromE6(self):
+    ll = s2.S2LatLng.FromE6(10000000, 20000000)
+    self.assertAlmostEqual(10.0, ll.lat().degrees())
+    self.assertAlmostEqual(20.0, ll.lng().degrees())
+
+  def testFromE7(self):
+    ll = s2.S2LatLng.FromE7(100000000, 200000000)
+    self.assertAlmostEqual(10.0, ll.lat().degrees())
+    self.assertAlmostEqual(20.0, ll.lng().degrees())
+
+  def testFromRadians(self):
+    ll = s2.S2LatLng.FromRadians(0.0, math.pi / 2)
+    self.assertAlmostEqual(0.0, ll.lat().degrees())
+    self.assertAlmostEqual(90.0, ll.lng().degrees())
+
+  def testFromUnsignedE6(self):
+    ll = s2.S2LatLng.FromUnsignedE6(10000000, 20000000)
+    self.assertAlmostEqual(10.0, ll.lat().degrees())
+    self.assertAlmostEqual(20.0, ll.lng().degrees())
+
+  def testFromUnsignedE7(self):
+    ll = s2.S2LatLng.FromUnsignedE7(100000000, 200000000)
+    self.assertAlmostEqual(10.0, ll.lat().degrees())
+    self.assertAlmostEqual(20.0, ll.lng().degrees())
+
+  def testCoords(self):
+    ll = s2.S2LatLng.FromDegrees(10.0, 20.0)
+    # coords() returns an opaque SWIG R2Point object.
+    c = ll.coords()
+    self.assertTrue(c is not None)
+
+class S2LatLngRectTest(unittest.TestCase):
+  def testFromPoint(self):
+    r = s2.S2LatLngRect.FromPoint(s2.S2LatLng.FromDegrees(1.0, 2.0))
+    self.assertTrue(r.is_point())
+
+  def testFromPointPair(self):
+    r = s2.S2LatLngRect.FromPointPair(
+        s2.S2LatLng.FromDegrees(1.0, 2.0),
+        s2.S2LatLng.FromDegrees(3.0, 4.0))
+    self.assertFalse(r.is_empty())
+
+  def testFromCenterSize(self):
+    center = s2.S2LatLng.FromDegrees(1.0, 2.0)
+    size = s2.S2LatLng.FromDegrees(2.0, 4.0)
+    r = s2.S2LatLngRect.FromCenterSize(center, size)
+    self.assertFalse(r.is_empty())
+
+  def testEmpty(self):
+    r = s2.S2LatLngRect.Empty()
+    self.assertTrue(r.is_empty())
+
+  def testFull(self):
+    r = s2.S2LatLngRect.Full()
+    self.assertFalse(r.is_empty())
+
+  def testExpandedByDistance(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(1.0, 2.0),
+                        s2.S2LatLng.FromDegrees(3.0, 4.0))
+    expanded = r.ExpandedByDistance(s2.S1Angle.Degrees(1.0))
+    self.assertGreater(expanded.Area(), r.Area())
+
+  def testArea(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(0.0, 0.0),
+                        s2.S2LatLng.FromDegrees(1.0, 1.0))
+    self.assertGreater(r.Area(), 0.0)
+
+  def testGetCenter(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(0.0, 0.0),
+                        s2.S2LatLng.FromDegrees(2.0, 4.0))
+    c = r.GetCenter()
+    self.assertAlmostEqual(1.0, c.lat().degrees())
+    self.assertAlmostEqual(2.0, c.lng().degrees())
+
+  def testGetCentroid(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(0.0, 0.0),
+                        s2.S2LatLng.FromDegrees(2.0, 4.0))
+    centroid = r.GetCentroid()
+    self.assertIsInstance(centroid, s2.S2Point)
+
+  def testGetDistance(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(0.0, 0.0),
+                        s2.S2LatLng.FromDegrees(1.0, 1.0))
+    p = s2.S2LatLng.FromDegrees(5.0, 5.0)
+    d = r.GetDistance(p)
+    self.assertIsInstance(d, s2.S1Angle)
+
+  def testGetSize(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(0.0, 0.0),
+                        s2.S2LatLng.FromDegrees(2.0, 4.0))
+    size = r.GetSize()
+    self.assertAlmostEqual(2.0, size.lat().degrees())
+    self.assertAlmostEqual(4.0, size.lng().degrees())
+
+  def testGetVertex(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(0.0, 0.0),
+                        s2.S2LatLng.FromDegrees(2.0, 4.0))
+    for i in range(4):
+      v = r.GetVertex(i)
+      self.assertIsInstance(v, s2.S2LatLng)
+
+  def testIntersectionAndUnion(self):
+    r1 = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(0.0, 0.0),
+                         s2.S2LatLng.FromDegrees(2.0, 2.0))
+    r2 = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(1.0, 1.0),
+                         s2.S2LatLng.FromDegrees(3.0, 3.0))
+    inter = r1.Intersection(r2)
+    self.assertFalse(inter.is_empty())
+    union = r1.Union(r2)
+    self.assertGreater(union.Area(), r1.Area())
+
+  def testLatLngAccessors(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(1.0, 2.0),
+                        s2.S2LatLng.FromDegrees(3.0, 4.0))
+    self.assertAlmostEqual(1.0, r.lat_lo().degrees())
+    self.assertAlmostEqual(3.0, r.lat_hi().degrees())
+    self.assertAlmostEqual(2.0, r.lng_lo().degrees())
+    self.assertAlmostEqual(4.0, r.lng_hi().degrees())
+    # lat()/lng() return opaque SWIG R1Interval/S1Interval objects.
+    self.assertTrue(r.lat() is not None)
+    self.assertTrue(r.lng() is not None)
+    self.assertIsInstance(r.lo(), s2.S2LatLng)
+    self.assertIsInstance(r.hi(), s2.S2LatLng)
+
+  def testEncodeDecode(self):
+    r = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(1.0, 2.0),
+                        s2.S2LatLng.FromDegrees(3.0, 4.0))
+    encoder = s2.Encoder()
+    r.Encode(encoder)
+    decoder = s2.Decoder(encoder.buffer())
+    r2 = s2.S2LatLngRect()
+    self.assertTrue(r2.Decode(decoder))
+    self.assertTrue(r.ApproxEquals(r2))
+
+  def testAddPoint(self):
+    r = s2.S2LatLngRect.Empty()
+    r.AddPoint(s2.S2LatLng.FromDegrees(1.0, 2.0))
+    self.assertFalse(r.is_empty())
+
+class EncoderDecoderTest(unittest.TestCase):
+  def testPutGet8(self):
+    enc = s2.Encoder()
+    enc.Ensure(1)
+    enc.put8(42)
+    dec = s2.Decoder(enc.buffer())
+    self.assertEqual(42, dec.get8())
+
+  def testPutGet16(self):
+    enc = s2.Encoder()
+    enc.Ensure(2)
+    enc.put16(1234)
+    dec = s2.Decoder(enc.buffer())
+    self.assertEqual(1234, dec.get16())
+
+  def testPutGet32(self):
+    enc = s2.Encoder()
+    enc.Ensure(4)
+    enc.put32(12345678)
+    dec = s2.Decoder(enc.buffer())
+    self.assertEqual(12345678, dec.get32())
+
+  def testPutGet64(self):
+    enc = s2.Encoder()
+    enc.Ensure(8)
+    enc.put64(123456789012345)
+    dec = s2.Decoder(enc.buffer())
+    self.assertEqual(123456789012345, dec.get64())
+
+  def testPutGetFloat(self):
+    enc = s2.Encoder()
+    enc.Ensure(4)
+    enc.putfloat(3.14)
+    dec = s2.Decoder(enc.buffer())
+    self.assertAlmostEqual(3.14, dec.getfloat(), places=5)
+
+  def testPutGetDouble(self):
+    enc = s2.Encoder()
+    enc.Ensure(8)
+    enc.putdouble(3.141592653589793)
+    dec = s2.Decoder(enc.buffer())
+    self.assertAlmostEqual(3.141592653589793, dec.getdouble())
+
+  def testEncoderLengthAndAvail(self):
+    enc = s2.Encoder()
+    self.assertEqual(0, enc.length())
+    enc.Ensure(1)
+    enc.put8(1)
+    self.assertEqual(1, enc.length())
+    self.assertGreaterEqual(enc.avail(), 0)
+
+  def testEncoderClear(self):
+    enc = s2.Encoder()
+    enc.Ensure(1)
+    enc.put8(1)
+    enc.clear()
+    self.assertEqual(0, enc.length())
+
+  def testEncoderEnsure(self):
+    enc = s2.Encoder()
+    enc.Ensure(100)
+    self.assertGreaterEqual(enc.avail(), 100)
+
+  def testDecoderPosAndAvail(self):
+    enc = s2.Encoder()
+    enc.Ensure(2)
+    enc.put8(1)
+    enc.put8(2)
+    dec = s2.Decoder(enc.buffer())
+    self.assertEqual(0, dec.pos())
+    self.assertEqual(2, dec.avail())
+    dec.get8()
+    self.assertEqual(1, dec.pos())
+    self.assertEqual(1, dec.avail())
+
 class RegionTermIndexerTest(unittest.TestCase):
   def _randomCaps(self, query_type, **indexer_options):
     # This function creates an index consisting either of points (if
@@ -903,7 +1602,7 @@ class RegionTermIndexerTest(unittest.TestCase):
       for j in range(len(caps)):
         if covering.Intersects(coverings[j]):
           expected.add(j)
-      
+
       for term in terms:
         actual |= index[term]
 
@@ -1006,7 +1705,38 @@ class RegionTermIndexerTest(unittest.TestCase):
     self.assertTrue(cell.is_valid())
     self.assertEqual("5/31200", cell.ToString())
 
+  def testCovererSetFixedLevel(self):
+    coverer = s2.S2RegionCoverer()
+    coverer.set_fixed_level(10)
+    self.assertEqual(10, coverer.min_level())
+    self.assertEqual(10, coverer.max_level())
+
+  def testCovererTrueMaxLevel(self):
+    coverer = s2.S2RegionCoverer()
+    coverer.set_max_level(20)
+    self.assertEqual(20, coverer.true_max_level())
+
+  def testIndexerMarkerCharacter(self):
+    indexer = s2.S2RegionTermIndexer()
+    default_marker = indexer.marker_character()
+    self.assertIsInstance(default_marker, str)
+
+  def testIndexerTrueMaxLevel(self):
+    indexer = s2.S2RegionTermIndexer()
+    indexer.set_max_level(20)
+    self.assertEqual(20, indexer.true_max_level())
+
+  def testIndexerSetFixedLevel(self):
+    indexer = s2.S2RegionTermIndexer()
+    indexer.set_fixed_level(10)
+    self.assertEqual(10, indexer.min_level())
+    self.assertEqual(10, indexer.max_level())
+
 class S2PolygonTestCase(unittest.TestCase):
+
+  def _makePolygon(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    return s2.S2Polygon(cell)
   def testInitToUnionSame(self):
     cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
     polygon1 = s2.S2Polygon(cell1)
@@ -1036,6 +1766,53 @@ class S2PolygonTestCase(unittest.TestCase):
     self.assertEqual(4, loop.num_vertices())
     loop = polygon3.loop(1)
     self.assertEqual(4, loop.num_vertices())
+
+  def testClone(self):
+    poly = self._makePolygon()
+    clone = poly.Clone()
+    self.assertTrue(poly.Equals(clone))
+
+  def testCopy(self):
+    poly = self._makePolygon()
+    copy = s2.S2Polygon()
+    copy.Copy(poly)
+    self.assertTrue(poly.Equals(copy))
+
+  def testGetCentroid(self):
+    poly = self._makePolygon()
+    centroid = poly.GetCentroid()
+    self.assertIsInstance(centroid, s2.S2Point)
+
+  def testGetDistance(self):
+    poly = self._makePolygon()
+    p = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    d = poly.GetDistance(p)
+    self.assertIsInstance(d, s2.S1Angle)
+
+  def testProject(self):
+    poly = self._makePolygon()
+    p = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    projected = poly.Project(p)
+    self.assertIsInstance(projected, s2.S2Point)
+
+  def testIsEmpty(self):
+    empty = s2.S2Polygon()
+    self.assertTrue(empty.is_empty())
+    poly = self._makePolygon()
+    self.assertFalse(poly.is_empty())
+
+  def testNumVertices(self):
+    poly = self._makePolygon()
+    self.assertEqual(4, poly.num_vertices())
+
+  def testIntersects(self):
+    poly1 = self._makePolygon()
+    poly2 = self._makePolygon()
+    self.assertTrue(poly1.Intersects(poly2))
+
+  def testIsValid(self):
+    poly = self._makePolygon()
+    self.assertTrue(poly.IsValid())
 
 class S2ChordAngleTest(unittest.TestCase):
   def testBasic(self):
@@ -1073,6 +1850,11 @@ class S2ChordAngleTest(unittest.TestCase):
     ca1 = s2.S1ChordAngle(s2.S1Angle.Degrees(100))
     ca2 = s2.S1ChordAngle(ca1)
     self.assertAlmostEqual(100, ca2.degrees())
+
+  def testToAngle(self):
+    ca = s2.S1ChordAngle(s2.S1Angle.Degrees(90.0))
+    a = ca.ToAngle()
+    self.assertAlmostEqual(90.0, a.degrees())
 
 class S2BufferOperationTest(unittest.TestCase):
   def setUp(self):
