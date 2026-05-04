@@ -164,22 +164,13 @@ void bind_s2cell_id(py::module& m) {
       .def_static("from_token", [](const std::string& token) {
                S2CellId cell = S2CellId::FromToken(token);
                if (cell == S2CellId::None()) {
-                 throw py::value_error("Invalid S2CellId token: '" + token + "'");
+                 throw py::value_error(
+                     absl::StrCat("Invalid S2CellId token: '", token, "'"));
                }
                return cell;
            }, py::arg("token"),
            "Return a cell from its token string.\n\n"
            "Raises ValueError if the token is malformed.")
-      .def_static("from_debug_string", [](const std::string& str) {
-               S2CellId cell = S2CellId::FromDebugString(str);
-               if (cell == S2CellId::None()) {
-                 throw py::value_error(
-                     "Invalid S2CellId debug string: '" + str + "'");
-               }
-               return cell;
-           }, py::arg("str"),
-           "Return a cell from its debug string (e.g. \"3/02\").\n\n"
-           "Raises ValueError if the string is malformed.")
       .def_static("from_face_ij", [](int face, int i, int j) {
                MaybeThrowFaceOutOfRange(face);
                return S2CellId::FromFaceIJ(face, i, j);

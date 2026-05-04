@@ -70,17 +70,6 @@ class TestS2CellId(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          "Invalid S2CellId token: 'invalid_token'")
 
-    def test_from_debug_string(self):
-        cell = s2.S2CellId.from_debug_string("3/02")
-        self.assertEqual(cell.face(), 3)
-        self.assertEqual(cell.level(), 2)
-
-    def test_from_debug_string_invalid_raises(self):
-        with self.assertRaises(ValueError) as cm:
-            s2.S2CellId.from_debug_string("bad")
-        self.assertEqual(str(cm.exception),
-                         "Invalid S2CellId debug string: 'bad'")
-
     def test_from_face_ij(self):
         cell = s2.S2CellId.from_face_ij(0, 0, 0)
         self.assertTrue(cell.is_leaf())
@@ -142,36 +131,48 @@ class TestS2CellId(unittest.TestCase):
         self.assertAlmostEqual(ll.lng.degrees, ll2.lng.degrees, places=5)
 
     def test_get_center_st(self):
-        cell = s2.S2CellId.from_face(0)
-        st = cell.get_center_st()
-        self.assertIsInstance(st, s2.R2Point)
+        # (s,t)-space covers [0,1] x [0,1] per face; a face cell's center
+        # is at (0.5, 0.5).
+        st = s2.S2CellId.from_face(0).get_center_st()
+        self.assertAlmostEqual(st.x, 0.5)
+        self.assertAlmostEqual(st.y, 0.5)
 
     def test_get_bound_st(self):
-        cell = s2.S2CellId.from_face(0)
-        bound = cell.get_bound_st()
-        self.assertIsInstance(bound, s2.R2Rect)
+        # A face cell in (s,t) spans the full [0,1] x [0,1] range.
+        bound = s2.S2CellId.from_face(0).get_bound_st()
+        self.assertAlmostEqual(bound.lo.x, 0.0)
+        self.assertAlmostEqual(bound.lo.y, 0.0)
+        self.assertAlmostEqual(bound.hi.x, 1.0)
+        self.assertAlmostEqual(bound.hi.y, 1.0)
 
     def test_get_center_uv(self):
-        cell = s2.S2CellId.from_face(0)
-        uv = cell.get_center_uv()
-        self.assertIsInstance(uv, s2.R2Point)
+        # (u,v)-space covers [-1,1] x [-1,1] per face; a face cell's center
+        # is at the origin.
+        uv = s2.S2CellId.from_face(0).get_center_uv()
+        self.assertAlmostEqual(uv.x, 0.0)
+        self.assertAlmostEqual(uv.y, 0.0)
 
     def test_get_bound_uv(self):
-        cell = s2.S2CellId.from_face(0)
-        bound = cell.get_bound_uv()
-        self.assertIsInstance(bound, s2.R2Rect)
+        # A face cell in (u,v) spans the full [-1,1] x [-1,1] range.
+        bound = s2.S2CellId.from_face(0).get_bound_uv()
+        self.assertAlmostEqual(bound.lo.x, -1.0)
+        self.assertAlmostEqual(bound.lo.y, -1.0)
+        self.assertAlmostEqual(bound.hi.x, 1.0)
+        self.assertAlmostEqual(bound.hi.y, 1.0)
 
     def test_get_size_ij(self):
+        # In (i,j)-space a face spans 2^kMaxLevel = 2^30 units.
         face = s2.S2CellId.from_face(0)
         self.assertEqual(face.get_size_ij(), 1 << 30)
 
     def test_get_size_ij_for_level(self):
+        # Level 0 cells span 2^kMaxLevel in (i,j); leaf cells span 1.
         self.assertEqual(s2.S2CellId.get_size_ij_for_level(0), 1 << 30)
         self.assertEqual(s2.S2CellId.get_size_ij_for_level(30), 1)
 
     def test_get_size_st(self):
-        face = s2.S2CellId.from_face(0)
-        self.assertGreater(face.get_size_st(), 0.0)
+        # In (s,t)-space a face spans the full unit interval, so size is 1.0.
+        self.assertAlmostEqual(s2.S2CellId.from_face(0).get_size_st(), 1.0)
 
     def test_child_position(self):
         face = s2.S2CellId.from_face(0)
@@ -187,7 +188,7 @@ class TestS2CellId(unittest.TestCase):
                          "Level 0 out of range [1, 30]")
 
     def test_child_position_at_level(self):
-        cell = s2.S2CellId.from_debug_string("0/012")
+        cell = s2.S2CellId.from_face(0).child(0).child(1).child(2)
         self.assertEqual(cell.child_position_at_level(1), 0)
         self.assertEqual(cell.child_position_at_level(2), 1)
         self.assertEqual(cell.child_position_at_level(3), 2)
@@ -198,9 +199,25 @@ class TestS2CellId(unittest.TestCase):
 
     # Traversal
 
-    def test_range_min_max(self):
-        cell = s2.S2CellId.from_face(0)
-        self.assertTrue(cell.range_min() <= cell.range_max())
+    def test_range_min_max_leaf(self):
+        # A leaf cell's range is just itself.
+        leaf = s2.S2CellId(s2.S2Point(1.0, 0.0, 0.0))
+        self.assertEqual(leaf.range_min(), leaf)
+        self.assertEqual(leaf.range_max(), leaf)
+
+    def test_range_min_max_covers_children(self):
+        # range_min/range_max bound the leaf cells of this cell; every
+        # direct child's range must sit within the parent's range.
+        face = s2.S2CellId.from_face(0)
+        self.assertLess(face.range_min(), face.range_max())
+        for child in face.children():
+            self.assertGreaterEqual(child.range_min(), face.range_min())
+            self.assertLessEqual(child.range_max(), face.range_max())
+        # The first child's range_min equals the parent's, and likewise
+        # the last child's range_max equals the parent's.
+        children = list(face.children())
+        self.assertEqual(children[0].range_min(), face.range_min())
+        self.assertEqual(children[-1].range_max(), face.range_max())
 
     def test_contains(self):
         face = s2.S2CellId.from_face(0)
@@ -230,7 +247,7 @@ class TestS2CellId(unittest.TestCase):
                          "Face cell has no parent")
 
     def test_parent_at_level(self):
-        cell = s2.S2CellId.from_debug_string("0/012")
+        cell = s2.S2CellId.from_face(0).child(0).child(1).child(2)
         self.assertEqual(cell.parent_at_level(0), s2.S2CellId.from_face(0))
         self.assertEqual(cell.parent_at_level(3), cell)
 
@@ -282,13 +299,6 @@ class TestS2CellId(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          "Leaf cell has no children")
 
-    def test_children_for_loop(self):
-        face = s2.S2CellId.from_face(0)
-        count = 0
-        for child in face.children():
-            count += 1
-        self.assertEqual(count, 4)
-
     def test_cells_level_0(self):
         cells = list(s2.S2CellId.cells(0))
         self.assertEqual(len(cells), 6)
@@ -333,12 +343,16 @@ class TestS2CellId(unittest.TestCase):
         self.assertEqual(len(cells), 1)
         self.assertEqual(cells[0].face(), 0)
 
-    def test_children_len(self):
+    # S2CellIdRange — tests for the range class returned by children()/cells().
+    # These exercise the range class itself; the factory methods that return a
+    # range (children, cells) are covered separately above.
+
+    def test_s2cell_id_range_len(self):
         face = s2.S2CellId.from_face(0)
         self.assertEqual(len(face.children()), 4)
         self.assertEqual(len(face.children(2)), 16)
 
-    def test_children_getitem(self):
+    def test_s2cell_id_range_getitem(self):
         face = s2.S2CellId.from_face(0)
         children = face.children()
         self.assertEqual(children[0].child_position(), 0)
@@ -346,15 +360,14 @@ class TestS2CellId(unittest.TestCase):
         # Negative indexing.
         self.assertEqual(children[-1].child_position(), 3)
 
-    def test_children_getitem_out_of_range_raises(self):
-        face = s2.S2CellId.from_face(0)
-        children = face.children()
+    def test_s2cell_id_range_getitem_out_of_range_raises(self):
+        children = s2.S2CellId.from_face(0).children()
         with self.assertRaises(IndexError):
             children[4]
         with self.assertRaises(IndexError):
             children[-5]
 
-    def test_children_contains(self):
+    def test_s2cell_id_range_contains(self):
         face = s2.S2CellId.from_face(0)
         children = face.children()
         child0 = face.child(0)
@@ -365,30 +378,18 @@ class TestS2CellId(unittest.TestCase):
         # A cell at the wrong level is not in the range.
         self.assertNotIn(face, children)
 
-    def test_children_reversed(self):
+    def test_s2cell_id_range_reversed(self):
         face = s2.S2CellId.from_face(0)
         children = list(face.children())
         rev_children = list(reversed(face.children()))
         self.assertEqual(rev_children, list(reversed(children)))
 
-    def test_cells_len(self):
-        self.assertEqual(len(s2.S2CellId.cells(0)), 6)
-        self.assertEqual(len(s2.S2CellId.cells(1)), 24)
-
-    def test_cells_getitem(self):
-        cells = s2.S2CellId.cells(0)
-        self.assertEqual(cells[0].face(), 0)
-        self.assertEqual(cells[5].face(), 5)
-        self.assertEqual(cells[-1].face(), 5)
-
-    def test_cells_reversed(self):
-        cells = list(s2.S2CellId.cells(0))
-        rev_cells = list(reversed(s2.S2CellId.cells(0)))
-        self.assertEqual(rev_cells, list(reversed(cells)))
-
     def test_get_common_ancestor_level(self):
-        cell1 = s2.S2CellId.from_debug_string("0/012")
-        cell2 = s2.S2CellId.from_debug_string("0/013")
+        # Two cells sharing the first two Hilbert curve steps on face 0
+        # diverge at level 2, so their common ancestor is at level 2.
+        base = s2.S2CellId.from_face(0).child(0).child(1)
+        cell1 = base.child(2)
+        cell2 = base.child(3)
         self.assertEqual(cell1.get_common_ancestor_level(cell2), 2)
 
     def test_get_common_ancestor_level_different_faces(self):
@@ -402,7 +403,7 @@ class TestS2CellId(unittest.TestCase):
         self.assertEqual(len(neighbors), 4)
 
     def test_get_vertex_neighbors(self):
-        cell = s2.S2CellId.from_debug_string("0/012")
+        cell = s2.S2CellId.from_face(0).child(0).child(1).child(2)
         neighbors = cell.get_vertex_neighbors(1)
         self.assertGreaterEqual(len(neighbors), 3)
         self.assertLessEqual(len(neighbors), 4)
@@ -413,7 +414,7 @@ class TestS2CellId(unittest.TestCase):
             cell.get_vertex_neighbors(0)  # level must be < cell level
 
     def test_get_all_neighbors(self):
-        cell = s2.S2CellId.from_debug_string("0/0")
+        cell = s2.S2CellId.from_face(0).child(0)
         neighbors = cell.get_all_neighbors(1)
         self.assertGreater(len(neighbors), 0)
 
@@ -453,7 +454,7 @@ class TestS2CellId(unittest.TestCase):
         self.assertEqual(str(cell), "0/")
 
     def test_repr_child(self):
-        cell = s2.S2CellId.from_debug_string("3/02")
+        cell = s2.S2CellId.from_face(3).child(0).child(2)
         self.assertEqual(repr(cell), "S2CellId(3/02)")
 
 
