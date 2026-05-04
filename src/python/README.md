@@ -149,7 +149,7 @@ Use the following sections to organize functions within the bindings files and t
 
 1. **Constructors** - Default constructors and constructors with parameters
 2. **Factory methods** - Static factory methods (e.g., `from_degrees`, `from_radians`, `zero`, `invalid`)
-3. **Constants** - Class-level constants (e.g., `S2CellId.kMaxLevel`, `S2CellId.kNumFaces`)
+3. **Constants** - Class-level constants in upper snake case (e.g., `S2CellId.MAX_LEVEL`, `S2CellId.NUM_FACES`)
 4. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
 5. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
 6. **Geometric operations** - Conversions, computations, containment checks, set operations, normalization, and distance calculations

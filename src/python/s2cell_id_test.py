@@ -32,10 +32,10 @@ class TestS2CellId(unittest.TestCase):
     # Constants
 
     def test_max_level(self):
-        self.assertEqual(s2.S2CellId.kMaxLevel, 30)
+        self.assertEqual(s2.S2CellId.MAX_LEVEL, 30)
 
     def test_num_faces(self):
-        self.assertEqual(s2.S2CellId.kNumFaces, 6)
+        self.assertEqual(s2.S2CellId.NUM_FACES, 6)
 
     # Factory methods
 
@@ -173,18 +173,6 @@ class TestS2CellId(unittest.TestCase):
         face = s2.S2CellId.from_face(0)
         self.assertGreater(face.get_size_st(), 0.0)
 
-    def test_get_center_si_ti(self):
-        cell = s2.S2CellId.from_face(0)
-        face, si, ti = cell.get_center_si_ti()
-        self.assertEqual(face, 0)
-        self.assertIsInstance(si, int)
-        self.assertIsInstance(ti, int)
-
-    def test_to_face_ij_orientation(self):
-        cell = s2.S2CellId.from_face(0)
-        face, i, j, orientation = cell.to_face_ij_orientation()
-        self.assertEqual(face, 0)
-
     def test_child_position(self):
         face = s2.S2CellId.from_face(0)
         for pos in range(4):
@@ -207,10 +195,6 @@ class TestS2CellId(unittest.TestCase):
     def test_to_token(self):
         cell = s2.S2CellId.from_face(0)
         self.assertEqual(cell.to_token(), "1")
-
-    def test_to_string(self):
-        cell = s2.S2CellId.from_debug_string("3/02")
-        self.assertEqual(cell.to_string(), "3/02")
 
     # Traversal
 

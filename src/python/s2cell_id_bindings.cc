@@ -16,7 +16,7 @@ namespace {
 
 void MaybeThrowNotValid(S2CellId id) {
   if (!id.is_valid()) {
-    throw py::value_error("Invalid S2CellId: " + id.ToString());
+    throw py::value_error(absl::StrCat("Invalid S2CellId: ", id.ToString()));
   }
 }
 
@@ -139,10 +139,10 @@ void bind_s2cell_id(py::module& m) {
            "Construct a leaf cell containing the given S2LatLng.")
 
       // Constants
-      .def_property_readonly_static("kMaxLevel",
+      .def_property_readonly_static("MAX_LEVEL",
            [](py::object) { return S2CellId::kMaxLevel; },
            "Maximum cell subdivision level (30)")
-      .def_property_readonly_static("kNumFaces",
+      .def_property_readonly_static("NUM_FACES",
            [](py::object) { return S2CellId::kNumFaces; },
            "Number of cube faces (6)")
 
@@ -222,34 +222,16 @@ void bind_s2cell_id(py::module& m) {
            "Return the edge length in (s,t)-space of cells at the given level")
       .def("to_point", &S2CellId::ToPoint,
            "Return the center of the cell as a normalized S2Point")
-      .def("to_point_raw", &S2CellId::ToPointRaw,
-           "Return the center of the cell as an S2Point (not normalized)")
       .def("to_lat_lng", &S2CellId::ToLatLng,
            "Return the S2LatLng corresponding to the center of the cell")
       .def("get_center_st", &S2CellId::GetCenterST,
-           "Return the center of the cell in (s,t) coordinates")
+           "Return the center of the cell in (s,t)-space")
       .def("get_bound_st", &S2CellId::GetBoundST,
            "Return the bounds of this cell in (s,t)-space")
       .def("get_center_uv", &S2CellId::GetCenterUV,
-           "Return the center of the cell in (u,v) coordinates")
+           "Return the center of the cell in (u,v)-space")
       .def("get_bound_uv", &S2CellId::GetBoundUV,
            "Return the bounds of this cell in (u,v)-space")
-      .def_static("expanded_by_distance_uv", &S2CellId::ExpandedByDistanceUV,
-           py::arg("uv"), py::arg("distance"),
-           "Expand a (u,v) rectangle to contain all points within the\n"
-           "given distance of the boundary")
-      .def("get_center_si_ti", [](S2CellId self) {
-               int si, ti;
-               int face = self.GetCenterSiTi(&si, &ti);
-               return py::make_tuple(face, si, ti);
-           },
-           "Return the (face, si, ti) coordinates of the cell center")
-      .def("to_face_ij_orientation", [](S2CellId self) {
-               int i, j, orientation;
-               int face = self.ToFaceIJOrientation(&i, &j, &orientation);
-               return py::make_tuple(face, i, j, orientation);
-           },
-           "Return (face, i, j, orientation) for this cell")
       .def("child_position", [](S2CellId self) {
                MaybeThrowLevelOutOfRange(self.level(), 1, S2CellId::kMaxLevel);
                return self.child_position();
@@ -267,8 +249,6 @@ void bind_s2cell_id(py::module& m) {
            "Return a compact token string for this cell.\n\n"
            "Tokens preserve ordering and the round-trip\n"
            "from_token(cell.to_token()) == cell is guaranteed.")
-      .def("to_string", &S2CellId::ToString,
-           "Return the debug string (e.g. \"3/02\")")
       .def("range_min", &S2CellId::range_min,
            "Return the minimum cell id contained within this cell")
       .def("range_max", &S2CellId::range_max,
