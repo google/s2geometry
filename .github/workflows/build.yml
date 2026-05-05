@@ -21,6 +21,8 @@ jobs:
         runs-on:
           - ubuntu-22.04
           - ubuntu-latest
+          - ubuntu-22.04-arm
+          - ubuntu-24.04-arm
           # Standard (free) macOS runners.
           # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories
           - macos-14           # AArch64
@@ -49,7 +51,7 @@ jobs:
       - run: >
           cmake
           -DWITH_PYTHON=ON
-          -DWITH_PYTHON_LIMITED_API=${{ matrix.runs-on != 'ubuntu-22.04' && 'ON' || 'OFF' }}
+          -DWITH_PYTHON_LIMITED_API=${{ !startsWith(matrix.runs-on, 'ubuntu-22') && 'ON' || 'OFF' }}
           -DFETCH_ABSEIL=ON
           -DCMAKE_CXX_STANDARD=17
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
@@ -99,6 +101,7 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           # Standard (free) macOS runners.
           # TODO: Expand to the full set of 5 macOS runners if this won't
           # cause trouble for the PyPI upload.
