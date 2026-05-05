@@ -21,14 +21,13 @@ jobs:
         runs-on:
           - ubuntu-22.04
           - ubuntu-latest
-          # `large` is x86-64 and `xlarge` is AArch64.
-          # https://docs.github.com/en/actions/reference/runners/larger-runners#available-macos-larger-runners-and-labels
-          - macos-14-large
-          - macos-14-xlarge
-          - macos-latest-large
-          # macos-latest-xlarge may timeout.
-          # https://github.com/google/s2geometry/issues/409
-          - macos-latest-xlarge
+          # Standard (free) macOS runners.
+          # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories
+          - macos-14           # AArch64
+          - macos-15           # AArch64
+          - macos-26           # AArch64
+          - macos-15-intel     # x86-64
+          - macos-26-intel     # x86-64
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
@@ -100,11 +99,11 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-latest
-          # `large` is x86-64 and `xlarge` is AArch64.
-          - macos-latest-large
-          # macos-latest-xlarge may timeout.
-          # https://github.com/google/s2geometry/issues/409
-          - macos-latest-xlarge
+          # Standard (free) macOS runners.
+          # TODO: Expand to the full set of 5 macOS runners if this won't
+          # cause trouble for the PyPI upload.
+          - macos-15           # AArch64
+          - macos-15-intel     # x86-64
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     steps:
@@ -118,7 +117,7 @@ jobs:
           output-dir: dist/
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dist-${{ runner.os }}-${{ runner.arch }}
+          name: dist-${{ matrix.runs-on }}
           path: ./dist/
   python-publish:
     if: (github.event_name == 'release') && (github.event.action == 'released')
