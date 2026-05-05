@@ -83,7 +83,7 @@ jobs:
         disk-cache: true
         repository-cache: true
         # The Bazel workspace is in the src directory.
-        workspace-root: src
+        module-root: src
 
     - name: Build and Test
       run: |
