@@ -119,6 +119,7 @@ else()
     # match [-Wattributes]
     add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
+    add_definitions(-Wno-nullability-completeness)
     # Some files use sized deallocation, which should be enabled by
     # default for C++14 and later.  There appears to be a bug with clang
     # < 19 causing this not to be enabled.
