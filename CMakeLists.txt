@@ -4,6 +4,12 @@ cmake_minimum_required(VERSION 3.18)
 # see https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md#macos
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 
+# Custom "Dev" build type: optimized but without -DNDEBUG so that asserts remain
+# active.  Use with -DCMAKE_BUILD_TYPE=Dev.  Defining the _INIT variables before
+# project() seeds the cache via the same mechanism CMake uses for the built-in
+# build types (Debug, Release, etc.).
+set(CMAKE_CXX_FLAGS_DEV_INIT "-O1")
+
 project(s2-geometry
         VERSION 0.12.0)
 

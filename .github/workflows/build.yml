@@ -32,7 +32,7 @@ jobs:
           - macos-26-intel     # x86-64
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set NUM_CORES
@@ -53,6 +53,7 @@ jobs:
           -DWITH_PYTHON=ON
           -DWITH_PYTHON_LIMITED_API=${{ !startsWith(matrix.runs-on, 'ubuntu-22') && 'ON' || 'OFF' }}
           -DFETCH_ABSEIL=ON
+          -DCMAKE_BUILD_TYPE=Dev
           -DCMAKE_CXX_STANDARD=17
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -65,6 +66,7 @@ jobs:
         working-directory: build/
   bazel:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # We would like to test on the oldest and newest supported.
     # https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md
@@ -91,12 +93,13 @@ jobs:
       run: |
         bazel test \
           --config=ci \
+          --config=dev \
           --keep_going \
           --test_verbose_timeout_warnings \
           //...
       working-directory: src
   python:
-    timeout-minutes: 30
+    timeout-minutes: 10
     strategy:
       matrix:
         runs-on:
