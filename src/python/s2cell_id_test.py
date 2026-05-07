@@ -301,6 +301,52 @@ class TestS2CellId(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          "Child position 4 out of range [0, 3]")
 
+    def test_children(self):
+        face = s2.S2CellId.from_face(0)
+        children = list(face.children())
+        self.assertEqual(len(children), 4)
+        for child in children:
+            self.assertEqual(child.level, 1)
+
+    def test_children_positions(self):
+        face = s2.S2CellId.from_face(0)
+        children = list(face.children())
+        for i, child in enumerate(children):
+            self.assertEqual(child.child_position(), i)
+
+    def test_children_at_level(self):
+        face = s2.S2CellId.from_face(0)
+        # Level 2 descendants = 4^2 = 16 cells.
+        children = list(face.children(2))
+        self.assertEqual(len(children), 16)
+        for child in children:
+            self.assertEqual(child.level, 2)
+
+    def test_children_of_leaf_raises(self):
+        leaf = s2.S2CellId(s2.S2Point(1.0, 0.0, 0.0))
+        with self.assertRaises(ValueError) as cm:
+            list(leaf.children())
+        self.assertEqual(str(cm.exception),
+                         "Leaf cell has no children")
+
+    def test_cells_level_0(self):
+        cells = list(s2.S2CellId.cells(0))
+        self.assertEqual(len(cells), 6)
+        for i, cell in enumerate(cells):
+            self.assertEqual(cell.face, i)
+
+    def test_cells_level_1(self):
+        cells = list(s2.S2CellId.cells(1))
+        # 6 faces * 4 children = 24 cells.
+        self.assertEqual(len(cells), 24)
+        for cell in cells:
+            self.assertEqual(cell.level, 1)
+
+    def test_cells_level_out_of_range_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            s2.S2CellId.cells(31)
+        self.assertEqual(str(cm.exception), "Level 31 out of range [0, 30]")
+
     def test_edge_neighbors(self):
         cell = s2.S2CellId.from_face(0)
         neighbors = cell.edge_neighbors()
@@ -365,6 +411,101 @@ class TestS2CellId(unittest.TestCase):
     def test_repr_child(self):
         cell = s2.S2CellId.from_face(3).child(0).child(2)
         self.assertEqual(repr(cell), "S2CellId(3/02)")
+
+
+class TestS2CellIdRange(unittest.TestCase):
+    """Test cases for the S2CellIdRange class returned by children()/cells()."""
+
+    def test_len(self):
+        face = s2.S2CellId.from_face(0)
+        self.assertEqual(len(face.children()), 4)
+        self.assertEqual(len(face.children(2)), 16)
+
+    def test_size_matches_len(self):
+        face = s2.S2CellId.from_face(0)
+        self.assertEqual(face.children().size(), 4)
+        self.assertEqual(s2.S2CellId.cells(1).size(), 24)
+
+    def test_size_large_range(self):
+        # cells(20) = 6 * 4^20 ≈ 6.6e12; fits in int64 but iterating would
+        # be prohibitive. size() returns it without materializing.
+        self.assertEqual(s2.S2CellId.cells(20).size(), 6 * (4 ** 20))
+
+    def test_getitem(self):
+        face = s2.S2CellId.from_face(0)
+        children = face.children()
+        self.assertEqual(children[0].child_position(), 0)
+        self.assertEqual(children[3].child_position(), 3)
+        # Negative indexing.
+        self.assertEqual(children[-1].child_position(), 3)
+
+    def test_getitem_out_of_range_raises(self):
+        children = s2.S2CellId.from_face(0).children()
+        with self.assertRaises(IndexError):
+            children[4]
+        with self.assertRaises(IndexError):
+            children[-5]
+
+    def test_slice_basic(self):
+        face = s2.S2CellId.from_face(0)
+        children = face.children()
+        sliced = children[1:3]
+        self.assertEqual(len(sliced), 2)
+        self.assertEqual(list(sliced),
+                         [face.child(1), face.child(2)])
+
+    def test_slice_open_ended(self):
+        face = s2.S2CellId.from_face(0)
+        children = face.children()
+        self.assertEqual(list(children[:2]),
+                         [face.child(0), face.child(1)])
+        self.assertEqual(list(children[2:]),
+                         [face.child(2), face.child(3)])
+        self.assertEqual(list(children[:]), list(children))
+
+    def test_slice_negative_indices(self):
+        face = s2.S2CellId.from_face(0)
+        children = face.children()
+        self.assertEqual(list(children[-2:]),
+                         [face.child(2), face.child(3)])
+
+    def test_slice_clamps_out_of_range(self):
+        children = s2.S2CellId.from_face(0).children()
+        # Stop past the end is clamped.
+        self.assertEqual(len(children[0:100]), 4)
+        # Start past the end produces an empty range.
+        self.assertEqual(len(children[100:]), 0)
+
+    def test_slice_step_not_one_raises(self):
+        children = s2.S2CellId.from_face(0).children()
+        with self.assertRaises(ValueError) as cm:
+            children[::2]
+        self.assertIn("step 1", str(cm.exception))
+        with self.assertRaises(ValueError):
+            children[::-1]
+
+    def test_slice_returns_range(self):
+        # Slicing returns another S2CellIdRange, not a list.
+        children = s2.S2CellId.from_face(0).children()
+        sliced = children[1:3]
+        self.assertIsInstance(sliced, s2.S2CellIdRange)
+
+    def test_contains(self):
+        face = s2.S2CellId.from_face(0)
+        children = face.children()
+        child0 = face.child(0)
+        self.assertIn(child0, children)
+        # A cell from a different face is not in the range.
+        other = s2.S2CellId.from_face(1).child(0)
+        self.assertNotIn(other, children)
+        # A cell at the wrong level is not in the range.
+        self.assertNotIn(face, children)
+
+    def test_reversed(self):
+        face = s2.S2CellId.from_face(0)
+        children = list(face.children())
+        rev_children = list(reversed(face.children()))
+        self.assertEqual(rev_children, list(reversed(children)))
 
 
 if __name__ == "__main__":

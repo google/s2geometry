@@ -2,7 +2,10 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
+#include <cstdint>
+#include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #include "absl/strings/str_cat.h"
@@ -67,6 +70,113 @@ void MaybeThrowPositionOutOfRange(uint64_t pos) {
                      "]"));
   }
 }
+
+// A range of S2CellIds at the same level, supporting len, indexing, iteration,
+// reverse iteration, and contiguous slicing. The range is [begin, end) where
+// end is exclusive.
+struct S2CellIdRange {
+  S2CellId begin;
+  S2CellId end;
+
+  int64_t size() const {
+    return end.distance_from_begin() - begin.distance_from_begin();
+  }
+
+  // __len__ must fit in Py_ssize_t. The largest reachable range is
+  // S2CellId::cells(kMaxLevel) = 6 * 4^30 ≈ 6.9e18, which fits on 64-bit
+  // platforms (Py_ssize_t max ≈ 9.2e18) but overflows on 32-bit platforms
+  // (Py_ssize_t max ≈ 2.1e9). Example: on 32-bit Python,
+  // len(S2CellId.cells(15)) overflows because 6 * 4^15 ≈ 6.4e9 > 2.1e9.
+  // When the count exceeds Py_ssize_t, raise OverflowError and direct users
+  // to the size() helper which returns the full int64 count.
+  Py_ssize_t len() const {
+    int64_t n = size();
+    if (n > std::numeric_limits<Py_ssize_t>::max()) {
+      throw std::overflow_error(absl::StrCat(
+          "S2CellIdRange size ", n,
+          " exceeds Py_ssize_t max ",
+          std::numeric_limits<Py_ssize_t>::max(),
+          "; len() is not representable on this platform, use .size() instead"));
+    }
+    return static_cast<Py_ssize_t>(n);
+  }
+
+  S2CellId item(int64_t i) const {
+    int64_t n = size();
+    if (i < 0) i += n;
+    if (i < 0 || i >= n) {
+      throw py::index_error(absl::StrCat("index ", i, " out of range"));
+    }
+    return begin.advance(i);
+  }
+
+  // Python slice support. Only step 1 is allowed; other steps cannot be
+  // represented as a contiguous S2CellIdRange (they would require
+  // materializing up to 6 * 4^30 / step cells) and would be better
+  // expressed by the caller. reversed() already covers the step=-1 case.
+  S2CellIdRange slice(py::slice s) const {
+    py::object step_obj = s.attr("step");
+    if (!step_obj.is_none()) {
+      int64_t step = step_obj.cast<int64_t>();
+      if (step != 1) {
+        throw py::value_error(absl::StrCat(
+            "S2CellIdRange only supports slices with step 1 (got step ",
+            step, ")"));
+      }
+    }
+    int64_t n = size();
+    auto clamp = [n](int64_t i) {
+      if (i < 0) i += n;
+      if (i < 0) return int64_t{0};
+      if (i > n) return n;
+      return i;
+    };
+    py::object start_obj = s.attr("start");
+    py::object stop_obj = s.attr("stop");
+    int64_t start =
+        start_obj.is_none() ? int64_t{0} : clamp(start_obj.cast<int64_t>());
+    int64_t stop =
+        stop_obj.is_none() ? n : clamp(stop_obj.cast<int64_t>());
+    if (stop < start) stop = start;
+    return S2CellIdRange{begin.advance(start), begin.advance(stop)};
+  }
+
+  bool contains(S2CellId cell) const {
+    return cell >= begin && cell < end &&
+           cell.level() == begin.level();
+  }
+};
+
+// Forward iterator for S2CellIdRange.
+struct S2CellIdForwardIter {
+  S2CellId cur;
+  S2CellId end;
+
+  S2CellId next() {
+    if (cur == end) throw py::stop_iteration();
+    S2CellId result = cur;
+    cur = cur.next();
+    return result;
+  }
+};
+
+// Reverse iterator for S2CellIdRange.
+struct S2CellIdReverseIter {
+  S2CellId cur;
+  S2CellId begin;
+  bool done;
+
+  S2CellId next() {
+    if (done) throw py::stop_iteration();
+    S2CellId result = cur;
+    if (cur == begin) {
+      done = true;
+    } else {
+      cur = cur.prev();
+    }
+    return result;
+  }
+};
 
 }  // namespace
 
@@ -226,6 +336,36 @@ void bind_s2cell_id(py::module& m) {
            }, py::arg("position"),
            "Return the immediate child at the given position (0..3).\n\n"
            "Raises ValueError if this is a leaf cell or position is out of range.")
+      .def("children", [](S2CellId self, py::object level_obj) {
+               MaybeThrowIfLeaf(self);
+               S2CellId begin, end;
+               if (level_obj.is_none()) {
+                 begin = self.child_begin();
+                 end = self.child_end();
+               } else {
+                 int level = level_obj.cast<int>();
+                 MaybeThrowLevelOutOfRange(level, self.level(),
+                                           S2CellId::kMaxLevel);
+                 begin = self.child_begin(level);
+                 end = self.child_end(level);
+               }
+               return S2CellIdRange{begin, end};
+           }, py::arg("level") = py::none(),
+           "Return a range over the children of this cell.\n\n"
+           "With no argument, returns the 4 immediate children.\n"
+           "With a level argument, returns all descendants at that level.\n"
+           "The range supports len(), indexing, slicing, iteration, and\n"
+           "reversed().\n"
+           "Raises ValueError if this is a leaf cell or level is out of range.")
+      .def_static("cells", [](int level) {
+               MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
+               return S2CellIdRange{S2CellId::Begin(level),
+                                    S2CellId::End(level)};
+           }, py::arg("level"),
+           "Return a range over all cells at the given level across all 6 faces.\n\n"
+           "The range supports len(), indexing, slicing, iteration, and\n"
+           "reversed().\n"
+           "Warning: the number of cells grows as 6 * 4^level.")
       .def("edge_neighbors", [](S2CellId self) {
                S2CellId neighbors[4];
                self.GetEdgeNeighbors(neighbors);
@@ -279,4 +419,39 @@ void bind_s2cell_id(py::module& m) {
   cls.attr("MAX_LEVEL")    = S2CellId::kMaxLevel;
   cls.attr("MAX_POSITION") = S2CellId::kMaxPosition;
   cls.attr("NUM_FACES")    = S2CellId::kNumFaces;
+
+  py::class_<S2CellIdRange>(m, "S2CellIdRange",
+      "A range of S2CellIds at the same level along the Hilbert curve.\n\n"
+      "Supports len(), indexing, slicing (step=1 only), iteration, reversed(),\n"
+      "and 'in'. Returned from S2CellId.children() and S2CellId.cells().")
+      .def("__len__", &S2CellIdRange::len)
+      .def("size", &S2CellIdRange::size,
+           "Return the number of cells in the range as a 64-bit integer.\n\n"
+           "Equivalent to len() on 64-bit platforms; use this method when\n"
+           "the range may exceed Py_ssize_t (e.g. very large cells() ranges\n"
+           "on 32-bit Python).")
+      .def("__getitem__", &S2CellIdRange::item, py::arg("index"))
+      .def("__getitem__", &S2CellIdRange::slice, py::arg("slice"))
+      .def("__contains__", &S2CellIdRange::contains, py::arg("cell"))
+      .def("__iter__", [](const S2CellIdRange& self) {
+        return S2CellIdForwardIter{self.begin, self.end};
+      })
+      .def("__reversed__", [](const S2CellIdRange& self) {
+        if (self.size() == 0) {
+          return S2CellIdReverseIter{self.begin, self.begin, true};
+        }
+        return S2CellIdReverseIter{self.end.prev(), self.begin, false};
+      });
+
+  py::class_<S2CellIdForwardIter>(m, "S2CellIdForwardIter", py::module_local())
+      .def("__iter__", [](S2CellIdForwardIter& self) -> S2CellIdForwardIter& {
+        return self;
+      })
+      .def("__next__", &S2CellIdForwardIter::next);
+
+  py::class_<S2CellIdReverseIter>(m, "S2CellIdReverseIter", py::module_local())
+      .def("__iter__", [](S2CellIdReverseIter& self) -> S2CellIdReverseIter& {
+        return self;
+      })
+      .def("__next__", &S2CellIdReverseIter::next);
 }
