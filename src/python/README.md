@@ -149,7 +149,8 @@ Use the following sections to organize functions within the bindings files and t
 4. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
 5. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
 6. **Geometric operations** - Conversions, computations, containment checks, set operations, normalization, and distance calculations
-7. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
-8. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
-9. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`
-10. **Module-level functions** - Standalone functions (e.g., trigonometric functions for S1Angle)
+7. **Traversal** - Methods for navigating a cell hierarchy (e.g., `parent`, `child`, neighbor methods)
+8. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
+9. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
+10. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`
+11. **Module-level functions** - Standalone functions (e.g., trigonometric functions for S1Angle)

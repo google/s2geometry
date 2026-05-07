@@ -192,8 +192,6 @@ class TestS2CellId(unittest.TestCase):
         cell = s2.S2CellId.from_face(0)
         self.assertEqual(cell.to_token(), "1")
 
-    # Traversal
-
     def test_range_min_max_leaf(self):
         # A leaf cell's range is just itself.
         leaf = s2.S2CellId(s2.S2Point(1.0, 0.0, 0.0))
@@ -228,6 +226,21 @@ class TestS2CellId(unittest.TestCase):
         # Different faces don't intersect.
         face1 = s2.S2CellId.from_face(1)
         self.assertFalse(face.intersects(face1))
+
+    def test_get_common_ancestor_level(self):
+        # Two cells sharing the first two Hilbert curve steps on face 0
+        # diverge at level 2, so their common ancestor is at level 2.
+        base = s2.S2CellId.from_face(0).child(0).child(1)
+        cell1 = base.child(2)
+        cell2 = base.child(3)
+        self.assertEqual(cell1.get_common_ancestor_level(cell2), 2)
+
+    def test_get_common_ancestor_level_different_faces(self):
+        cell1 = s2.S2CellId.from_face(0)
+        cell2 = s2.S2CellId.from_face(1)
+        self.assertEqual(cell1.get_common_ancestor_level(cell2), -1)
+
+    # Traversal
 
     def test_parent(self):
         face = s2.S2CellId.from_face(0)
@@ -265,19 +278,6 @@ class TestS2CellId(unittest.TestCase):
             face.child(4)
         self.assertEqual(str(cm.exception),
                          "Child position 4 out of range [0, 3]")
-
-    def test_get_common_ancestor_level(self):
-        # Two cells sharing the first two Hilbert curve steps on face 0
-        # diverge at level 2, so their common ancestor is at level 2.
-        base = s2.S2CellId.from_face(0).child(0).child(1)
-        cell1 = base.child(2)
-        cell2 = base.child(3)
-        self.assertEqual(cell1.get_common_ancestor_level(cell2), 2)
-
-    def test_get_common_ancestor_level_different_faces(self):
-        cell1 = s2.S2CellId.from_face(0)
-        cell2 = s2.S2CellId.from_face(1)
-        self.assertEqual(cell1.get_common_ancestor_level(cell2), -1)
 
     def test_get_edge_neighbors(self):
         cell = s2.S2CellId.from_face(0)
