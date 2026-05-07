@@ -64,6 +64,71 @@ jobs:
       - if: always()
         run: ctest --parallel ${{ env.NUM_CORES }} --output-on-failure
         working-directory: build/
+  cmake-big-endian:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      ARM_TOOLCHAIN_VERSION: "13.3.rel1"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set NUM_CORES
+        run: |
+          NUM_CORES=$(getconf _NPROCESSORS_ONLN)
+          echo "NUM_CORES=$NUM_CORES" >> $GITHUB_ENV
+          echo "Detected $NUM_CORES cores"
+      - name: Install QEMU user-mode
+        run: sudo apt-get update && sudo apt-get install -y qemu-user
+      - name: Download Arm GNU Toolchain
+        run: |
+          TARBALL="arm-gnu-toolchain-${ARM_TOOLCHAIN_VERSION}-aarch64-aarch64_be-none-linux-gnu.tar.xz"
+          URL="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_TOOLCHAIN_VERSION}/binrel/${TARBALL}"
+          wget -q "$URL" "$URL.sha256asc"
+          sha256sum --check "$TARBALL.sha256asc"
+          tar xf "$TARBALL" -C /opt
+          TOOLCHAIN_DIR="/opt/arm-gnu-toolchain-${ARM_TOOLCHAIN_VERSION}-aarch64-aarch64_be-none-linux-gnu"
+          echo "${TOOLCHAIN_DIR}/bin" >> $GITHUB_PATH
+          echo "TOOLCHAIN_DIR=${TOOLCHAIN_DIR}" >> $GITHUB_ENV
+      - name: Create CMake toolchain file
+        run: |
+          cat > toolchain-aarch64_be.cmake << 'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR aarch64)
+          set(CMAKE_C_COMPILER   aarch64_be-none-linux-gnu-gcc)
+          set(CMAKE_CXX_COMPILER aarch64_be-none-linux-gnu-g++)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+          EOF
+      - run: mkdir build
+      - run: >
+          cmake
+          -DCMAKE_TOOLCHAIN_FILE=../toolchain-aarch64_be.cmake
+          -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64_be;-L;${{ env.TOOLCHAIN_DIR }}/aarch64_be-none-linux-gnu/libc"
+          -DWITH_PYTHON=OFF
+          -DFETCH_ABSEIL=ON
+          -DSKIP_OPENSSL_TESTS=ON
+          -DCMAKE_BUILD_TYPE=Dev
+          -DCMAKE_CXX_STANDARD=17
+          ..
+        working-directory: build/
+      - run: cmake --build . --parallel ${{ env.NUM_CORES }}
+        working-directory: build/
+      - if: always()
+        name: Run tests
+        run: |
+          # Known failures due to unimplemented big-endian encoding/decoding.
+          EXCLUDE="EncodedS2PointVectorTest\.(Empty|OnePoint|AllExceptionsBlock|RoundtripEncodingFast)"
+          EXCLUDE+="|EncodedS2ShapeIndex\.(OneEdge|RegularLoops|OverlappingPointClouds|OverlappingPolylines|OverlappingLoops|JavaByteCompatibility)"
+          EXCLUDE+="|S2LaxPolygonShape\.(EmptyPolygon|FullPolygon|ManyLoopPolygon|InvertedLoops|S2CoderWorks)"
+          EXCLUDE+="|S2LaxPolygonShapeTest\.BadLoopOffsets"
+          EXCLUDE+="|S2LaxPolylineShape\.S2CoderWorks"
+          EXCLUDE+="|S2Point\.CoderWorks"
+          EXCLUDE+="|S2RegionEncodeDecodeTest\.S2(Loop|Polygon|Polyline)"
+          EXCLUDE+="|FastEncodeTaggedShapes\.MixedShapes"
+          EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
+          EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure -E "$EXCLUDE"
+        working-directory: build/
   bazel:
     runs-on: ubuntu-latest
     timeout-minutes: 15
