@@ -74,11 +74,6 @@ class TestS2CellId(unittest.TestCase):
         cell = s2.S2CellId.from_face_ij(0, 0, 0)
         self.assertTrue(cell.is_leaf())
 
-    def test_cells_level_out_of_range_raises(self):
-        with self.assertRaises(ValueError) as cm:
-            s2.S2CellId.cells(31)
-        self.assertEqual(str(cm.exception), "Level 31 out of range [0, 30]")
-
     # Properties
 
     def test_id_property(self):
@@ -210,12 +205,12 @@ class TestS2CellId(unittest.TestCase):
         # direct child's range must sit within the parent's range.
         face = s2.S2CellId.from_face(0)
         self.assertLess(face.range_min(), face.range_max())
-        for child in face.children():
+        children = [face.child(i) for i in range(4)]
+        for child in children:
             self.assertGreaterEqual(child.range_min(), face.range_min())
             self.assertLessEqual(child.range_max(), face.range_max())
         # The first child's range_min equals the parent's, and likewise
         # the last child's range_max equals the parent's.
-        children = list(face.children())
         self.assertEqual(children[0].range_min(), face.range_min())
         self.assertEqual(children[-1].range_max(), face.range_max())
 
@@ -270,119 +265,6 @@ class TestS2CellId(unittest.TestCase):
             face.child(4)
         self.assertEqual(str(cm.exception),
                          "Child position 4 out of range [0, 3]")
-
-    def test_children(self):
-        face = s2.S2CellId.from_face(0)
-        children = list(face.children())
-        self.assertEqual(len(children), 4)
-        for child in children:
-            self.assertEqual(child.level(), 1)
-
-    def test_children_positions(self):
-        face = s2.S2CellId.from_face(0)
-        children = list(face.children())
-        for i, child in enumerate(children):
-            self.assertEqual(child.child_position(), i)
-
-    def test_children_at_level(self):
-        face = s2.S2CellId.from_face(0)
-        # Level 2 descendants = 4^2 = 16 cells.
-        children = list(face.children(2))
-        self.assertEqual(len(children), 16)
-        for child in children:
-            self.assertEqual(child.level(), 2)
-
-    def test_children_of_leaf_raises(self):
-        leaf = s2.S2CellId(s2.S2Point(1.0, 0.0, 0.0))
-        with self.assertRaises(ValueError) as cm:
-            list(leaf.children())
-        self.assertEqual(str(cm.exception),
-                         "Leaf cell has no children")
-
-    def test_cells_level_0(self):
-        cells = list(s2.S2CellId.cells(0))
-        self.assertEqual(len(cells), 6)
-        for i, cell in enumerate(cells):
-            self.assertEqual(cell.face(), i)
-
-    def test_cells_level_1(self):
-        cells = list(s2.S2CellId.cells(1))
-        # 6 faces * 4 children = 24 cells.
-        self.assertEqual(len(cells), 24)
-        for cell in cells:
-            self.assertEqual(cell.level(), 1)
-
-    def test_iter_from_cell(self):
-        # Iterating from face 3 should yield faces 3, 4, 5.
-        face3 = s2.S2CellId.from_face(3)
-        cells = list(face3)
-        self.assertEqual(len(cells), 3)
-        self.assertEqual(cells[0].face(), 3)
-        self.assertEqual(cells[1].face(), 4)
-        self.assertEqual(cells[2].face(), 5)
-
-    def test_iter_from_last_face(self):
-        face5 = s2.S2CellId.from_face(5)
-        cells = list(face5)
-        self.assertEqual(len(cells), 1)
-        self.assertEqual(cells[0].face(), 5)
-
-    def test_reversed_from_cell(self):
-        # Reversed from face 3 should yield faces 3, 2, 1, 0.
-        face3 = s2.S2CellId.from_face(3)
-        cells = list(reversed(face3))
-        self.assertEqual(len(cells), 4)
-        self.assertEqual(cells[0].face(), 3)
-        self.assertEqual(cells[1].face(), 2)
-        self.assertEqual(cells[2].face(), 1)
-        self.assertEqual(cells[3].face(), 0)
-
-    def test_reversed_from_first_face(self):
-        face0 = s2.S2CellId.from_face(0)
-        cells = list(reversed(face0))
-        self.assertEqual(len(cells), 1)
-        self.assertEqual(cells[0].face(), 0)
-
-    # S2CellIdRange — tests for the range class returned by children()/cells().
-    # These exercise the range class itself; the factory methods that return a
-    # range (children, cells) are covered separately above.
-
-    def test_s2cell_id_range_len(self):
-        face = s2.S2CellId.from_face(0)
-        self.assertEqual(len(face.children()), 4)
-        self.assertEqual(len(face.children(2)), 16)
-
-    def test_s2cell_id_range_getitem(self):
-        face = s2.S2CellId.from_face(0)
-        children = face.children()
-        self.assertEqual(children[0].child_position(), 0)
-        self.assertEqual(children[3].child_position(), 3)
-        # Negative indexing.
-        self.assertEqual(children[-1].child_position(), 3)
-
-    def test_s2cell_id_range_getitem_out_of_range_raises(self):
-        children = s2.S2CellId.from_face(0).children()
-        with self.assertRaises(IndexError):
-            children[4]
-        with self.assertRaises(IndexError):
-            children[-5]
-
-    def test_s2cell_id_range_contains(self):
-        face = s2.S2CellId.from_face(0)
-        children = face.children()
-        child0 = face.child(0)
-        self.assertIn(child0, children)
-        # A cell from a different face is not in the range.
-        other = s2.S2CellId.from_face(1).child(0)
-        self.assertNotIn(other, children)
-        # A cell at the wrong level is not in the range.
-        self.assertNotIn(face, children)
-
-    def test_s2cell_id_range_reversed(self):
-        face = s2.S2CellId.from_face(0)
-        children = list(face.children())
-        rev_children = list(reversed(face.children()))
-        self.assertEqual(rev_children, list(reversed(children)))
 
     def test_get_common_ancestor_level(self):
         # Two cells sharing the first two Hilbert curve steps on face 0

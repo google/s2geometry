@@ -2,7 +2,6 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
-#include <cstdint>
 #include <sstream>
 #include <vector>
 
@@ -54,62 +53,6 @@ void MaybeThrowChildPositionOutOfRange(int position) {
   }
 }
 
-// A range of S2CellIds at the same level, supporting len, indexing, iteration,
-// and reverse iteration. The range is [begin, end) where end is exclusive.
-struct S2CellIdRange {
-  S2CellId begin;
-  S2CellId end;
-
-  int64_t size() const {
-    return end.distance_from_begin() - begin.distance_from_begin();
-  }
-
-  S2CellId item(int64_t i) const {
-    int64_t len = size();
-    if (i < 0) i += len;
-    if (i < 0 || i >= len) {
-      throw py::index_error(absl::StrCat("index ", i, " out of range"));
-    }
-    return begin.advance(i);
-  }
-
-  bool contains(S2CellId cell) const {
-    return cell >= begin && cell < end &&
-           cell.level() == begin.level();
-  }
-};
-
-// Forward iterator for S2CellIdRange.
-struct S2CellIdForwardIter {
-  S2CellId cur;
-  S2CellId end;
-
-  S2CellId next() {
-    if (cur == end) throw py::stop_iteration();
-    S2CellId result = cur;
-    cur = cur.next();
-    return result;
-  }
-};
-
-// Reverse iterator for S2CellIdRange.
-struct S2CellIdReverseIter {
-  S2CellId cur;
-  S2CellId begin;
-  bool done;
-
-  S2CellId next() {
-    if (done) throw py::stop_iteration();
-    S2CellId result = cur;
-    if (cur == begin) {
-      done = true;
-    } else {
-      cur = cur.prev();
-    }
-    return result;
-  }
-};
-
 }  // namespace
 
 void bind_s2cell_id(py::module& m) {
@@ -139,11 +82,9 @@ void bind_s2cell_id(py::module& m) {
            "Construct a leaf cell containing the given S2LatLng.")
 
       // Constants
-      .def_property_readonly_static("MAX_LEVEL",
-           [](py::object) { return S2CellId::kMaxLevel; },
+      .def_readonly_static("MAX_LEVEL", &S2CellId::kMaxLevel,
            "Maximum cell subdivision level (30)")
-      .def_property_readonly_static("NUM_FACES",
-           [](py::object) { return S2CellId::kNumFaces; },
+      .def_readonly_static("NUM_FACES", &S2CellId::kNumFaces,
            "Number of cube faces (6)")
 
       // Factory methods
@@ -273,45 +214,6 @@ void bind_s2cell_id(py::module& m) {
            }, py::arg("position"),
            "Return the immediate child at the given position (0..3).\n\n"
            "Raises ValueError if this is a leaf cell or position is out of range.")
-      .def("children", [](S2CellId self, py::object level_obj) {
-               MaybeThrowIfLeaf(self);
-               S2CellId begin, end;
-               if (level_obj.is_none()) {
-                 begin = self.child_begin();
-                 end = self.child_end();
-               } else {
-                 int level = level_obj.cast<int>();
-                 MaybeThrowLevelOutOfRange(level, self.level(),
-                                           S2CellId::kMaxLevel);
-                 begin = self.child_begin(level);
-                 end = self.child_end(level);
-               }
-               return S2CellIdRange{begin, end};
-           }, py::arg("level") = py::none(),
-           "Return a range over the children of this cell.\n\n"
-           "With no argument, returns the 4 immediate children.\n"
-           "With a level argument, returns all descendants at that level.\n"
-           "The range supports len(), indexing, iteration, and reversed().\n"
-           "Raises ValueError if this is a leaf cell or level is out of range.")
-      .def_static("cells", [](int level) {
-               MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
-               return S2CellIdRange{S2CellId::Begin(level),
-                                    S2CellId::End(level)};
-           }, py::arg("level"),
-           "Return a range over all cells at the given level across all 6 faces.\n\n"
-           "The range supports len(), indexing, iteration, and reversed().\n"
-           "Warning: the number of cells grows as 6 * 4^level.")
-      .def("__iter__", [](S2CellId self) {
-               return S2CellIdForwardIter{self, S2CellId::End(self.level())};
-           },
-           "Iterate along the Hilbert curve at this cell's level,\n"
-           "starting from this cell to the end of the level.")
-      .def("__reversed__", [](S2CellId self) {
-               return S2CellIdReverseIter{self, S2CellId::Begin(self.level()),
-                                          false};
-           },
-           "Iterate in reverse along the Hilbert curve at this cell's level,\n"
-           "starting from this cell back to the beginning of the level.")
       .def("get_edge_neighbors", [](S2CellId self) {
                S2CellId neighbors[4];
                self.GetEdgeNeighbors(neighbors);
@@ -360,30 +262,4 @@ void bind_s2cell_id(py::module& m) {
         oss << id;
         return oss.str();
       });
-
-  py::class_<S2CellIdRange>(m, "S2CellIdRange")
-      .def("__len__", &S2CellIdRange::size)
-      .def("__getitem__", &S2CellIdRange::item, py::arg("index"))
-      .def("__contains__", &S2CellIdRange::contains, py::arg("cell"))
-      .def("__iter__", [](const S2CellIdRange& self) {
-        return S2CellIdForwardIter{self.begin, self.end};
-      })
-      .def("__reversed__", [](const S2CellIdRange& self) {
-        if (self.size() == 0) {
-          return S2CellIdReverseIter{self.begin, self.begin, true};
-        }
-        return S2CellIdReverseIter{self.end.prev(), self.begin, false};
-      });
-
-  py::class_<S2CellIdForwardIter>(m, "S2CellIdForwardIter")
-      .def("__iter__", [](S2CellIdForwardIter& self) -> S2CellIdForwardIter& {
-        return self;
-      })
-      .def("__next__", &S2CellIdForwardIter::next);
-
-  py::class_<S2CellIdReverseIter>(m, "S2CellIdReverseIter")
-      .def("__iter__", [](S2CellIdReverseIter& self) -> S2CellIdReverseIter& {
-        return self;
-      })
-      .def("__next__", &S2CellIdReverseIter::next);
 }
