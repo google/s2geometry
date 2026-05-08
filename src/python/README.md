@@ -148,7 +148,7 @@ Use the following sections to organize functions within the bindings files and t
 1. **Constants** - Class-level constants in upper snake case (e.g., `S2CellId.MAX_LEVEL`, `S2CellId.NUM_FACES`)
 1. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
 1. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
-1. **Geometric operations** - Conversions, computations, containment checks, set operations, normalization, and distance calculations
+1. **Geometric operations** - All other methods including conversions, computations, containment checks, set operations, normalization, and distance calculations
 1. **Traversal** - Methods for navigating a cell hierarchy (e.g., `parent`, `child`, neighbor methods)
 1. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
 1. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)

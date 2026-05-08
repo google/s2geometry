@@ -3,6 +3,9 @@ common --enable_bzlmod
 common --cxxopt=-std=c++20
 common --announce_rc
 
+# Faster tests than fastbuild (-O0).
+build:dev --copt=-O1
+
 # CI-specific flags
 common:ci --color=yes
 build:ci --show_progress_rate_limit=10

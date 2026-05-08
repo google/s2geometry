@@ -16,15 +16,13 @@ requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: POSIX",
-    "License :: OSI Approved :: Apache Software License",
 ]
 dynamic = [
     "version",
 ]
 
-[project.license]
-file = "LICENSE"
-content-type = "text/plain"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "AUTHORS"]
 
 [project.urls]
 Source = "https://github.com/google/s2geometry"

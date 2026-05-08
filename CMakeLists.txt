@@ -4,6 +4,12 @@ cmake_minimum_required(VERSION 3.18)
 # see https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md#macos
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 
+# Custom "Dev" build type: optimized but without -DNDEBUG so that asserts remain
+# active.  Use with -DCMAKE_BUILD_TYPE=Dev.  Defining the _INIT variables before
+# project() seeds the cache via the same mechanism CMake uses for the built-in
+# build types (Debug, Release, etc.).
+set(CMAKE_CXX_FLAGS_DEV_INIT "-O1")
+
 project(s2-geometry
         VERSION 0.12.0)
 
@@ -120,6 +126,10 @@ else()
     add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
     add_definitions(-Wno-nullability-completeness)
+    # Suppress noisy AArch64 ABI notes about parameter passing changes in
+    # GCC 10.1.  Irrelevant since we don't mix objects from old compilers.
+    # TODO: Use check_cxx_compiler_flag(-Wno-psabi) to guard this.
+    add_compile_options(-Wno-psabi)
     # Some files use sized deallocation, which should be enabled by
     # default for C++14 and later.  There appears to be a bug with clang
     # < 19 causing this not to be enabled.
@@ -131,6 +141,7 @@ endif()
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
+# TODO: Unused?  bignum_test uses target_include_directories instead.
 include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
@@ -297,7 +308,12 @@ set_target_properties(s2 PROPERTIES
     VERSION ${PROJECT_VERSION})
 
 if (BUILD_TESTS)
-  find_package(OpenSSL REQUIRED)
+  # Used to avoid otherwise unneeded dependency for AArch64-BE cross-compilation.
+  # Currently only bignum_test requires OpenSSL.
+  option(SKIP_OPENSSL_TESTS "Skip tests that require OpenSSL." OFF)
+  if (NOT SKIP_OPENSSL_TESTS)
+    find_package(OpenSSL REQUIRED)
+  endif()
 
   # We could use a pre-installed benchmark with
   # `find_package(benchmark QUIET)` then, `if (NOT benchmark_FOUND)`, but
@@ -471,9 +487,13 @@ if (BUILD_TESTS)
       src/s2/s2wrapped_shape_test.cc
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc
-      src/s2/util/math/exactfloat/bignum_test.cc
       src/s2/util/math/exactfloat/exactfloat_test.cc
       src/s2/util/math/exactfloat/exactfloat_underflow_test.cc)
+
+  if (NOT SKIP_OPENSSL_TESTS)
+    list(APPEND S2TestFiles
+         src/s2/util/math/exactfloat/bignum_test.cc)
+  endif()
 
   enable_testing()
 
@@ -504,12 +524,14 @@ if (BUILD_TESTS)
     gtest_discover_tests(${test})
   endforeach()
 
-  target_link_libraries(
-    bignum_test
-    ${OPENSSL_LIBRARIES})
+  if (NOT SKIP_OPENSSL_TESTS)
+    target_link_libraries(
+      bignum_test
+      ${OPENSSL_LIBRARIES})
 
-  target_include_directories(
-    bignum_test PRIVATE ${OPENSSL_INCLUDE_DIR})
+    target_include_directories(
+      bignum_test PRIVATE ${OPENSSL_INCLUDE_DIR})
+  endif()
 
 endif()
 

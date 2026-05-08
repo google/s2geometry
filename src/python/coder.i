@@ -124,6 +124,9 @@
 %unignore Encoder::putdouble(double);
 %unignore Encoder::putfloat(float);
 %unignore Encoder::reset(void *, size_t);
+// Silence SWIG Warning 362: operator= can't be wrapped in Python.
+// %ignoreall is active but the warning fires at parse time regardless.
+%ignore Encoder::operator=;
 
 %include "s2/util/coding/coder.h"
 
