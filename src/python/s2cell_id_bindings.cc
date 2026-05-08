@@ -36,13 +36,20 @@ void MaybeThrowFaceOutOfRange(int face) {
 
 void MaybeThrowIfLeaf(S2CellId id) {
   if (id.is_leaf()) {
-    throw py::value_error("Leaf cell has no children");
+    throw py::value_error("Function invalid for leaf cells");
   }
 }
 
 void MaybeThrowIfFace(S2CellId id) {
   if (id.is_face()) {
-    throw py::value_error("Face cell has no parent");
+    throw py::value_error("Function invalid for face cells");
+  }
+}
+
+void MaybeThrowCellIdOutOfRange(const char* name, int value, int min, int max) {
+  if (value < min || value > max) {
+    throw py::value_error(
+        absl::StrCat(name, " ", value, " out of range [", min, ", ", max, "]"));
   }
 }
 
@@ -114,6 +121,8 @@ void bind_s2cell_id(py::module& m) {
            "Raises ValueError if the token is malformed.")
       .def_static("from_face_ij", [](int face, int i, int j) {
                MaybeThrowFaceOutOfRange(face);
+               MaybeThrowCellIdOutOfRange("i", i, 0, S2CellId::kMaxSize - 1);
+               MaybeThrowCellIdOutOfRange("j", j, 0, S2CellId::kMaxSize - 1);
                return S2CellId::FromFaceIJ(face, i, j);
            },
            py::arg("face"), py::arg("i"), py::arg("j"),
@@ -130,12 +139,12 @@ void bind_s2cell_id(py::module& m) {
            "Return true if this is a top-level face cell (level == 0)")
 
       // Geometric operations
-      .def("face", &S2CellId::face,
-           "Return which cube face this cell belongs to (0..5)")
-      .def("pos", &S2CellId::pos,
-           "Return the position along the Hilbert curve over this face")
-      .def("level", &S2CellId::level,
-           "Return the subdivision level (0..kMaxLevel)")
+      .def_property_readonly("face", &S2CellId::face,
+           "Which cube face this cell belongs to (0..5)")
+      .def_property_readonly("pos", &S2CellId::pos,
+           "The position along the Hilbert curve over this face")
+      .def_property_readonly("level", &S2CellId::level,
+           "The subdivision level (0..kMaxLevel)")
       .def("get_size_ij",
            py::overload_cast<>(&S2CellId::GetSizeIJ, py::const_),
            "Return the edge length of this cell in (i,j)-space")
@@ -222,6 +231,7 @@ void bind_s2cell_id(py::module& m) {
            },
            "Return the four cells adjacent across this cell's edges")
       .def("get_vertex_neighbors", [](S2CellId self, int level) {
+               MaybeThrowIfFace(self);
                MaybeThrowLevelOutOfRange(level, 0, self.level() - 1);
                std::vector<S2CellId> output;
                self.AppendVertexNeighbors(level, &output);

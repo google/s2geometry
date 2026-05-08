@@ -42,7 +42,7 @@ class TestS2CellId(unittest.TestCase):
     def test_from_face(self):
         for face in range(6):
             cell = s2.S2CellId.from_face(face)
-            self.assertEqual(cell.face(), face)
+            self.assertEqual(cell.face, face)
             self.assertTrue(cell.is_face())
 
     def test_from_face_out_of_range_raises(self):
@@ -54,8 +54,8 @@ class TestS2CellId(unittest.TestCase):
 
     def test_from_face_pos_level(self):
         cell = s2.S2CellId.from_face_pos_level(0, 0, 0)
-        self.assertEqual(cell.level(), 0)
-        self.assertEqual(cell.face(), 0)
+        self.assertEqual(cell.level, 0)
+        self.assertEqual(cell.face, 0)
 
     def test_from_token_roundtrip(self):
         cell = s2.S2CellId.from_face(3)
@@ -73,6 +73,18 @@ class TestS2CellId(unittest.TestCase):
     def test_from_face_ij(self):
         cell = s2.S2CellId.from_face_ij(0, 0, 0)
         self.assertTrue(cell.is_leaf())
+
+    def test_from_face_ij_i_out_of_range_raises(self):
+        with self.assertRaises(ValueError):
+            s2.S2CellId.from_face_ij(0, -1, 0)
+        with self.assertRaises(ValueError):
+            s2.S2CellId.from_face_ij(0, 1 << s2.S2CellId.MAX_LEVEL, 0)
+
+    def test_from_face_ij_j_out_of_range_raises(self):
+        with self.assertRaises(ValueError):
+            s2.S2CellId.from_face_ij(0, 0, -1)
+        with self.assertRaises(ValueError):
+            s2.S2CellId.from_face_ij(0, 0, 1 << s2.S2CellId.MAX_LEVEL)
 
     # Properties
 
@@ -100,13 +112,13 @@ class TestS2CellId(unittest.TestCase):
 
     def test_face(self):
         for f in range(6):
-            self.assertEqual(s2.S2CellId.from_face(f).face(), f)
+            self.assertEqual(s2.S2CellId.from_face(f).face, f)
 
     def test_level(self):
         face = s2.S2CellId.from_face(0)
-        self.assertEqual(face.level(), 0)
+        self.assertEqual(face.level, 0)
         child = face.child(0)
-        self.assertEqual(child.level(), 1)
+        self.assertEqual(child.level, 1)
 
     def test_to_point(self):
         cell = s2.S2CellId.from_face(0)
@@ -158,11 +170,11 @@ class TestS2CellId(unittest.TestCase):
     def test_get_size_ij(self):
         # In (i,j)-space a face spans 2^kMaxLevel = 2^30 units.
         face = s2.S2CellId.from_face(0)
-        self.assertEqual(face.get_size_ij(), 1 << 30)
+        self.assertEqual(face.get_size_ij(), 1 << s2.S2CellId.MAX_LEVEL)
 
     def test_get_size_ij_for_level(self):
         # Level 0 cells span 2^kMaxLevel in (i,j); leaf cells span 1.
-        self.assertEqual(s2.S2CellId.get_size_ij_for_level(0), 1 << 30)
+        self.assertEqual(s2.S2CellId.get_size_ij_for_level(0), 1 << s2.S2CellId.MAX_LEVEL)
         self.assertEqual(s2.S2CellId.get_size_ij_for_level(30), 1)
 
     def test_get_size_st(self):
@@ -252,7 +264,7 @@ class TestS2CellId(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             face.parent()
         self.assertEqual(str(cm.exception),
-                         "Face cell has no parent")
+                         "Function invalid for face cells")
 
     def test_parent_at_level(self):
         cell = s2.S2CellId.from_face(0).child(0).child(1).child(2)
@@ -263,14 +275,14 @@ class TestS2CellId(unittest.TestCase):
         face = s2.S2CellId.from_face(0)
         for pos in range(4):
             child = face.child(pos)
-            self.assertEqual(child.level(), 1)
+            self.assertEqual(child.level, 1)
 
     def test_child_of_leaf_raises(self):
         leaf = s2.S2CellId(s2.S2Point(1.0, 0.0, 0.0))
         with self.assertRaises(ValueError) as cm:
             leaf.child(0)
         self.assertEqual(str(cm.exception),
-                         "Leaf cell has no children")
+                         "Function invalid for leaf cells")
 
     def test_child_position_out_of_range_raises(self):
         face = s2.S2CellId.from_face(0)
