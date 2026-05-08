@@ -548,12 +548,19 @@ public:
 %unignore S2BooleanOperation::S2BooleanOperation(OpType, S2Builder::Layer*, const Options&);
 %ignore S2BooleanOperation::S2BooleanOperation(OpType, std::unique_ptr<S2Builder::Layer>, const Options&);
 %ignore S2BooleanOperation::S2BooleanOperation(OpType, std::unique_ptr<S2Builder::Layer>);
+// Silence SWIG Warning 362: operator= can't be wrapped in Python.
+%ignore S2BooleanOperation::operator=;
 %unignore S2BufferOperation;
 %unignore S2BufferOperation::Build;
 %unignore S2BufferOperation::Options;
 %unignore S2BufferOperation::S2BufferOperation(S2Builder::Layer*);
 %ignore S2BufferOperation::S2BufferOperation(std::unique_ptr<S2Builder::Layer>);
 %ignore S2BufferOperation::S2BufferOperation(std::unique_ptr<S2Builder::Layer>, const Options&);
+// Silence SWIG Warning 362: operator= can't be wrapped in Python.
+%ignore S2BufferOperation::operator=;
+// Silence SWIG Warning 325: nested class Options can't be wrapped directly.
+// S2BufferOperationOptions provides a workaround wrapper.
+%warnfilter(325) S2BufferOperation;
 %unignore S2BufferOperationOptions;
 %unignore S2BufferOperationOptions::set_buffer_radius;
 %unignore S2BufferOperationOptions::set_error_fraction;
