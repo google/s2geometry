@@ -144,11 +144,11 @@ To add bindings for a new class:
 Use the following sections to organize functions within the bindings files and tests. Secondarily, follow the order in which functions are declared in the C++ headers.
 
 1. **Constructors** - Default constructors and constructors with parameters
-2. **Factory methods** - Static factory methods (e.g., `from_degrees`, `from_radians`, `zero`, `invalid`)
-3. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
-4. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
-5. **Geometric operations** - All other methods including conversions, computations, containment checks, set operations, normalization, and distance calculations
-6. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
-7. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
-8. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`
-9. **Module-level functions** - Standalone functions (e.g., trigonometric functions for S1Angle)
+1. **Factory methods** - Static factory methods (e.g., `from_degrees`, `from_radians`, `zero`, `invalid`)
+1. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
+1. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
+1. **Geometric operations** - All other methods including conversions, computations, containment checks, set operations, normalization, and distance calculations
+1. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
+1. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
+1. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`
+1. **Module-level functions** - Standalone functions (e.g., trigonometric functions for S1Angle)
