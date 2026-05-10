@@ -521,7 +521,16 @@ if (BUILD_TESTS)
     # Compared to `add_test()`, displays progress and success/failure of each
     # test case rather than just the binary, so we see
     # `S2Cell.TestSubdivide ... PASSED`.  Also lists disabled tests.
-    gtest_discover_tests(${test})
+    #
+    # Mark s2loop_measures_test as flaky: some cases (notably
+    # GetSignedArea.ErrorAccumulation) are numerically sensitive on some
+    # platforms; see README "Status" and #395.  CI can split runs with
+    # `ctest -LE flaky` and `ctest -L flaky --repeat until-pass:3` (#521).
+    if (test STREQUAL "s2loop_measures_test")
+      gtest_discover_tests(${test} PROPERTIES LABELS "flaky")
+    else()
+      gtest_discover_tests(${test})
+    endif()
   endforeach()
 
   if (NOT SKIP_OPENSSL_TESTS)

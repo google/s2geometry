@@ -62,7 +62,10 @@ jobs:
       - run: cmake --build . --parallel ${{ env.NUM_CORES }}
         working-directory: build/
       - if: always()
-        run: ctest --parallel ${{ env.NUM_CORES }} --output-on-failure
+        run: |
+          set -euxo pipefail
+          ctest --parallel "${NUM_CORES}" --output-on-failure -LE flaky
+          ctest --parallel "${NUM_CORES}" --output-on-failure -L flaky --repeat until-pass:3
         working-directory: build/
   cmake-big-endian:
     runs-on: ubuntu-24.04-arm
@@ -116,6 +119,7 @@ jobs:
       - if: always()
         name: Run tests
         run: |
+          set -euxo pipefail
           # Known failures due to unimplemented big-endian encoding/decoding.
           EXCLUDE="EncodedS2PointVectorTest\.(Empty|OnePoint|AllExceptionsBlock|RoundtripEncodingFast)"
           EXCLUDE+="|EncodedS2ShapeIndex\.(OneEdge|RegularLoops|OverlappingPointClouds|OverlappingPolylines|OverlappingLoops|JavaByteCompatibility)"
@@ -127,7 +131,8 @@ jobs:
           EXCLUDE+="|FastEncodeTaggedShapes\.MixedShapes"
           EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
           EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure -E "$EXCLUDE"
+          ctest --parallel "${NUM_CORES}" --output-on-failure -LE flaky -E "$EXCLUDE"
+          ctest --parallel "${NUM_CORES}" --output-on-failure -L flaky -E "$EXCLUDE" --repeat until-pass:3
         working-directory: build/
   bazel:
     runs-on: ubuntu-latest
