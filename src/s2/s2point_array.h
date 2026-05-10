@@ -32,7 +32,7 @@ namespace s2internal {
 
 struct S2PointArrayDeleter {
   void operator()(S2Point* p) const {
-    ::operator delete(p, std::align_val_t(alignof(*p)));
+    ::operator delete(p, std::align_val_t(alignof(S2Point)));
   }
 };
 
@@ -46,7 +46,7 @@ inline UniqueS2PointArray MakeS2PointArrayForOverwrite(int32_t size) {
   // zero-initializes the memory, so we use `::operator new` directly.
   ABSL_DCHECK_GE(size, 0);
   S2Point* p = static_cast<S2Point*>(
-      ::operator new(size * sizeof(*p), std::align_val_t(alignof(*p))));
+      ::operator new(size * sizeof(S2Point), std::align_val_t(alignof(S2Point))));
   return UniqueS2PointArray(p);
 }
 
