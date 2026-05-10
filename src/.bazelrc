@@ -3,10 +3,27 @@ common --enable_bzlmod
 common --cxxopt=-std=c++20
 common --announce_rc
 
+# OSS #458: compiler-specific warning/c++ flags (keep in conceptual sync with the
+# `check_cxx_compiler_flag` gate in CMakeLists.txt). Typical usage:
+#   bazel test --config=dev --config=clang   # AppleClang / explicit Clang
+#   bazel test --config=dev --config=gcc     # host GCC on Linux CI
+#
+# Keep these minimal: entries should correspond to churn we deliberately silence.
+
+# Host GCC toolchains (typical ubuntu-latest CI).
+build:gcc --cxxopt=-Wno-attributes
+build:gcc --cxxopt=-Wno-psabi
+
+# Clang toolchains (typical Darwin / explicit clang setups).
+build:clang --cxxopt=-Wno-attributes
+build:clang --cxxopt=-Wno-nullability-completeness
+build:clang --cxxopt=-fsized-deallocation
+
 # Faster tests than fastbuild (-O0).
 build:dev --copt=-O1
 
-# CI-specific flags
+# CI-specific flags (also select the GCC-aligned warning config).
 common:ci --color=yes
+common:ci --config=gcc
 build:ci --show_progress_rate_limit=10
 test:ci --test_output=errors

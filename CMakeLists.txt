@@ -119,23 +119,30 @@ if (MSVC)
     # Make sure Windows doesn't define min/max macros that interfere with STL
     add_definitions(-DNOMINMAX)
 else()
-    # Avoid megabytes of warnings like:
-    # util/math/vector.h:178:16: warning: optimization attribute on
-    # ‘double sqrt(double)’ follows definition but the attribute doesn’t
-    # match [-Wattributes]
-    add_definitions(-Wno-attributes)
-    add_definitions(-Wno-deprecated-declarations)
-    add_definitions(-Wno-nullability-completeness)
-    # Suppress noisy AArch64 ABI notes about parameter passing changes in
-    # GCC 10.1.  Irrelevant since we don't mix objects from old compilers.
-    # TODO: Use check_cxx_compiler_flag(-Wno-psabi) to guard this.
-    add_compile_options(-Wno-psabi)
-    # Some files use sized deallocation, which should be enabled by
-    # default for C++14 and later.  There appears to be a bug with clang
-    # < 19 causing this not to be enabled.
-    # https://github.com/google/s2geometry/issues/411#issuecomment-2726949607
-    # This can be removed when clang19 is the minimum supported version.
-    add_compile_options(-fsized-deallocation)
+  # OSS #458: silence only observed warning churn, guarded by toolchain support.
+
+  check_cxx_compiler_flag(-Wno-attributes S2_CXX_SUPPORTS_WNO_ATTRIBUTES)
+  if (S2_CXX_SUPPORTS_WNO_ATTRIBUTES)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-attributes>)
+  endif()
+
+  check_cxx_compiler_flag(-Wno-nullability-completeness
+                          S2_CXX_SUPPORTS_WNO_NULLABILITY_COMPLETENESS)
+  if (S2_CXX_SUPPORTS_WNO_NULLABILITY_COMPLETENESS)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-nullability-completeness>)
+  endif()
+
+  check_cxx_compiler_flag(-Wno-psabi S2_CXX_SUPPORTS_WNO_PSABI)
+  if (S2_CXX_SUPPORTS_WNO_PSABI)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-psabi>)
+  endif()
+
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    check_cxx_compiler_flag(-fsized-deallocation S2_CXX_SUPPORTS_FSIZED_DEALLOCATION)
+    if (S2_CXX_SUPPORTS_FSIZED_DEALLOCATION)
+      add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fsized-deallocation>)
+    endif()
+  endif()
 endif()
 
 # If OpenSSL is installed in a non-standard location, configure with
