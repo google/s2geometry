@@ -45,9 +45,8 @@ inline UniqueS2PointArray MakeS2PointArrayForOverwrite(int32_t size) {
   // Note that even `std::make_unique_for_overwrite<S2Point[]>(size)`
   // zero-initializes the memory, so we use `::operator new` directly.
   ABSL_DCHECK_GE(size, 0);
-  void* raw = ::operator new(size * sizeof(S2Point),
-                             std::align_val_t(alignof(S2Point)));
-  S2Point* const p = static_cast<S2Point*>(raw);
+  S2Point* p = static_cast<S2Point*>(::operator new(
+      size * sizeof(S2Point), std::align_val_t(alignof(S2Point))));
   return UniqueS2PointArray(p);
 }
 
