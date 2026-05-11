@@ -64,8 +64,12 @@ jobs:
       - if: always()
         run: |
           set -euxo pipefail
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure --label-exclude flaky
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure --label-regex flaky --repeat until-pass:3
+          FLAKY="$(tr -d '\n\r' < s2_ctest_flaky_tests.regex)"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --exclude-regex "${FLAKY}"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --tests-regex "${FLAKY}" \
+            --repeat until-pass:3
         working-directory: build/
   cmake-big-endian:
     runs-on: ubuntu-24.04-arm
@@ -131,12 +135,13 @@ jobs:
           EXCLUDE+="|FastEncodeTaggedShapes\.MixedShapes"
           EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
           EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
+          FLAKY="$(tr -d '\n\r' < s2_ctest_flaky_tests.regex)"
+          EXCLUDE_MAIN="${EXCLUDE}|${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
-            --label-exclude flaky \
-            --exclude-regex "$EXCLUDE"
+            --exclude-regex "${EXCLUDE_MAIN}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
-            --label-regex flaky \
-            --exclude-regex "$EXCLUDE" \
+            --tests-regex "${FLAKY}" \
+            --exclude-regex "${EXCLUDE}" \
             --repeat until-pass:3
         working-directory: build/
   bazel:

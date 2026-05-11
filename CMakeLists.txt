@@ -497,17 +497,16 @@ if (BUILD_TESTS)
 
   enable_testing()
 
-  # Tests that use randomized / statistical bounds (e.g. ConfidenceBound) or
-  # that have open flaky reports — mark so CI can ctest --label-exclude/--repeat
-  # (#521). Not expected to fail every run on a healthy tree.  Keep sorted;
-  # the same targets set flaky = True in src/BUILD.bazel.
-  set(FLAKY_TESTS
-      s2closest_edge_query_test
-      s2convex_hull_query_test
-      s2furthest_edge_query_test
-      s2loop_measures_test
-      s2polygon_test
-      s2predicates_test)
+  # Names of flaky gtest cases (CTest matches substrings against this POSIX
+  # extended regex — same style as cmake-big-endian's EXCLUDE). CI passes it to
+  # ctest --exclude-regex / --tests-regex with --repeat until-pass.
+  set(_s2_ctest_flaky_regex
+      [=[
+GetSignedArea\.ErrorAccumulation|CompareEdgeDistance\.Consistency|AllowedShapeTests/S2ClosestEdgeQueryShapeTest\.(CircleEdges|FractalEdges|PointCloudEdges)/[0-9]+|S2FurthestEdgeQuery\.PointCloudEdges|S2ConvexHullQuery\.PointsInsideHull|S2Polygon\.TestApproxContainsAndDisjoint
+]=])
+  string(STRIP "${_s2_ctest_flaky_regex}" _s2_ctest_flaky_regex)
+  file(WRITE "${CMAKE_BINARY_DIR}/s2_ctest_flaky_tests.regex"
+       "${_s2_ctest_flaky_regex}")
 
   foreach (test_cc ${S2TestFiles})
     get_filename_component(test ${test_cc} NAME_WE)
@@ -533,11 +532,7 @@ if (BUILD_TESTS)
     # Compared to `add_test()`, displays progress and success/failure of each
     # test case rather than just the binary, so we see
     # `S2Cell.TestSubdivide ... PASSED`.  Also lists disabled tests.
-    if (test IN_LIST FLAKY_TESTS)
-      gtest_discover_tests(${test} PROPERTIES LABELS "flaky")
-    else()
-      gtest_discover_tests(${test})
-    endif()
+    gtest_discover_tests(${test})
   endforeach()
 
   if (NOT SKIP_OPENSSL_TESTS)

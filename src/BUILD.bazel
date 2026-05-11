@@ -839,7 +839,6 @@ cc_test(
 cc_test(
     name = "s2closest_edge_query_test",
     srcs = [":s2/s2closest_edge_query_test.cc"],
-    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -890,7 +889,6 @@ cc_test(
 cc_test(
     name = "s2convex_hull_query_test",
     srcs = [":s2/s2convex_hull_query_test.cc"],
-    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1002,7 +1000,6 @@ cc_test(
 cc_test(
     name = "s2furthest_edge_query_test",
     srcs = [":s2/s2furthest_edge_query_test.cc"],
-    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1093,7 +1090,6 @@ cc_test(
 cc_test(
     name = "s2loop_measures_test",
     srcs = [":s2/s2loop_measures_test.cc"],
-    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1235,7 +1231,6 @@ cc_test(
 cc_test(
     name = "s2polygon_test",
     srcs = [":s2/s2polygon_test.cc"],
-    flaky = True,
     shard_count = 5,
     deps = [
         ":s2",
@@ -1287,7 +1282,6 @@ cc_test(
 cc_test(
     name = "s2predicates_test",
     srcs = [":s2/s2predicates_test.cc"],
-    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
