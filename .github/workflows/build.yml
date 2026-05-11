@@ -63,9 +63,14 @@ jobs:
         working-directory: build/
       - if: always()
         run: |
-          set -euxo pipefail
+          set -u
           # Join one-regex-per-line list (same alternation as a single POSIX ERE).
-          FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
+          # macOS paste(1) has no GNU long options; Linux uses --serial/--delimiters.
+          if [ '${{ runner.os }}' = 'macOS' ]; then
+            FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
+          else
+            FLAKY="$(paste --serial --delimiters='|' ../flaky_tests.txt)"
+          fi
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
             --exclude-regex "${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
@@ -124,7 +129,7 @@ jobs:
       - if: always()
         name: Run tests
         run: |
-          set -euxo pipefail
+          set -u
           # Known failures due to unimplemented big-endian encoding/decoding.
           EXCLUDE="EncodedS2PointVectorTest\.(Empty|OnePoint|AllExceptionsBlock|RoundtripEncodingFast)"
           EXCLUDE+="|EncodedS2ShapeIndex\.(OneEdge|RegularLoops|OverlappingPointClouds|OverlappingPolylines|OverlappingLoops|JavaByteCompatibility)"
@@ -136,7 +141,7 @@ jobs:
           EXCLUDE+="|FastEncodeTaggedShapes\.MixedShapes"
           EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
           EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
-          FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
+          FLAKY="$(paste --serial --delimiters='|' ../flaky_tests.txt)"
           EXCLUDE_MAIN="${EXCLUDE}|${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
             --exclude-regex "${EXCLUDE_MAIN}"

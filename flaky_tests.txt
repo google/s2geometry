@@ -1,6 +1,6 @@
-GetSignedArea\.ErrorAccumulation
-CompareEdgeDistance\.Consistency
 AllowedShapeTests/S2ClosestEdgeQueryShapeTest\.(CircleEdges|FractalEdges|PointCloudEdges)/[0-9]+
-S2FurthestEdgeQuery\.PointCloudEdges
+CompareEdgeDistance\.Consistency
+GetSignedArea\.ErrorAccumulation
 S2ConvexHullQuery\.PointsInsideHull
+S2FurthestEdgeQuery\.PointCloudEdges
 S2Polygon\.TestApproxContainsAndDisjoint
