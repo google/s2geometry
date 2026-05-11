@@ -1,0 +1,40 @@
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+
+    steps:
+      # Default clone depth is enough here: we only run buildifier on the
+      # checked-out tree (no PR-range git diffs in this workflow).
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install buildifier
+        run: |
+          set -u
+          BUILDIFIER_VERSION=8.5.1
+          BUILDIFIER_SHA256=887377fc64d23a850f4d18a077b5db05b19913f4b99b270d193f3c7334b5a9a7
+          BUILDIFIER_DL=/tmp/buildifier
+          curl -fsSL -o "${BUILDIFIER_DL}" \
+            "https://github.com/bazelbuild/buildtools/releases/download/v${BUILDIFIER_VERSION}/buildifier-linux-amd64"
+          echo "${BUILDIFIER_SHA256}  ${BUILDIFIER_DL}" | sha256sum --check -
+          chmod +x "${BUILDIFIER_DL}"
+          sudo mv "${BUILDIFIER_DL}" /usr/local/bin/buildifier
+
+      - name: Check Starlark / BUILD formatting (buildifier)
+        run: buildifier -r -mode=check .
