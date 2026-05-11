@@ -138,9 +138,8 @@ jobs:
           EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
           EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
           FLAKY="$(paste --serial --delimiters='|' ../flaky_tests.txt)"
-          EXCLUDE_MAIN="${EXCLUDE}|${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
-            --exclude-regex "${EXCLUDE_MAIN}"
+            --exclude-regex "${EXCLUDE}|${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
             --tests-regex "${FLAKY}" \
             --exclude-regex "${EXCLUDE}" \
