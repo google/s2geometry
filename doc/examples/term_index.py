@@ -1,14 +1,14 @@
-"""
-This example shows how to add spatial data to an information retrieval
-system.  Such systems work by converting documents into a collection of
-"index terms" (e.g., representing words or phrases), and then building an
+"""Example of spatial indexing with S2RegionTermIndexer.
+
+Information retrieval systems work by converting documents into a collection
+of "index terms" (e.g., representing words or phrases), and then building an
 "inverted index" that maps each term to a list of documents (and document
 positions) where that term occurs.
 
-This example shows how to convert spatial data into index terms, which can
-then be indexed along with the other document information.
-
-This is a port of the C++ term_index.cc example for the Python API.
+This example demonstrates converting spatial data (points) into S2 index
+terms using S2RegionTermIndexer, building an inverted index, and querying it
+for all points within a given radius.  It is a port of the C++ term_index.cc
+example.
 """
 import argparse
 from collections import defaultdict

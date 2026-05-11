@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Tests for S2 Geometry SWIG bindings."""
+
 import math
 import unittest
 from collections import defaultdict
