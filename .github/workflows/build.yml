@@ -64,7 +64,8 @@ jobs:
       - if: always()
         run: |
           set -euxo pipefail
-          FLAKY="$(tr -d '\n\r' < s2_ctest_flaky_tests.regex)"
+          # Join one-regex-per-line list (same alternation as a single POSIX ERE).
+          FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
             --exclude-regex "${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
@@ -135,7 +136,7 @@ jobs:
           EXCLUDE+="|FastEncodeTaggedShapes\.MixedShapes"
           EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
           EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
-          FLAKY="$(tr -d '\n\r' < s2_ctest_flaky_tests.regex)"
+          FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
           EXCLUDE_MAIN="${EXCLUDE}|${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
             --exclude-regex "${EXCLUDE_MAIN}"

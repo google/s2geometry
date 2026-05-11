@@ -497,17 +497,6 @@ if (BUILD_TESTS)
 
   enable_testing()
 
-  # Names of flaky gtest cases (CTest matches substrings against this POSIX
-  # extended regex — same style as cmake-big-endian's EXCLUDE). CI passes it to
-  # ctest --exclude-regex / --tests-regex with --repeat until-pass.
-  set(_s2_ctest_flaky_regex
-      [=[
-GetSignedArea\.ErrorAccumulation|CompareEdgeDistance\.Consistency|AllowedShapeTests/S2ClosestEdgeQueryShapeTest\.(CircleEdges|FractalEdges|PointCloudEdges)/[0-9]+|S2FurthestEdgeQuery\.PointCloudEdges|S2ConvexHullQuery\.PointsInsideHull|S2Polygon\.TestApproxContainsAndDisjoint
-]=])
-  string(STRIP "${_s2_ctest_flaky_regex}" _s2_ctest_flaky_regex)
-  file(WRITE "${CMAKE_BINARY_DIR}/s2_ctest_flaky_tests.regex"
-       "${_s2_ctest_flaky_regex}")
-
   foreach (test_cc ${S2TestFiles})
     get_filename_component(test ${test_cc} NAME_WE)
     add_executable(${test} ${test_cc})
