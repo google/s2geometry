@@ -146,7 +146,13 @@ jobs:
             --repeat until-pass:3
         working-directory: build/
   bazel:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          - macos-latest
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 15
 
     # We would like to test on the oldest and newest supported.
