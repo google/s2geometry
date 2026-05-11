@@ -3,27 +3,28 @@ common --enable_bzlmod
 common --cxxopt=-std=c++20
 common --announce_rc
 
-# OSS #458: compiler-specific warning/c++ flags (keep in conceptual sync with the
-# `check_cxx_compiler_flag` gate in CMakeLists.txt). Typical usage:
-#   bazel test --config=dev --config=clang   # AppleClang / explicit Clang
-#   bazel test --config=dev --config=gcc     # host GCC on Linux CI
-#
-# Keep these minimal: entries should correspond to churn we deliberately silence.
+# C++ warning flags for non-MSVC toolchains. Keep in line with CMakeLists.txt.
+# `bazel test --config=ci` uses `build:ci --config=gcc` (Linux CI). For local
+# macOS / Clang builds, pass `--config=clang` in addition to your other flags.
 
-# Host GCC toolchains (typical ubuntu-latest CI).
+# Host GCC (Linux CI).
 build:gcc --cxxopt=-Wno-attributes
+build:gcc --cxxopt=-Wno-deprecated-declarations
+build:gcc --cxxopt=-Wno-sign-compare
 build:gcc --cxxopt=-Wno-psabi
 
-# Clang toolchains (typical Darwin / explicit clang setups).
+# Clang (e.g. macOS).
 build:clang --cxxopt=-Wno-attributes
+build:clang --cxxopt=-Wno-deprecated-declarations
+build:clang --cxxopt=-Wno-sign-compare
 build:clang --cxxopt=-Wno-nullability-completeness
 build:clang --cxxopt=-fsized-deallocation
 
 # Faster tests than fastbuild (-O0).
 build:dev --copt=-O1
 
-# CI-specific flags (also select the GCC-aligned warning config).
+# CI-specific flags.
 common:ci --color=yes
-common:ci --config=gcc
+build:ci --config=gcc
 build:ci --show_progress_rate_limit=10
 test:ci --test_output=errors

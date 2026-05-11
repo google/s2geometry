@@ -14,7 +14,6 @@ project(s2-geometry
         VERSION 0.12.0)
 
 include(CMakeDependentOption)
-include(CheckCXXCompilerFlag)
 include(FeatureSummary)
 include(FetchContent)
 include(FindPackageHandleStandardArgs)
@@ -119,30 +118,25 @@ if (MSVC)
     # Make sure Windows doesn't define min/max macros that interfere with STL
     add_definitions(-DNOMINMAX)
 else()
-  # OSS #458: silence only observed warning churn, guarded by toolchain support.
-
-  check_cxx_compiler_flag(-Wno-attributes S2_CXX_SUPPORTS_WNO_ATTRIBUTES)
-  if (S2_CXX_SUPPORTS_WNO_ATTRIBUTES)
+    # Avoid megabytes of warnings like:
+    # util/math/vector.h:178:16: warning: optimization attribute on
+    # ‘double sqrt(double)’ follows definition but the attribute doesn’t
+    # match [-Wattributes]
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-attributes>)
-  endif()
-
-  check_cxx_compiler_flag(-Wno-nullability-completeness
-                          S2_CXX_SUPPORTS_WNO_NULLABILITY_COMPLETENESS)
-  if (S2_CXX_SUPPORTS_WNO_NULLABILITY_COMPLETENESS)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-compare>)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-nullability-completeness>)
-  endif()
-
-  check_cxx_compiler_flag(-Wno-psabi S2_CXX_SUPPORTS_WNO_PSABI)
-  if (S2_CXX_SUPPORTS_WNO_PSABI)
+    # Suppress noisy AArch64 ABI notes about parameter passing changes in
+    # GCC 10.1.  Irrelevant since we don't mix objects from old compilers.
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-psabi>)
-  endif()
-
-  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    check_cxx_compiler_flag(-fsized-deallocation S2_CXX_SUPPORTS_FSIZED_DEALLOCATION)
-    if (S2_CXX_SUPPORTS_FSIZED_DEALLOCATION)
-      add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fsized-deallocation>)
+    # Some files use sized deallocation, which should be enabled by
+    # default for C++14 and later.  There appears to be a bug with clang
+    # < 19 causing this not to be enabled.
+    # https://github.com/google/s2geometry/issues/411#issuecomment-2726949607
+    # This can be removed when clang19 is the minimum supported version.
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fsized-deallocation>)
     endif()
-  endif()
 endif()
 
 # If OpenSSL is installed in a non-standard location, configure with
