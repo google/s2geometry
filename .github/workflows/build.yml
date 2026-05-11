@@ -82,8 +82,8 @@ jobs:
         run: |
           TARBALL="arm-gnu-toolchain-${ARM_TOOLCHAIN_VERSION}-aarch64-aarch64_be-none-linux-gnu.tar.xz"
           URL="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_TOOLCHAIN_VERSION}/binrel/${TARBALL}"
-          wget -q "$URL" "$URL.sha256asc"
-          sha256sum --check "$TARBALL.sha256asc"
+          wget -q "$URL"
+          echo "46e8e8a573766f761efe7a16240bc2355b67cb30fab7ecc508b03f36c3034290  $TARBALL" | sha256sum --check
           tar xf "$TARBALL" -C /opt
           TOOLCHAIN_DIR="/opt/arm-gnu-toolchain-${ARM_TOOLCHAIN_VERSION}-aarch64-aarch64_be-none-linux-gnu"
           echo "${TOOLCHAIN_DIR}/bin" >> $GITHUB_PATH
