@@ -499,12 +499,13 @@ if (BUILD_TESTS)
 
   # Tests that use randomized / statistical bounds (e.g. ConfidenceBound) or
   # that have open flaky reports — mark so CI can ctest --label-exclude/--repeat
-  # (#521). Not expected to fail every run on a healthy tree.
+  # (#521). Not expected to fail every run on a healthy tree.  Keep sorted;
+  # the same targets set flaky = True in src/BUILD.bazel.
   set(FLAKY_TESTS
-      s2loop_measures_test
       s2closest_edge_query_test
-      s2furthest_edge_query_test
       s2convex_hull_query_test
+      s2furthest_edge_query_test
+      s2loop_measures_test
       s2polygon_test
       s2predicates_test)
 
