@@ -4,6 +4,7 @@ import math
 import unittest
 import s2geometry_pybind as s2
 
+
 class TestS2Point(unittest.TestCase):
     """Test cases for S2Point bindings."""
 
@@ -28,7 +29,7 @@ class TestS2Point(unittest.TestCase):
         self.assertAlmostEqual(p.y, 4.0)
         self.assertAlmostEqual(p.z, 0.0)
         self.assertAlmostEqual(p.norm(), 5.0)  # Not on unit sphere
-        
+
         # User may call normalize() to obtain a unit vector.
         normalized = p.normalize()
         self.assertAlmostEqual(normalized.norm(), 1.0)

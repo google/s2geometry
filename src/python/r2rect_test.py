@@ -158,9 +158,9 @@ class TestR2Rect(unittest.TestCase):
 
     def test_contains_point(self):
         rect = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(2.0, 2.0))
-        self.assertTrue(rect.contains_point(s2.R2Point(1.0, 1.0)))   # interior
-        self.assertTrue(rect.contains_point(s2.R2Point(0.0, 0.0)))   # corner
-        self.assertTrue(rect.contains_point(s2.R2Point(2.0, 2.0)))   # corner
+        self.assertTrue(rect.contains_point(s2.R2Point(1.0, 1.0)))  # interior
+        self.assertTrue(rect.contains_point(s2.R2Point(0.0, 0.0)))  # corner
+        self.assertTrue(rect.contains_point(s2.R2Point(2.0, 2.0)))  # corner
         self.assertFalse(rect.contains_point(s2.R2Point(3.0, 1.0)))  # outside
 
     def test_interior_contains_point(self):
@@ -258,8 +258,7 @@ class TestR2Rect(unittest.TestCase):
     def test_approx_equals(self):
         r1 = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(1.0, 1.0))
         r2 = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(1.0, 1.0))
-        r3 = s2.R2Rect(s2.R2Point(0.0, 0.0),
-                        s2.R2Point(1.0, 1.0 + 1e-16))
+        r3 = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(1.0, 1.0 + 1e-16))
         r4 = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(1.0, 1.1))
         self.assertTrue(r1.approx_equals(r2))
         self.assertTrue(r1.approx_equals(r3))

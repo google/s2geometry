@@ -10,6 +10,7 @@ terms using S2RegionTermIndexer, building an inverted index, and querying it
 for all points within a given radius.  It is a port of the C++ term_index.cc
 example.
 """
+
 import argparse
 from collections import defaultdict
 
@@ -25,14 +26,16 @@ def main():
         )
     )
     parser.add_argument(
-        '--num_documents', type=int, default=10000, help="Number of documents"
+        "--num_documents", type=int, default=10000, help="Number of documents"
     )
     parser.add_argument(
-        '--num_queries', type=int, default=10000, help="Number of queries"
+        "--num_queries", type=int, default=10000, help="Number of queries"
     )
     parser.add_argument(
-        '--query_radius_km', type=float, default=100,
-        help="Query radius in kilometers"
+        "--query_radius_km",
+        type=float,
+        default=100,
+        help="Query radius in kilometers",
     )
 
     args = parser.parse_args()
