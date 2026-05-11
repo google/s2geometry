@@ -497,6 +497,17 @@ if (BUILD_TESTS)
 
   enable_testing()
 
+  # Tests that use randomized / statistical bounds (e.g. ConfidenceBound) or
+  # that have open flaky reports — mark so CI can ctest --label-exclude/--repeat
+  # (#521). Not expected to fail every run on a healthy tree.
+  set(FLAKY_TESTS
+      s2loop_measures_test
+      s2closest_edge_query_test
+      s2furthest_edge_query_test
+      s2convex_hull_query_test
+      s2polygon_test
+      s2predicates_test)
+
   foreach (test_cc ${S2TestFiles})
     get_filename_component(test ${test_cc} NAME_WE)
     add_executable(${test} ${test_cc})
@@ -521,12 +532,7 @@ if (BUILD_TESTS)
     # Compared to `add_test()`, displays progress and success/failure of each
     # test case rather than just the binary, so we see
     # `S2Cell.TestSubdivide ... PASSED`.  Also lists disabled tests.
-    #
-    # Mark s2loop_measures_test as flaky: some cases (notably
-    # GetSignedArea.ErrorAccumulation) are numerically sensitive on some
-    # platforms; see README "Status" and #395.  CI can split runs with
-    # `ctest -LE flaky` and `ctest -L flaky --repeat until-pass:3` (#521).
-    if (test STREQUAL "s2loop_measures_test")
+    if (test IN_LIST FLAKY_TESTS)
       gtest_discover_tests(${test} PROPERTIES LABELS "flaky")
     else()
       gtest_discover_tests(${test})

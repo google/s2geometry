@@ -64,8 +64,8 @@ jobs:
       - if: always()
         run: |
           set -euxo pipefail
-          ctest --parallel "${NUM_CORES}" --output-on-failure -LE flaky
-          ctest --parallel "${NUM_CORES}" --output-on-failure -L flaky --repeat until-pass:3
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure --label-exclude flaky
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure --label-regex flaky --repeat until-pass:3
         working-directory: build/
   cmake-big-endian:
     runs-on: ubuntu-24.04-arm
@@ -131,8 +131,13 @@ jobs:
           EXCLUDE+="|FastEncodeTaggedShapes\.MixedShapes"
           EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
           EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
-          ctest --parallel "${NUM_CORES}" --output-on-failure -LE flaky -E "$EXCLUDE"
-          ctest --parallel "${NUM_CORES}" --output-on-failure -L flaky -E "$EXCLUDE" --repeat until-pass:3
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --label-exclude flaky \
+            --exclude-regex "$EXCLUDE"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --label-regex flaky \
+            --exclude-regex "$EXCLUDE" \
+            --repeat until-pass:3
         working-directory: build/
   bazel:
     runs-on: ubuntu-latest
