@@ -144,8 +144,8 @@ To add bindings for a new class:
 Use the following sections to organize functions within the bindings files and tests. Secondarily, follow the order in which functions are declared in the C++ headers.
 
 1. **Constructors** - Default constructors and constructors with parameters
-1. **Factory methods** - Static factory methods (e.g., `from_degrees`, `from_radians`, `zero`, `invalid`)
 1. **Constants** - Class-level constants in upper snake case (e.g., `S2CellId.MAX_LEVEL`, `S2CellId.NUM_FACES`)
+1. **Factory methods** - Static factory methods (e.g., `from_degrees`, `from_radians`, `zero`, `invalid`)
 1. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
 1. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
 1. **Geometric operations** - All other methods including conversions, computations, containment checks, set operations, normalization, and distance calculations

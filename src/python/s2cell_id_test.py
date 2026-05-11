@@ -181,6 +181,12 @@ class TestS2CellId(unittest.TestCase):
         # In (s,t)-space a face spans the full unit interval, so size is 1.0.
         self.assertAlmostEqual(s2.S2CellId.from_face(0).get_size_st(), 1.0)
 
+    def test_get_size_st_for_level(self):
+        # Level-0 cells span the full unit interval; level-30 cells span 1/2^30.
+        self.assertAlmostEqual(s2.S2CellId.get_size_st_for_level(0), 1.0)
+        self.assertAlmostEqual(s2.S2CellId.get_size_st_for_level(30),
+                               1.0 / (1 << 30))
+
     def test_child_position(self):
         face = s2.S2CellId.from_face(0)
         for pos in range(4):
@@ -302,10 +308,15 @@ class TestS2CellId(unittest.TestCase):
         self.assertGreaterEqual(len(neighbors), 3)
         self.assertLessEqual(len(neighbors), 4)
 
-    def test_get_vertex_neighbors_level_too_high_raises(self):
-        cell = s2.S2CellId.from_face(0)
+    def test_get_vertex_neighbors_face_cell_raises(self):
+        face = s2.S2CellId.from_face(0)
         with self.assertRaises(ValueError):
-            cell.get_vertex_neighbors(0)  # level must be < cell level
+            face.get_vertex_neighbors(0)
+
+    def test_get_vertex_neighbors_level_out_of_range_raises(self):
+        cell = s2.S2CellId.from_face(0).child(0).child(1).child(2)
+        with self.assertRaises(ValueError):
+            cell.get_vertex_neighbors(3)  # level must be < self.level() (3)
 
     def test_get_all_neighbors(self):
         cell = s2.S2CellId.from_face(0).child(0)
