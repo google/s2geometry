@@ -65,12 +65,8 @@ jobs:
         run: |
           set -u
           # Join one-regex-per-line list (same alternation as a single POSIX ERE).
-          # macOS paste(1) has no GNU long options; Linux uses --serial/--delimiters.
-          if [ '${{ runner.os }}' = 'macOS' ]; then
-            FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
-          else
-            FLAKY="$(paste --serial --delimiters='|' ../flaky_tests.txt)"
-          fi
+          # macOS doesn't support long options.
+          FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
             --exclude-regex "${FLAKY}"
           ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
