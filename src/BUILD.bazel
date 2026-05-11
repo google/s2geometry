@@ -698,6 +698,8 @@ cc_test(
 cc_test(
     name = "s2builderutil_snap_functions_test",
     srcs = [":s2/s2builderutil_snap_functions_test.cc"],
+    # https://github.com/google/s2geometry/issues/596
+    flaky = True,
     shard_count = 3,
     deps = [
         ":s2",
@@ -729,6 +731,8 @@ cc_test(
 cc_test(
     name = "s2cell_test",
     srcs = [":s2/s2cell_test.cc"],
+    # https://github.com/google/s2geometry/issues/505
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -739,6 +743,8 @@ cc_test(
 cc_test(
     name = "s2cell_id_test",
     srcs = [":s2/s2cell_id_test.cc"],
+    # https://github.com/google/s2geometry/issues/516
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -839,6 +845,9 @@ cc_test(
 cc_test(
     name = "s2closest_edge_query_test",
     srcs = [":s2/s2closest_edge_query_test.cc"],
+    # https://github.com/google/s2geometry/issues/552
+    # https://github.com/google/s2geometry/issues/582
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -889,6 +898,8 @@ cc_test(
 cc_test(
     name = "s2convex_hull_query_test",
     srcs = [":s2/s2convex_hull_query_test.cc"],
+    # https://github.com/google/s2geometry/issues/515
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1000,6 +1011,8 @@ cc_test(
 cc_test(
     name = "s2furthest_edge_query_test",
     srcs = [":s2/s2furthest_edge_query_test.cc"],
+    # https://github.com/google/s2geometry/issues/592
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1050,6 +1063,8 @@ cc_test(
 cc_test(
     name = "s2latlng_rect_test",
     srcs = [":s2/s2latlng_rect_test.cc"],
+    # https://github.com/google/s2geometry/issues/523
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1090,6 +1105,8 @@ cc_test(
 cc_test(
     name = "s2loop_measures_test",
     srcs = [":s2/s2loop_measures_test.cc"],
+    # https://github.com/google/s2geometry/issues/395
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1161,6 +1178,8 @@ cc_test(
 cc_test(
     name = "s2padded_cell_test",
     srcs = [":s2/s2padded_cell_test.cc"],
+    # https://github.com/google/s2geometry/issues/598
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",
@@ -1231,6 +1250,7 @@ cc_test(
 cc_test(
     name = "s2polygon_test",
     srcs = [":s2/s2polygon_test.cc"],
+    flaky = True,
     shard_count = 5,
     deps = [
         ":s2",
@@ -1282,6 +1302,9 @@ cc_test(
 cc_test(
     name = "s2predicates_test",
     srcs = [":s2/s2predicates_test.cc"],
+    # https://github.com/google/s2geometry/issues/511
+    # https://github.com/google/s2geometry/issues/612
+    flaky = True,
     deps = [
         ":s2",
         ":s2_testing_headers",

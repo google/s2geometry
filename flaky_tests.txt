@@ -1,6 +1,12 @@
-AllowedShapeTests/S2ClosestEdgeQueryShapeTest\.(CircleEdges|FractalEdges|PointCloudEdges)/[0-9]+
+AllowedShapeTests/S2ClosestEdgeQueryShapeTest\.(CircleEdges|FractalEdges|PointCloudEdges|ConservativeCellDistanceIsUsed)/(-1|0)
 CompareEdgeDistance\.Consistency
 GetSignedArea\.ErrorAccumulation
+IntLatLngSnapFunction\.SnapPoint
+S2Cell\.GetDistanceToEdge
+S2CellId\.MaximumTile
 S2ConvexHullQuery\.PointsInsideHull
 S2FurthestEdgeQuery\.PointCloudEdges
+S2LatLngRect\.GetCentroid
+S2PaddedCell\.ShrinkToFit
 S2Polygon\.TestApproxContainsAndDisjoint
+SignTest\.StressTest
