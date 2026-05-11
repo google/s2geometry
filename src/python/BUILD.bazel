@@ -1,5 +1,5 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 
 package(default_visibility = ["//visibility:private"])
@@ -31,8 +31,8 @@ pybind_extension(
         ":r2rect_bindings",
         ":s1angle_bindings",
         ":s1interval_bindings",
-        ":s2point_bindings",
         ":s2latlng_bindings",
+        ":s2point_bindings",
     ],
 )
 
@@ -73,7 +73,7 @@ pybind_library(
     srcs = ["s1interval_bindings.cc"],
     deps = [
         "//:s2",
-	 "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
