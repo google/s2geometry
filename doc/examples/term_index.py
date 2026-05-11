@@ -1,15 +1,16 @@
-"""
-This example shows how to add spatial data to an information retrieval
-system.  Such systems work by converting documents into a collection of
-"index terms" (e.g., representing words or phrases), and then building an
+"""Example of spatial indexing with S2RegionTermIndexer.
+
+Information retrieval systems work by converting documents into a collection
+of "index terms" (e.g., representing words or phrases), and then building an
 "inverted index" that maps each term to a list of documents (and document
 positions) where that term occurs.
 
-This example shows how to convert spatial data into index terms, which can
-then be indexed along with the other document information.
-
-This is a port of the C++ term_index.cc example for the Python API.
+This example demonstrates converting spatial data (points) into S2 index
+terms using S2RegionTermIndexer, building an inverted index, and querying it
+for all points within a given radius.  It is a port of the C++ term_index.cc
+example.
 """
+
 import argparse
 from collections import defaultdict
 
@@ -25,14 +26,16 @@ def main():
         )
     )
     parser.add_argument(
-        '--num_documents', type=int, default=10000, help="Number of documents"
+        "--num_documents", type=int, default=10000, help="Number of documents"
     )
     parser.add_argument(
-        '--num_queries', type=int, default=10000, help="Number of queries"
+        "--num_queries", type=int, default=10000, help="Number of queries"
     )
     parser.add_argument(
-        '--query_radius_km', type=float, default=100,
-        help="Query radius in kilometers"
+        "--query_radius_km",
+        type=float,
+        default=100,
+        help="Query radius in kilometers",
     )
 
     args = parser.parse_args()

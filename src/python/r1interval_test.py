@@ -1,7 +1,7 @@
 """Tests for R1Interval pybind11 bindings."""
 
-import unittest
 import math
+import unittest
 import s2geometry_pybind as s2
 
 
@@ -101,16 +101,16 @@ class TestR1Interval(unittest.TestCase):
 
     def test_contains_point(self):
         interval = s2.R1Interval(1.0, 3.0)
-        self.assertTrue(interval.contains_point(1.0))   # lo boundary
-        self.assertTrue(interval.contains_point(2.0))   # interior
-        self.assertTrue(interval.contains_point(3.0))   # hi boundary
+        self.assertTrue(interval.contains_point(1.0))  # lo boundary
+        self.assertTrue(interval.contains_point(2.0))  # interior
+        self.assertTrue(interval.contains_point(3.0))  # hi boundary
         self.assertFalse(interval.contains_point(0.5))  # below
         self.assertFalse(interval.contains_point(3.5))  # above
 
     def test_interior_contains_point(self):
         interval = s2.R1Interval(1.0, 3.0)
         self.assertFalse(interval.interior_contains_point(1.0))  # lo boundary
-        self.assertTrue(interval.interior_contains_point(2.0))   # interior
+        self.assertTrue(interval.interior_contains_point(2.0))  # interior
         self.assertFalse(interval.interior_contains_point(3.0))  # hi boundary
 
     def test_contains_interval(self):

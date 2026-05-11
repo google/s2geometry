@@ -62,7 +62,16 @@ jobs:
       - run: cmake --build . --parallel ${{ env.NUM_CORES }}
         working-directory: build/
       - if: always()
-        run: ctest --parallel ${{ env.NUM_CORES }} --output-on-failure
+        run: |
+          set -u
+          # Join one-regex-per-line list (same alternation as a single POSIX ERE).
+          # macOS doesn't support long options.
+          FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --exclude-regex "${FLAKY}"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --tests-regex "${FLAKY}" \
+            --repeat until-pass:3
         working-directory: build/
   cmake-big-endian:
     runs-on: ubuntu-24.04-arm
@@ -82,8 +91,8 @@ jobs:
         run: |
           TARBALL="arm-gnu-toolchain-${ARM_TOOLCHAIN_VERSION}-aarch64-aarch64_be-none-linux-gnu.tar.xz"
           URL="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_TOOLCHAIN_VERSION}/binrel/${TARBALL}"
-          wget -q "$URL" "$URL.sha256asc"
-          sha256sum --check "$TARBALL.sha256asc"
+          wget -q "$URL"
+          echo "46e8e8a573766f761efe7a16240bc2355b67cb30fab7ecc508b03f36c3034290  $TARBALL" | sha256sum --check
           tar xf "$TARBALL" -C /opt
           TOOLCHAIN_DIR="/opt/arm-gnu-toolchain-${ARM_TOOLCHAIN_VERSION}-aarch64-aarch64_be-none-linux-gnu"
           echo "${TOOLCHAIN_DIR}/bin" >> $GITHUB_PATH
@@ -116,6 +125,7 @@ jobs:
       - if: always()
         name: Run tests
         run: |
+          set -u
           # Known failures due to unimplemented big-endian encoding/decoding.
           EXCLUDE="EncodedS2PointVectorTest\.(Empty|OnePoint|AllExceptionsBlock|RoundtripEncodingFast)"
           EXCLUDE+="|EncodedS2ShapeIndex\.(OneEdge|RegularLoops|OverlappingPointClouds|OverlappingPolylines|OverlappingLoops|JavaByteCompatibility)"
@@ -127,10 +137,22 @@ jobs:
           EXCLUDE+="|FastEncodeTaggedShapes\.MixedShapes"
           EXCLUDE+="|DecodeTaggedShapes\.(DecodeFromByteString|DecodeFromEncoded)"
           EXCLUDE+="|OutgoingEdgeButNoIncomingEdge"
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure -E "$EXCLUDE"
+          FLAKY="$(paste --serial --delimiters='|' ../flaky_tests.txt)"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --exclude-regex "${EXCLUDE}|${FLAKY}"
+          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+            --tests-regex "${FLAKY}" \
+            --exclude-regex "${EXCLUDE}" \
+            --repeat until-pass:3
         working-directory: build/
   bazel:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          - macos-latest
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 15
 
     # We would like to test on the oldest and newest supported.

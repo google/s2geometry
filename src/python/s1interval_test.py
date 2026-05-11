@@ -1,7 +1,7 @@
 """Tests for S1Interval pybind11 bindings."""
 
-import unittest
 import math
+import unittest
 import s2geometry_pybind as s2
 
 
@@ -186,7 +186,8 @@ class TestS1Interval(unittest.TestCase):
 
     def test_project(self):
         interval = s2.S1Interval(0.0, 1.5)
-        self.assertAlmostEqual(interval.project(1.0), 1.0)  # Point inside interval
+        # Point inside interval
+        self.assertAlmostEqual(interval.project(1.0), 1.0)
 
     def test_project_on_empty_raises(self):
         with self.assertRaises(ValueError):
@@ -200,8 +201,7 @@ class TestS1Interval(unittest.TestCase):
     def test_expanded(self):
         interval = s2.S1Interval(0.5, 1.5)
         expanded = interval.expanded(0.5)
-        self.assertAlmostEqual(expanded.length(), 
-                             interval.length() + 1.0)
+        self.assertAlmostEqual(expanded.length(), interval.length() + 1.0)
 
     def test_union(self):
         interval1 = s2.S1Interval(0.0, 1.0)
@@ -235,12 +235,14 @@ class TestS1Interval(unittest.TestCase):
         interval2 = s2.S1Interval(0.0, 2.0)
         interval3 = s2.S1Interval(0.0, 2.0 + 1e-16)  # Very small difference
         interval4 = s2.S1Interval(0.0, 2.1)  # Larger difference
-        
+
         # Test with default max_error (1e-15)
         self.assertTrue(interval1.approx_equals(interval2))
-        self.assertTrue(interval1.approx_equals(interval3))  # Within default tolerance
-        self.assertFalse(interval1.approx_equals(interval4))  # Outside default tolerance
-        
+        # Within default tolerance
+        self.assertTrue(interval1.approx_equals(interval3))
+        # Outside default tolerance
+        self.assertFalse(interval1.approx_equals(interval4))
+
         # Test with explicit max_error values
         self.assertTrue(interval1.approx_equals(interval3, 1e-15))
         self.assertFalse(interval1.approx_equals(interval4, 0.05))
@@ -266,7 +268,7 @@ class TestS1Interval(unittest.TestCase):
         # Empty interval has lo=pi, hi=-pi
         self.assertEqual(repr(empty), "S1Interval([3.14159, -3.14159])")
         self.assertEqual(str(empty), "[3.14159, -3.14159]")
-        
+
         full = s2.S1Interval.full()
         # Full interval spans from -pi to pi
         self.assertEqual(repr(full), "S1Interval([-3.14159, 3.14159])")

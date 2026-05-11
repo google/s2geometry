@@ -78,8 +78,8 @@ class TestS1Angle(unittest.TestCase):
         self.assertEqual(s2.S1Angle.from_degrees(180.0).radians, math.pi)
         for k in range(9):
             self.assertEqual(
-                s2.S1Angle.from_degrees(45 * k).radians,
-                k * math.pi / 4)
+                s2.S1Angle.from_degrees(45 * k).radians, k * math.pi / 4
+            )
 
     def test_e5(self):
         a = s2.S1Angle.from_degrees(45.0)
@@ -96,10 +96,14 @@ class TestS1Angle(unittest.TestCase):
     def test_e5_e6_e7_consistency(self):
         # Degrees(n) == E6(1000000 * n) == E7(10000000 * n) for integer n.
         for n in [0, 1, 45, 90, 180, -180, -90]:
-            self.assertEqual(s2.S1Angle.from_degrees(n).radians,
-                             s2.S1Angle.from_e6(1000000 * n).radians)
-            self.assertEqual(s2.S1Angle.from_degrees(n).radians,
-                             s2.S1Angle.from_e7(10000000 * n).radians)
+            self.assertEqual(
+                s2.S1Angle.from_degrees(n).radians,
+                s2.S1Angle.from_e6(1000000 * n).radians,
+            )
+            self.assertEqual(
+                s2.S1Angle.from_degrees(n).radians,
+                s2.S1Angle.from_e7(10000000 * n).radians,
+            )
 
     def test_properties_are_readonly(self):
         a = s2.S1Angle.from_degrees(45.0)
@@ -266,17 +270,22 @@ class TestS1Angle(unittest.TestCase):
 
     def test_repr(self):
         # The repr format comes from C++ operator<< which uses %.7f on degrees.
-        self.assertEqual(repr(s2.S1Angle.from_degrees(45.0)),
-                         "S1Angle(45.0000000)")
-        self.assertEqual(repr(s2.S1Angle.from_degrees(45.00)),
-                         "S1Angle(45.0000000)")
-        self.assertEqual(repr(s2.S1Angle.from_degrees(0.0)),
-                         "S1Angle(0.0000000)")
-        self.assertEqual(repr(s2.S1Angle.from_degrees(-90.0)),
-                         "S1Angle(-90.0000000)")
+        self.assertEqual(
+            repr(s2.S1Angle.from_degrees(45.0)), "S1Angle(45.0000000)"
+        )
+        self.assertEqual(
+            repr(s2.S1Angle.from_degrees(45.00)), "S1Angle(45.0000000)"
+        )
+        self.assertEqual(
+            repr(s2.S1Angle.from_degrees(0.0)), "S1Angle(0.0000000)"
+        )
+        self.assertEqual(
+            repr(s2.S1Angle.from_degrees(-90.0)), "S1Angle(-90.0000000)"
+        )
         # Precision beyond 7 decimal places is truncated.
-        self.assertEqual(repr(s2.S1Angle.from_degrees(45.0000000001)),
-                         "S1Angle(45.0000000)")
+        self.assertEqual(
+            repr(s2.S1Angle.from_degrees(45.0000000001)), "S1Angle(45.0000000)"
+        )
 
     def test_str(self):
         self.assertEqual(str(s2.S1Angle.from_degrees(45.0)), "45.0000000")

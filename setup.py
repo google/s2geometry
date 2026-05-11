@@ -1,9 +1,8 @@
-import sys
 from pathlib import Path
+import sys
 
 import cmake_build_extension
 import setuptools
-
 
 setuptools.setup(
     ext_modules=[
@@ -26,7 +25,7 @@ setuptools.setup(
                 "-DBUILD_TESTS=OFF",
                 "-DFETCH_ABSEIL=ON",
                 "-DWITH_PYTHON_LIMITED_API=ON",
-            ]
+            ],
         ),
     ],
     options={"bdist_wheel": {"py_limited_api": "cp310"}},

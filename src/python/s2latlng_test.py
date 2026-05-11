@@ -23,24 +23,28 @@ class TestS2LatLng(unittest.TestCase):
         self.assertAlmostEqual(ll.lng.degrees, -122.0)
 
     def test_constructor_from_angles_at_bounds(self):
-        ll = s2.S2LatLng(s2.S1Angle.from_degrees(90.0),
-                         s2.S1Angle.from_degrees(180.0))
+        ll = s2.S2LatLng(
+            s2.S1Angle.from_degrees(90.0), s2.S1Angle.from_degrees(180.0)
+        )
         self.assertAlmostEqual(ll.lat.degrees, 90.0)
         self.assertAlmostEqual(ll.lng.degrees, 180.0)
 
     def test_constructor_from_angles_invalid_lat_raises(self):
         with self.assertRaises(ValueError) as cm:
-            s2.S2LatLng(s2.S1Angle.from_degrees(91.0),
-                        s2.S1Angle.from_degrees(0.0))
+            s2.S2LatLng(
+                s2.S1Angle.from_degrees(91.0), s2.S1Angle.from_degrees(0.0)
+            )
         self.assertEqual(
             str(cm.exception),
             "Invalid S2LatLng: (91, 0) "
-            "(latitude must be in [-90, 90], longitude in [-180, 180])")
+            "(latitude must be in [-90, 90], longitude in [-180, 180])",
+        )
 
     def test_constructor_from_angles_invalid_lng_raises(self):
         with self.assertRaises(ValueError):
-            s2.S2LatLng(s2.S1Angle.from_degrees(0.0),
-                        s2.S1Angle.from_degrees(181.0))
+            s2.S2LatLng(
+                s2.S1Angle.from_degrees(0.0), s2.S1Angle.from_degrees(181.0)
+            )
 
     def test_constructor_from_point(self):
         p = s2.S2Point(1.0, 0.0, 0.0)
@@ -49,7 +53,7 @@ class TestS2LatLng(unittest.TestCase):
         self.assertAlmostEqual(ll.lng.degrees, 0.0)
 
     def test_constructor_from_nan_point_raises(self):
-        p = s2.S2Point(float('nan'), 0.0, 0.0)
+        p = s2.S2Point(float("nan"), 0.0, 0.0)
         with self.assertRaises(ValueError):
             s2.S2LatLng(p)
 
@@ -87,9 +91,9 @@ class TestS2LatLng(unittest.TestCase):
 
     def test_normalized_from_radians_non_finite_raises(self):
         with self.assertRaises(ValueError):
-            s2.S2LatLng.normalized_from_radians(float('nan'), 0.0)
+            s2.S2LatLng.normalized_from_radians(float("nan"), 0.0)
         with self.assertRaises(ValueError):
-            s2.S2LatLng.normalized_from_radians(0.0, float('inf'))
+            s2.S2LatLng.normalized_from_radians(0.0, float("inf"))
 
     def test_from_degrees(self):
         ll = s2.S2LatLng.from_degrees(45.0, -90.0)
@@ -282,17 +286,17 @@ class TestS2LatLng(unittest.TestCase):
     def test_scalar_multiplication_inf_raises(self):
         ll = s2.S2LatLng.from_degrees(10.0, 20.0)
         with self.assertRaises(ValueError):
-            ll * float('inf')
+            ll * float("inf")
 
     def test_scalar_multiplication_nan_raises(self):
         ll = s2.S2LatLng.from_degrees(10.0, 20.0)
         with self.assertRaises(ValueError):
-            ll * float('nan')
+            ll * float("nan")
 
     def test_rmul_inf_raises(self):
         ll = s2.S2LatLng.from_degrees(10.0, 20.0)
         with self.assertRaises(ValueError):
-            float('inf') * ll
+            float("inf") * ll
 
     def test_scalar_multiplication_normalizes(self):
         ll = s2.S2LatLng.from_degrees(60.0, 120.0)
