@@ -31,6 +31,14 @@ void MaybeThrowLevelOutOfRange(int level, int min, int max) {
   }
 }
 
+void MaybeThrowPositionOutOfRange(uint64_t pos) {
+  if (pos > S2CellId::kMaxPosition) {
+    throw py::value_error(
+        absl::StrCat("pos ", pos, " out of range [0, ", S2CellId::kMaxPosition,
+                     "]"));
+  }
+}
+
 }  // namespace
 
 void bind_s2cell(py::module& m) {
@@ -68,10 +76,7 @@ void bind_s2cell(py::module& m) {
            "Raises ValueError if face is out of range.")
       .def_static("from_face_pos_level", [](int face, uint64_t pos, int level) {
                MaybeThrowFaceOutOfRange(face);
-               if (pos > S2CellId::kMaxPosition) {
-                 throw py::value_error(absl::StrCat(
-                     "pos ", pos, " out of range [0, ", S2CellId::kMaxPosition, "]"));
-               }
+               MaybeThrowPositionOutOfRange(pos);
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
                return S2Cell::FromFacePosLevel(face, pos, level);
            },
