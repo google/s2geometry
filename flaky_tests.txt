@@ -4,6 +4,7 @@ GetSignedArea\.ErrorAccumulation
 IntLatLngSnapFunction\.SnapPoint
 S2Cell\.GetDistanceToEdge
 S2CellId\.MaximumTile
+S2ClosestEdgeQuery\.IsConservativeDistanceLessOrEqual
 S2ConvexHullQuery\.PointsInsideHull
 S2FurthestEdgeQuery\.PointCloudEdges
 S2LatLngRect\.GetCentroid
