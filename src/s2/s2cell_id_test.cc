@@ -101,6 +101,26 @@ TEST(S2CellId, FromFace) {
   }
 }
 
+TEST(S2CellId, MaxPosition) {
+  // kMaxPosition is the largest value that fits in the position field.
+  EXPECT_EQ(S2CellId::kMaxPosition, (~uint64_t{0}) >> S2CellId::kFaceBits);
+
+  // FromFacePosLevel with kMaxPosition produces a valid cell on the correct face.
+  for (int face = 0; face < S2CellId::kNumFaces; ++face) {
+    S2CellId id = S2CellId::FromFacePosLevel(face, S2CellId::kMaxPosition, 0);
+    EXPECT_TRUE(id.is_valid());
+    EXPECT_EQ(face, id.face());
+  }
+
+  // pos values above kMaxPosition overflow the position field into the face
+  // bits, producing an invalid cell.  Construct the raw id directly rather
+  // than via FromFacePosLevel to avoid triggering its is_valid() DCHECK.
+  constexpr uint64_t kOverflowPos = S2CellId::kMaxPosition + 1;
+  S2CellId overflow_id(
+      (static_cast<uint64_t>(5) << S2CellId::kPosBits) + (kOverflowPos | 1));
+  EXPECT_FALSE(overflow_id.is_valid());
+}
+
 TEST(S2CellId, ParentChildRelationships) {
   S2CellId id = S2CellId::FromFacePosLevel(3, 0x12345678,
                                            S2CellId::kMaxLevel - 4);

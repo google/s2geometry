@@ -60,10 +60,18 @@ void MaybeThrowChildPositionOutOfRange(int position) {
   }
 }
 
+void MaybeThrowPositionOutOfRange(uint64_t pos) {
+  if (pos > S2CellId::kMaxPosition) {
+    throw py::value_error(
+        absl::StrCat("pos ", pos, " out of range [0, ", S2CellId::kMaxPosition,
+                     "]"));
+  }
+}
+
 }  // namespace
 
 void bind_s2cell_id(py::module& m) {
-  py::class_<S2CellId>(m, "S2CellId",
+  auto cls = py::class_<S2CellId>(m, "S2CellId",
       "A 64-bit unsigned integer that uniquely identifies a cell in the\n"
       "S2 cell decomposition.\n\n"
       "See s2/s2cell_id.h for comprehensive documentation.")
@@ -88,12 +96,6 @@ void bind_s2cell_id(py::module& m) {
            py::arg("latlng"),
            "Construct a leaf cell containing the given S2LatLng.")
 
-      // Constants
-      .def_readonly_static("MAX_LEVEL", &S2CellId::kMaxLevel,
-           "Maximum cell subdivision level (30)")
-      .def_readonly_static("NUM_FACES", &S2CellId::kNumFaces,
-           "Number of cube faces (6)")
-
       // Factory methods
       .def_static("from_face", [](int face) {
                MaybeThrowFaceOutOfRange(face);
@@ -103,12 +105,13 @@ void bind_s2cell_id(py::module& m) {
            "Raises ValueError if face is out of range.")
       .def_static("from_face_pos_level", [](int face, uint64_t pos, int level) {
                MaybeThrowFaceOutOfRange(face);
+               MaybeThrowPositionOutOfRange(pos);
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
                return S2CellId::FromFacePosLevel(face, pos, level);
            },
            py::arg("face"), py::arg("pos"), py::arg("level"),
            "Return a cell given its face, Hilbert curve position, and level.\n\n"
-           "Raises ValueError if face or level is out of range.")
+           "Raises ValueError if face, pos, or level is out of range.")
       .def_static("from_token", [](const std::string& token) {
                S2CellId cell = S2CellId::FromToken(token);
                if (cell == S2CellId::None()) {
@@ -272,4 +275,8 @@ void bind_s2cell_id(py::module& m) {
         oss << id;
         return oss.str();
       });
+
+  cls.attr("MAX_LEVEL")    = S2CellId::kMaxLevel;
+  cls.attr("MAX_POSITION") = S2CellId::kMaxPosition;
+  cls.attr("NUM_FACES")    = S2CellId::kNumFaces;
 }
