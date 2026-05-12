@@ -38,3 +38,18 @@ jobs:
 
       - name: Check Starlark / BUILD formatting (buildifier)
         run: buildifier -r -mode=check .
+
+      - name: Install keep-sorted
+        run: |
+          set -u
+          KEEPSORTED_VERSION=0.8.0
+          KEEPSORTED_SHA256=0d9801785ac354232ea754bbfd8cc204a5e255905e14bcbff5fe8733e4dbd85c
+          KEEPSORTED_DL=/tmp/keep-sorted
+          curl -fsSL -o "${KEEPSORTED_DL}" \
+            "https://github.com/google/keep-sorted/releases/download/v${KEEPSORTED_VERSION}/keep-sorted_linux"
+          echo "${KEEPSORTED_SHA256}  ${KEEPSORTED_DL}" | sha256sum --check -
+          chmod +x "${KEEPSORTED_DL}"
+          sudo mv "${KEEPSORTED_DL}" /usr/local/bin/keep-sorted
+
+      - name: Check keep-sorted
+        run: git ls-files -z | xargs -0 keep-sorted --mode=lint

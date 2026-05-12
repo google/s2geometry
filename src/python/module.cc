@@ -3,14 +3,16 @@
 namespace py = pybind11;
 
 // Forward declarations for binding functions
+// keep-sorted start
 void bind_r1interval(py::module& m);
 void bind_r2point(py::module& m);
 void bind_r2rect(py::module& m);
 void bind_s1angle(py::module& m);
 void bind_s1interval(py::module& m);
-void bind_s2point(py::module& m);
-void bind_s2latlng(py::module& m);
 void bind_s2cell_id(py::module& m);
+void bind_s2latlng(py::module& m);
+void bind_s2point(py::module& m);
+// keep-sorted end
 
 PYBIND11_MODULE(s2geometry_bindings, m) {
   m.doc() = "S2 Geometry Python bindings using pybind11";
