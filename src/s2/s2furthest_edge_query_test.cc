@@ -16,6 +16,7 @@
 #include "s2/s2furthest_edge_query.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <memory>
 #include <random>
@@ -441,8 +442,18 @@ static void TestFindFurthestEdges(
   //
   // Here we verify that GetDistance() and IsDistanceGreater() return results
   // that are consistent with the max_error() setting.
-  S1ChordAngle expected_distance = expected[0].distance();
-  EXPECT_GE(query->GetDistance(target), expected_distance - max_error);
+  const S1ChordAngle expected_distance = expected[0].distance();
+  const S1ChordAngle distance_floor = expected_distance - max_error;
+  // Brute-force FurthestEdges vs FindFurthestEdge/GetDistance can disagree by
+  // extra ULPs in length2() near Pi (#592). Use UpdateMinDistance error bounds,
+  // with a small absolute floor because chord-length sensitivity blows up near
+  // 180 degrees.
+  const double distance_consistency_slack =
+      std::max(S2::GetUpdateMinDistanceMaxError(expected_distance) +
+                   S2::GetUpdateMinDistanceMaxError(distance_floor),
+               512 * DBL_EPSILON);
+  EXPECT_GE(query->GetDistance(target),
+            distance_floor.PlusError(-distance_consistency_slack));
 
   // Test IsDistanceGreater().
   EXPECT_FALSE(query->IsDistanceGreater(
