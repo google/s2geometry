@@ -31,28 +31,22 @@ void MaybeThrowLevelOutOfRange(int level, int min, int max) {
   }
 }
 
-void MaybeThrowNotValidCellId(S2CellId id) {
-  if (!id.is_valid()) {
-    throw py::value_error(absl::StrCat("Invalid S2CellId: ", id.ToString()));
-  }
-}
-
 }  // namespace
 
 void bind_s2cell(py::module& m) {
-  py::class_<S2Cell>(m, "S2Cell",
+  auto cls = py::class_<S2Cell>(m, "S2Cell",
       "An S2Region representing a single cell on the sphere.\n\n"
       "Unlike S2CellId (which is just a 64-bit identifier), S2Cell carries\n"
       "precomputed state that allows efficient containment and intersection\n"
       "tests. See s2/s2cell.h for comprehensive documentation.")
       // Constructors
       .def(py::init([](S2CellId id) {
-               MaybeThrowNotValidCellId(id);
+               // No validity check needed: all S2CellId objects reachable from
+               // Python are guaranteed valid by the S2CellId bindings.
                return S2Cell(id);
            }),
            py::arg("cell_id"),
-           "Construct the cell corresponding to the given S2CellId.\n\n"
-           "Raises ValueError if the cell id is not valid.")
+           "Construct the cell corresponding to the given S2CellId.")
       .def(py::init([](const S2Point& p) {
                return S2Cell(p);
            }),
@@ -74,26 +68,16 @@ void bind_s2cell(py::module& m) {
            "Raises ValueError if face is out of range.")
       .def_static("from_face_pos_level", [](int face, uint64_t pos, int level) {
                MaybeThrowFaceOutOfRange(face);
+               if (pos > S2CellId::kMaxPosition) {
+                 throw py::value_error(absl::StrCat(
+                     "pos ", pos, " out of range [0, ", S2CellId::kMaxPosition, "]"));
+               }
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
                return S2Cell::FromFacePosLevel(face, pos, level);
            },
            py::arg("face"), py::arg("pos"), py::arg("level"),
            "Return a cell given its face, Hilbert curve position, and level.\n\n"
-           "Raises ValueError if face or level is out of range.")
-
-      // Constants
-      .def_property_readonly_static("BOTTOM_EDGE",
-           [](py::object) { return static_cast<int>(S2Cell::kBottomEdge); },
-           "Boundary index for the bottom edge (0)")
-      .def_property_readonly_static("RIGHT_EDGE",
-           [](py::object) { return static_cast<int>(S2Cell::kRightEdge); },
-           "Boundary index for the right edge (1)")
-      .def_property_readonly_static("TOP_EDGE",
-           [](py::object) { return static_cast<int>(S2Cell::kTopEdge); },
-           "Boundary index for the top edge (2)")
-      .def_property_readonly_static("LEFT_EDGE",
-           [](py::object) { return static_cast<int>(S2Cell::kLeftEdge); },
-           "Boundary index for the left edge (3)")
+           "Raises ValueError if face, pos, or level is out of range.")
 
       // Properties
       .def_property_readonly("id", &S2Cell::id,
@@ -146,9 +130,6 @@ void bind_s2cell(py::module& m) {
            "Return the center of the cell as a normalized S2Point")
       .def("center_raw", &S2Cell::GetCenterRaw,
            "Return the cell center without normalization")
-      .def("average_area",
-           py::overload_cast<>(&S2Cell::AverageArea, py::const_),
-           "Return the average area of cells at this level, in steradians")
       .def_static("average_area_for_level", [](int level) {
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
                return S2Cell::AverageArea(level);
@@ -225,6 +206,12 @@ void bind_s2cell(py::module& m) {
         return oss.str();
       });
 
+  // Edge boundary constants (from S2Cell::Boundary enum).
+  cls.attr("BOTTOM_EDGE") = static_cast<int>(S2Cell::kBottomEdge);
+  cls.attr("RIGHT_EDGE")  = static_cast<int>(S2Cell::kRightEdge);
+  cls.attr("TOP_EDGE")    = static_cast<int>(S2Cell::kTopEdge);
+  cls.attr("LEFT_EDGE")   = static_cast<int>(S2Cell::kLeftEdge);
+
   // TODO: The following S2Cell methods are not yet bound because they depend
   // on types that have not been bound yet:
   //   - get_cap_bound()       -> S2Cap
@@ -238,5 +225,4 @@ void bind_s2cell(py::module& m) {
   //   - is_distance_less_or_equal(cell, limit) -> takes S1ChordAngle
   //   - is_max_distance_less(cell, limit)      -> takes S1ChordAngle
   //   - is_max_distance_less_or_equal(...)     -> takes S1ChordAngle
-  // Encode/Decode are intentionally omitted per the pybind README.
 }

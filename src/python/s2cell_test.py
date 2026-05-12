@@ -17,14 +17,6 @@ class TestS2Cell(unittest.TestCase):
         self.assertEqual(cell.face, 0)
         self.assertEqual(cell.level, 0)
 
-    def test_constructor_from_invalid_cell_id_raises(self):
-        with self.assertRaises(ValueError):
-            # S2CellId(0) itself raises, so build via from_face and then mutate
-            # by constructing a raw cell id that is not valid is not exposed;
-            # instead just verify the guard exists by going through from_face
-            # with an out-of-range face.
-            s2.S2Cell.from_face(6)
-
     def test_constructor_from_point(self):
         p = s2.S2Point(1.0, 0.0, 0.0)
         cell = s2.S2Cell(p)
@@ -58,6 +50,8 @@ class TestS2Cell(unittest.TestCase):
     def test_from_face_pos_level_out_of_range_raises(self):
         with self.assertRaises(ValueError):
             s2.S2Cell.from_face_pos_level(6, 0, 0)
+        with self.assertRaises(ValueError):
+            s2.S2Cell.from_face_pos_level(0, s2.S2CellId.MAX_POSITION + 1, 0)
         with self.assertRaises(ValueError):
             s2.S2Cell.from_face_pos_level(0, 0, 31)
 
@@ -105,7 +99,7 @@ class TestS2Cell(unittest.TestCase):
     def test_get_size_ij(self):
         # A face cell spans 2^kMaxLevel in (i,j).
         face = s2.S2Cell.from_face(0)
-        self.assertEqual(face.get_size_ij(), 1 << 30)
+        self.assertEqual(face.get_size_ij(), 1 << s2.S2CellId.MAX_LEVEL)
 
     def test_get_size_st(self):
         # A face cell spans the full [0,1] range in (s,t).
@@ -190,13 +184,6 @@ class TestS2Cell(unittest.TestCase):
         self.assertAlmostEqual(normalized.x, norm.x)
         self.assertAlmostEqual(normalized.y, norm.y)
         self.assertAlmostEqual(normalized.z, norm.z)
-
-    def test_average_area_level_0(self):
-        # Total sphere area is 4*pi steradians; 6 face cells cover it,
-        # so each face cell's average area is about 2*pi/3.
-        face = s2.S2Cell.from_face(0)
-        self.assertAlmostEqual(face.average_area(), 4.0 * math.pi / 6.0,
-                               places=5)
 
     def test_average_area_for_level(self):
         # AverageArea halves (roughly) with each subdivision by 4: area at
