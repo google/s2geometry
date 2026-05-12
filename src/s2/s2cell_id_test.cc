@@ -113,11 +113,14 @@ TEST(S2CellId, MaxPosition) {
   }
 
   // pos values above kMaxPosition overflow the position field into the face
-  // bits, producing an invalid cell.  Construct the raw id directly rather
-  // than via FromFacePosLevel to avoid triggering its is_valid() DCHECK.
+  // bits, producing an invalid cell.
+  //
+  // Replicate FromFacePosLevel to avoid its is_valid() DCHECK:
+  //   S2CellId cell((static_cast<uint64_t>(face) << kPosBits) + (pos | 1));
+  constexpr int face = 5;
   constexpr uint64_t kOverflowPos = S2CellId::kMaxPosition + 1;
   S2CellId overflow_id(
-      (static_cast<uint64_t>(5) << S2CellId::kPosBits) + (kOverflowPos | 1));
+      (static_cast<uint64_t>(face) << S2CellId::kPosBits) + (kOverflowPos | 1));
   EXPECT_FALSE(overflow_id.is_valid());
 }
 
