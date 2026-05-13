@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 
+#include "absl/hash/hash.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -22,11 +23,11 @@ void MaybeThrowNotUnitLength(const S2Point& p, const char* name) {
   }
 }
 
-void MaybeThrowSpecialForArithmetic(const S1ChordAngle& a, const char* name) {
+void MaybeThrowIfSpecial(const S1ChordAngle& a, const char* name) {
   if (a.is_special()) {
     throw py::value_error(
-        absl::StrCat(name, " must not be Negative() or Infinity() "
-                     "for arithmetic"));
+        absl::StrCat(name, " must not be a special value "
+                     "(negative() or infinity())"));
   }
 }
 
@@ -89,12 +90,21 @@ void bind_s1chord_angle(py::module& m) {
            "The angle in degrees.\n\n"
            "Note: this performs a trigonometric conversion and should be\n"
            "avoided in inner loops.")
-      .def_property_readonly("e5", &S1ChordAngle::e5,
-                             "The E5 representation (degrees * 1e5, rounded)")
-      .def_property_readonly("e6", &S1ChordAngle::e6,
-                             "The E6 representation (degrees * 1e6, rounded)")
-      .def_property_readonly("e7", &S1ChordAngle::e7,
-                             "The E7 representation (degrees * 1e7, rounded)")
+      .def_property_readonly("e5", [](const S1ChordAngle& self) {
+               MaybeThrowIfSpecial(self, "self");
+               return self.e5();
+           }, "The E5 representation (degrees * 1e5, rounded).\n\n"
+           "Raises ValueError if the angle is negative() or infinity().")
+      .def_property_readonly("e6", [](const S1ChordAngle& self) {
+               MaybeThrowIfSpecial(self, "self");
+               return self.e6();
+           }, "The E6 representation (degrees * 1e6, rounded).\n\n"
+           "Raises ValueError if the angle is negative() or infinity().")
+      .def_property_readonly("e7", [](const S1ChordAngle& self) {
+               MaybeThrowIfSpecial(self, "self");
+               return self.e7();
+           }, "The E7 representation (degrees * 1e7, rounded).\n\n"
+           "Raises ValueError if the angle is negative() or infinity().")
 
       // Predicates
       .def("is_zero", &S1ChordAngle::is_zero,
@@ -115,15 +125,27 @@ void bind_s1chord_angle(py::module& m) {
            "Infinity() converts to S1Angle::Infinity(); Negative() converts\n"
            "to an unspecified negative S1Angle. Uses trigonometric functions\n"
            "and should be avoided in inner loops.")
-      .def("sin", [](const S1ChordAngle& self) { return sin(self); },
+      .def("sin", [](const S1ChordAngle& self) {
+               MaybeThrowIfSpecial(self, "self");
+               return sin(self);
+           },
            "Return the sine of the chord angle.\n\n"
-           "More accurate and efficient than converting to S1Angle first.")
-      .def("cos", [](const S1ChordAngle& self) { return cos(self); },
+           "More accurate and efficient than converting to S1Angle first.\n"
+           "Raises ValueError if the angle is negative() or infinity().")
+      .def("cos", [](const S1ChordAngle& self) {
+               MaybeThrowIfSpecial(self, "self");
+               return cos(self);
+           },
            "Return the cosine of the chord angle.\n\n"
-           "More accurate and efficient than converting to S1Angle first.")
-      .def("tan", [](const S1ChordAngle& self) { return tan(self); },
+           "More accurate and efficient than converting to S1Angle first.\n"
+           "Raises ValueError if the angle is negative() or infinity().")
+      .def("tan", [](const S1ChordAngle& self) {
+               MaybeThrowIfSpecial(self, "self");
+               return tan(self);
+           },
            "Return the tangent of the chord angle.\n\n"
-           "More accurate and efficient than converting to S1Angle first.")
+           "More accurate and efficient than converting to S1Angle first.\n"
+           "Raises ValueError if the angle is negative() or infinity().")
 
       // Operators
       .def(py::self == py::self, "Return true if chord angles are equal")
@@ -137,33 +159,33 @@ void bind_s1chord_angle(py::module& m) {
       .def(py::self >= py::self,
            "Return true if this is greater than or equal to other")
       .def("__add__", [](const S1ChordAngle& a, const S1ChordAngle& b) {
-               MaybeThrowSpecialForArithmetic(a, "left operand");
-               MaybeThrowSpecialForArithmetic(b, "right operand");
+               MaybeThrowIfSpecial(a, "left operand");
+               MaybeThrowIfSpecial(b, "right operand");
                return a + b;
            }, py::is_operator(),
            "Add two chord angles, clamping the result to [0, Pi].\n\n"
            "Raises ValueError if either operand is Negative() or Infinity().")
       .def("__sub__", [](const S1ChordAngle& a, const S1ChordAngle& b) {
-               MaybeThrowSpecialForArithmetic(a, "left operand");
-               MaybeThrowSpecialForArithmetic(b, "right operand");
+               MaybeThrowIfSpecial(a, "left operand");
+               MaybeThrowIfSpecial(b, "right operand");
                return a - b;
            }, py::is_operator(),
            "Subtract two chord angles, clamping the result to [0, Pi].\n\n"
            "Raises ValueError if either operand is Negative() or Infinity().")
       .def("__iadd__", [](S1ChordAngle& self, const S1ChordAngle& other) {
-               MaybeThrowSpecialForArithmetic(self, "left operand");
-               MaybeThrowSpecialForArithmetic(other, "right operand");
+               MaybeThrowIfSpecial(self, "left operand");
+               MaybeThrowIfSpecial(other, "right operand");
                self += other;
                return self;
            }, py::is_operator(), "In-place addition")
       .def("__isub__", [](S1ChordAngle& self, const S1ChordAngle& other) {
-               MaybeThrowSpecialForArithmetic(self, "left operand");
-               MaybeThrowSpecialForArithmetic(other, "right operand");
+               MaybeThrowIfSpecial(self, "left operand");
+               MaybeThrowIfSpecial(other, "right operand");
                self -= other;
                return self;
            }, py::is_operator(), "In-place subtraction")
       .def("__hash__", [](const S1ChordAngle& self) {
-        return std::hash<double>()(self.length2());
+        return absl::Hash<double>()(self.length2());
       })
 
       // String representation

@@ -75,6 +75,7 @@ pybind_library(
     srcs = ["s1chord_angle_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
         "@abseil-cpp//absl/strings",
     ],
 )

@@ -29,7 +29,7 @@ class TestS1ChordAngle(unittest.TestCase):
         x = s2.S2Point(1.0, 0.0, 0.0)
         y = s2.S2Point(-1.0, 0.0, 0.0)
         a = s2.S1ChordAngle(x, y)
-        self.assertAlmostEqual(a.radians, math.pi)
+        self.assertEqual(a, s2.S1ChordAngle.straight())
 
     def test_constructor_non_unit_length_raises(self):
         bad = s2.S2Point(2.0, 0.0, 0.0)
@@ -104,6 +104,20 @@ class TestS1ChordAngle(unittest.TestCase):
         self.assertEqual(a.e6, 45000000)
         self.assertEqual(a.e7, 450000000)
 
+    def test_e5_e6_e7_special_raises(self):
+        with self.assertRaises(ValueError):
+            _ = s2.S1ChordAngle.negative().e5
+        with self.assertRaises(ValueError):
+            _ = s2.S1ChordAngle.infinity().e5
+        with self.assertRaises(ValueError):
+            _ = s2.S1ChordAngle.negative().e6
+        with self.assertRaises(ValueError):
+            _ = s2.S1ChordAngle.infinity().e6
+        with self.assertRaises(ValueError):
+            _ = s2.S1ChordAngle.negative().e7
+        with self.assertRaises(ValueError):
+            _ = s2.S1ChordAngle.infinity().e7
+
     # Predicates
 
     def test_is_zero(self):
@@ -137,11 +151,30 @@ class TestS1ChordAngle(unittest.TestCase):
         angle = a.to_angle()
         self.assertAlmostEqual(angle.degrees, 90.0)
 
+    def test_to_angle_special_values(self):
+        self.assertEqual(s2.S1ChordAngle.infinity().to_angle(),
+                         s2.S1Angle.infinity())
+        self.assertTrue(s2.S1ChordAngle.negative().to_angle().radians < 0)
+
     def test_sin_cos_tan(self):
         a = s2.S1ChordAngle.from_degrees(30.0)
         self.assertAlmostEqual(a.sin(), 0.5, places=10)
         self.assertAlmostEqual(a.cos(), math.sqrt(3) / 2, places=10)
         self.assertAlmostEqual(a.tan(), 1.0 / math.sqrt(3), places=10)
+
+    def test_sin_cos_tan_special_raises(self):
+        with self.assertRaises(ValueError):
+            s2.S1ChordAngle.negative().sin()
+        with self.assertRaises(ValueError):
+            s2.S1ChordAngle.infinity().sin()
+        with self.assertRaises(ValueError):
+            s2.S1ChordAngle.negative().cos()
+        with self.assertRaises(ValueError):
+            s2.S1ChordAngle.infinity().cos()
+        with self.assertRaises(ValueError):
+            s2.S1ChordAngle.negative().tan()
+        with self.assertRaises(ValueError):
+            s2.S1ChordAngle.infinity().tan()
 
     # Operators
 
@@ -227,14 +260,16 @@ class TestS1ChordAngle(unittest.TestCase):
 
     def test_repr(self):
         a = s2.S1ChordAngle.from_degrees(90.0)
-        r = repr(a)
-        self.assertTrue(r.startswith("S1ChordAngle("))
-        self.assertTrue(r.endswith(")"))
+        self.assertEqual(repr(a), "S1ChordAngle(90.0000000)")
 
     def test_str(self):
         a = s2.S1ChordAngle.from_degrees(90.0)
-        s = str(a)
-        self.assertIn("90", s)
+        self.assertEqual(str(a), "90.0000000")
+
+    def test_str_negative_sentinel(self):
+        # negative() is a sentinel value; its string output is implementation-
+        # defined but should represent a negative angle.
+        self.assertIn("-", str(s2.S1ChordAngle.negative()))
 
 
 if __name__ == "__main__":
