@@ -171,6 +171,12 @@ class TestR2Point(unittest.TestCase):
         self.assertAlmostEqual(p.x, 2.0)
         self.assertAlmostEqual(p.y, 3.0)
 
+    def test_hash(self):
+        a = s2.R2Point(1.0, 2.0)
+        b = s2.R2Point(1.0, 2.0)
+        self.assertEqual(hash(a), hash(b))
+        self.assertEqual(len({a, b}), 1)
+
     # String representation
 
     def test_string_representation(self):

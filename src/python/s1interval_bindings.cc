@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 
+#include "absl/hash/hash.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s1interval.h"
 
@@ -134,6 +135,10 @@ void bind_s1interval(py::module& m) {
           "Return true if two intervals contain the same set of points")
       .def(py::self != py::self,
           "Return true if two intervals do not contain the same set of points")
+      .def("__hash__", [](const S1Interval& self) {
+        return absl::Hash<std::pair<double, double>>()(
+            std::make_pair(self.lo(), self.hi()));
+      })
 
       // String representation
       .def("__repr__", [](const S1Interval& i) {

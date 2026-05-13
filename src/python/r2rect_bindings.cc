@@ -3,6 +3,7 @@
 
 #include <sstream>
 
+#include "absl/hash/hash.h"
 #include "s2/r2rect.h"
 
 namespace py = pybind11;
@@ -163,6 +164,11 @@ void bind_r2rect(py::module& m) {
       // Operators
       .def(py::self == py::self, "Return true if two rectangles are equal")
       .def(py::self != py::self, "Return true if two rectangles are not equal")
+      .def("__hash__", [](const R2Rect& self) {
+        return absl::Hash<std::tuple<double, double, double, double>>()(
+            std::make_tuple(self.lo().x(), self.lo().y(),
+                            self.hi().x(), self.hi().y()));
+      })
 
       // String representation
       .def("__repr__", [](const R2Rect& r) {

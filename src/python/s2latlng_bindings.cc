@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 
+#include "absl/hash/hash.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s1angle.h"
 #include "s2/s2latlng.h"
@@ -180,6 +181,10 @@ void bind_s2latlng(py::module& m) {
            "Multiply by scalar (reversed operands).\n\n"
            "The result is automatically normalized.\n"
            "Note: the native C++ implementation does not normalize.")
+      .def("__hash__", [](const S2LatLng& self) {
+        return absl::Hash<std::pair<double, double>>()(
+            std::make_pair(self.lat().radians(), self.lng().radians()));
+      })
 
       // String representation
       .def("to_string_in_degrees", &S2LatLng::ToStringInDegrees,

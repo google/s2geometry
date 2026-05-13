@@ -3,6 +3,7 @@
 
 #include <sstream>
 
+#include "absl/hash/hash.h"
 #include "s2/s2point.h"
 
 namespace py = pybind11;
@@ -62,6 +63,10 @@ void bind_s2point(py::module& m) {
       .def(-py::self, "Negate point")
       .def(py::self == py::self, "Return true if points are exactly equal")
       .def(py::self != py::self, "Return true if points are not exactly equal")
+      .def("__hash__", [](const S2Point& self) {
+        return absl::Hash<std::tuple<double, double, double>>()(
+            std::make_tuple(self.x(), self.y(), self.z()));
+      })
 
       // String representation
       // __repr__ prefixes class name, __str__ delegates to C++ operator<<

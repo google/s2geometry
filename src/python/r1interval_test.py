@@ -252,6 +252,12 @@ class TestR1Interval(unittest.TestCase):
         e2 = s2.R1Interval()
         self.assertTrue(e1 == e2)
 
+    def test_hash(self):
+        a = s2.R1Interval(0.0, 1.0)
+        b = s2.R1Interval(0.0, 1.0)
+        self.assertEqual(hash(a), hash(b))
+        self.assertEqual(len({a, b}), 1)
+
     # String representation
 
     def test_string_representation(self):
