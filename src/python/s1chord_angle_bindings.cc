@@ -2,25 +2,23 @@
 #include <pybind11/operators.h>
 
 #include <cmath>
-#include <cstdint>
 #include <sstream>
 
 #include "absl/strings/str_cat.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2point.h"
+#include "s2/s2pointutil.h"
 
 namespace py = pybind11;
 
 namespace {
 
 void MaybeThrowNotUnitLength(const S2Point& p, const char* name) {
-  // Use a generous tolerance; this matches the spirit of the C++
-  // ABSL_DCHECK(S2::IsUnitLength(x)) which uses ~4 * DBL_EPSILON.
-  double norm = p.Norm();
-  if (std::abs(norm - 1.0) > 1e-12) {
+  if (!S2::IsUnitLength(p)) {
     throw py::value_error(
-        absl::StrCat(name, " must be a unit-length vector (norm=", norm, ")"));
+        absl::StrCat(name, " must be a unit-length vector (norm=",
+                     p.Norm(), ")"));
   }
 }
 
@@ -29,13 +27,6 @@ void MaybeThrowSpecialForArithmetic(const S1ChordAngle& a, const char* name) {
     throw py::value_error(
         absl::StrCat(name, " must not be Negative() or Infinity() "
                      "for arithmetic"));
-  }
-}
-
-void MaybeThrowNegativeLength2(double length2) {
-  if (length2 < 0) {
-    throw py::value_error(
-        absl::StrCat("length2 must be non-negative, got ", length2));
   }
 }
 
@@ -79,19 +70,6 @@ void bind_s1chord_angle(py::module& m) {
                   "Construct a chord angle from the E6 representation")
       .def_static("from_e7", &S1ChordAngle::E7, py::arg("e7"),
                   "Construct a chord angle from the E7 representation")
-      .def_static("fast_upper_bound_from", &S1ChordAngle::FastUpperBoundFrom,
-                  py::arg("angle"),
-                  "Return a fast upper bound on the given S1Angle.\n\n"
-                  "Accurate to within 1% for distances up to about 3100km on\n"
-                  "the Earth's surface. Much faster than the S1Angle\n"
-                  "constructor.")
-      .def_static("from_length2", [](double length2) {
-               MaybeThrowNegativeLength2(length2);
-               return S1ChordAngle::FromLength2(length2);
-           }, py::arg("length2"),
-           "Construct a chord angle from the squared chord length.\n\n"
-           "The argument is clamped to a maximum of 4.0 to handle roundoff.\n"
-           "Raises ValueError if the argument is negative.")
       .def_static("zero", &S1ChordAngle::Zero, "Return the zero chord angle")
       .def_static("right", &S1ChordAngle::Right,
                   "Return a 90-degree chord angle")
@@ -103,9 +81,6 @@ void bind_s1chord_angle(py::module& m) {
                   "Return a chord angle smaller than Zero()")
 
       // Properties
-      .def_property_readonly("length2", &S1ChordAngle::length2,
-                             "The squared chord length (most clients will "
-                             "not need this)")
       .def_property_readonly("radians", &S1ChordAngle::radians,
            "The angle in radians.\n\n"
            "Note: this performs a trigonometric conversion and should be\n"
@@ -149,31 +124,6 @@ void bind_s1chord_angle(py::module& m) {
       .def("tan", [](const S1ChordAngle& self) { return tan(self); },
            "Return the tangent of the chord angle.\n\n"
            "More accurate and efficient than converting to S1Angle first.")
-      .def("sin2", [](const S1ChordAngle& self) { return sin2(self); },
-           "Return sin(self) squared, computed more efficiently than sin()**2")
-      .def("successor", &S1ChordAngle::Successor,
-           "Return the smallest representable S1ChordAngle larger than this.\n\n"
-           "Useful for converting a '<' comparison to a '<=' comparison.\n"
-           "Special cases:\n"
-           "  Negative().successor() == Zero()\n"
-           "  Straight().successor() == Infinity()\n"
-           "  Infinity().successor() == Infinity()")
-      .def("predecessor", &S1ChordAngle::Predecessor,
-           "Return the largest representable S1ChordAngle smaller than this.\n\n"
-           "Special cases:\n"
-           "  Infinity().predecessor() == Straight()\n"
-           "  Zero().predecessor() == Negative()\n"
-           "  Negative().predecessor() == Negative()")
-      .def("plus_error", &S1ChordAngle::PlusError, py::arg("error"),
-           "Return a chord angle adjusted by the given error bound.\n\n"
-           "The error may be positive or negative and should typically be\n"
-           "a value returned by one of the error-bound methods.")
-      .def("s2_point_constructor_max_error",
-           &S1ChordAngle::GetS2PointConstructorMaxError,
-           "Return the maximum error in length2 for the two-point constructor")
-      .def("s1_angle_constructor_max_error",
-           &S1ChordAngle::GetS1AngleConstructorMaxError,
-           "Return the maximum error in length2 for the S1Angle constructor")
 
       // Operators
       .def(py::self == py::self, "Return true if chord angles are equal")
