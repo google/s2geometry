@@ -444,16 +444,26 @@ static void TestFindFurthestEdges(
   // that are consistent with the max_error() setting.
   const S1ChordAngle expected_distance = expected[0].distance();
   const S1ChordAngle distance_floor = expected_distance - max_error;
-  // Brute-force FurthestEdges vs FindFurthestEdge/GetDistance can disagree by
-  // extra ULPs in length2() near Pi (#592). Use UpdateMinDistance error bounds,
-  // with a small absolute floor because chord-length sensitivity blows up near
-  // 180 degrees.
-  const double distance_consistency_slack =
-      std::max(S2::GetUpdateMinDistanceMaxError(expected_distance) +
-                   S2::GetUpdateMinDistanceMaxError(distance_floor),
-               512 * DBL_EPSILON);
+  // `GetDistance` uses `FindFurthestEdge` while `expected_distance` came from the
+  // brute-force `FindFurthestEdges` traversal (`use_brute_force`). They agree
+  // geometrically once `max_error`/`CheckDistanceResults` constraints are accounted
+  // for, but we are comparing two separate floating-point chord-length results.
+  //
+  // (1) Each value only needs to satisfy `UpdateMinDistance`-grade accuracy; stacked
+  // conservatively via `GetUpdateMinDistanceMaxError` (worst near 0° / 180°, see
+  // s2edge_distances.h).
+  // (2) Near antipodal distances, chord `length2()` saturates toward 4; relative ULP
+  // noise then dominates modest predicate bounds (Issue #592 on macOS). Model that as
+  // O(ULPs) noise at the chord-length magnitude (~4).
+  constexpr double kLength2WorstCaseUlpFactor = 128;
+  const double analytic_slack =
+      S2::GetUpdateMinDistanceMaxError(expected_distance) +
+      S2::GetUpdateMinDistanceMaxError(distance_floor);
+  const double length2_noise_slack =
+      std::min(4.0, std::max(expected_distance.length2(), distance_floor.length2())) *
+      (kLength2WorstCaseUlpFactor * DBL_EPSILON);
   EXPECT_GE(query->GetDistance(target),
-            distance_floor.PlusError(-distance_consistency_slack));
+            distance_floor.PlusError(-(analytic_slack + length2_noise_slack)));
 
   // Test IsDistanceGreater().
   EXPECT_FALSE(query->IsDistanceGreater(
