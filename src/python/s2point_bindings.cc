@@ -64,8 +64,7 @@ void bind_s2point(py::module& m) {
       .def(py::self == py::self, "Return true if points are exactly equal")
       .def(py::self != py::self, "Return true if points are not exactly equal")
       .def("__hash__", [](const S2Point& self) {
-        return absl::Hash<std::tuple<double, double, double>>()(
-            std::make_tuple(self.x(), self.y(), self.z()));
+        return absl::HashOf(self);
       })
 
       // String representation

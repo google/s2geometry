@@ -182,8 +182,7 @@ void bind_s2latlng(py::module& m) {
            "The result is automatically normalized.\n"
            "Note: the native C++ implementation does not normalize.")
       .def("__hash__", [](const S2LatLng& self) {
-        return absl::Hash<std::pair<double, double>>()(
-            std::make_pair(self.lat().radians(), self.lng().radians()));
+        return absl::HashOf(self);
       })
 
       // String representation

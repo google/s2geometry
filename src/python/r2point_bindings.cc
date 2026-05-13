@@ -66,8 +66,7 @@ void bind_r2point(py::module& m) {
       .def(py::self == py::self, "Return true if points are exactly equal")
       .def(py::self != py::self, "Return true if points are not exactly equal")
       .def("__hash__", [](const R2Point& self) {
-        return absl::Hash<std::pair<double, double>>()(
-            std::make_pair(self.x(), self.y()));
+        return absl::HashOf(self);
       })
 
       // String representation
