@@ -452,18 +452,18 @@ static void TestFindFurthestEdges(
   // (1) Each value only needs to satisfy `UpdateMinDistance`-grade accuracy; stacked
   // conservatively via `GetUpdateMinDistanceMaxError` (worst near 0° / 180°, see
   // s2edge_distances.h).
-  // (2) Near antipodal distances, chord `length2()` saturates toward 4; relative ULP
-  // noise then dominates modest predicate bounds (Issue #592 on macOS). Model that as
-  // O(ULPs) noise at the chord-length magnitude (~4).
-  constexpr double kLength2WorstCaseUlpFactor = 128;
+  // (2) Near antipodal distances, chord `length2()` saturates toward 4, so small
+  // `length2()` differences correspond to much larger angle differences.  The
+  // macOS failure in Issue #592 was about 450 * DBL_EPSILON in `length2()`;
+  // round that to a 512-ULP bound for this consistency check.
+  constexpr double kAntipodalLength2Slack = 512 * DBL_EPSILON;
   const double analytic_slack =
       S2::GetUpdateMinDistanceMaxError(expected_distance) +
       S2::GetUpdateMinDistanceMaxError(distance_floor);
-  const double length2_noise_slack =
-      std::min(4.0, std::max(expected_distance.length2(), distance_floor.length2())) *
-      (kLength2WorstCaseUlpFactor * DBL_EPSILON);
+  const double distance_consistency_slack =
+      std::max(analytic_slack, kAntipodalLength2Slack);
   EXPECT_GE(query->GetDistance(target),
-            distance_floor.PlusError(-(analytic_slack + length2_noise_slack)));
+            distance_floor.PlusError(-distance_consistency_slack));
 
   // Test IsDistanceGreater().
   EXPECT_FALSE(query->IsDistanceGreater(
