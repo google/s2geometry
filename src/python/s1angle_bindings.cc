@@ -140,7 +140,7 @@ void bind_s1angle(py::module& m) {
         return a / b;
       }, py::arg("other"), "Divide two angles, returning a scalar ratio")
       .def("__hash__", [](S1Angle self) {
-        return absl::Hash<double>()(self.radians());
+        return absl::HashOf(self);
       })
 
       // String representation

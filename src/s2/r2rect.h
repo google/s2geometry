@@ -21,6 +21,7 @@
 #include <iosfwd>
 #include <ostream>
 
+#include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r1interval.h"
@@ -250,5 +251,10 @@ inline bool R2Rect::operator!=(const R2Rect& other) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const R2Rect& r);
+
+template <typename H>
+H AbslHashValue(H h, const R2Rect& rect) {
+  return H::combine(std::move(h), rect.x(), rect.y());
+}
 
 #endif  // S2_R2RECT_H_

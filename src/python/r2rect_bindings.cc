@@ -165,9 +165,7 @@ void bind_r2rect(py::module& m) {
       .def(py::self == py::self, "Return true if two rectangles are equal")
       .def(py::self != py::self, "Return true if two rectangles are not equal")
       .def("__hash__", [](const R2Rect& self) {
-        return absl::Hash<std::tuple<double, double, double, double>>()(
-            std::make_tuple(self.lo().x(), self.lo().y(),
-                            self.hi().x(), self.hi().y()));
+        return absl::HashOf(self);
       })
 
       // String representation

@@ -136,8 +136,7 @@ void bind_s1interval(py::module& m) {
       .def(py::self != py::self,
           "Return true if two intervals do not contain the same set of points")
       .def("__hash__", [](const S1Interval& self) {
-        return absl::Hash<std::pair<double, double>>()(
-            std::make_pair(self.lo(), self.hi()));
+        return absl::HashOf(self);
       })
 
       // String representation
