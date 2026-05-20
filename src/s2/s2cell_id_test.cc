@@ -101,7 +101,7 @@ TEST(S2CellId, FromFace) {
   }
 }
 
-TEST(S2CellId, MaxPosition) {
+TEST(S2CellId, MaxPositionIsValid) {
   // kMaxPosition is the largest value that fits in the position field.
   EXPECT_EQ(S2CellId::kMaxPosition, (~uint64_t{0}) >> S2CellId::kFaceBits);
 
@@ -111,7 +111,9 @@ TEST(S2CellId, MaxPosition) {
     EXPECT_TRUE(id.is_valid());
     EXPECT_EQ(face, id.face());
   }
+}
 
+TEST(S2CellId, PositionAboveMaxIsInvalid) {
   // pos values above kMaxPosition overflow the position field into the face
   // bits, producing an invalid cell.
   //
@@ -120,7 +122,7 @@ TEST(S2CellId, MaxPosition) {
   constexpr int face = 5;
   constexpr uint64_t kOverflowPos = S2CellId::kMaxPosition + 1;
   S2CellId overflow_id(
-      (static_cast<uint64_t>(face) << S2CellId::kPosBits) + (kOverflowPos | 1));
+      (uint64_t{face} << S2CellId::kPosBits) + (kOverflowPos | 1));
   EXPECT_FALSE(overflow_id.is_valid());
 }
 
