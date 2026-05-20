@@ -22,6 +22,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/hash/hash_testing.h"
 #include "absl/strings/string_view.h"
 
 using absl::string_view;
@@ -488,4 +489,16 @@ TEST_F(S1IntervalTestBase, GetDirectedHausdorffDistance) {
                   S1Interval(0.1, 0.2).GetDirectedHausdorffDistance(in));
   EXPECT_FLOAT_EQ(3.0 - 0.1,
                   S1Interval(-0.2, -0.1).GetDirectedHausdorffDistance(in));
+}
+
+TEST(S1Interval, SupportsAbslHash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+    S1Interval::Empty(),
+    S1Interval::Full(),
+    S1Interval(0, 1),
+    S1Interval(-1, 1),
+    S1Interval(M_PI / 2, M_PI),
+    S1Interval(-M_PI, -M_PI / 2),
+    S1Interval(M_PI - 0.1, -M_PI + 0.1),  // inverted (wraps around)
+  }));
 }
