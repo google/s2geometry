@@ -138,14 +138,6 @@ void bind_s1angle(py::module& m) {
       .def("__truediv__", [](const S1Angle& a, const S1Angle& b) -> double {
         return a / b;
       }, py::arg("other"), "Divide two angles, returning a scalar ratio")
-      .def(py::self += py::self, "In-place addition")
-      .def(py::self -= py::self, "In-place subtraction")
-      .def("__imul__", [](S1Angle& self, double m) -> S1Angle& {
-        return self *= m;
-      }, py::arg("m"), "In-place multiplication by scalar")
-      .def("__itruediv__", [](S1Angle& self, double m) -> S1Angle& {
-        return self /= m;
-      }, py::arg("m"), "In-place division by scalar")
 
       // String representation
       .def("__repr__", [](S1Angle a) {

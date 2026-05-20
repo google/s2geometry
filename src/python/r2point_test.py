@@ -147,25 +147,25 @@ class TestR2Point(unittest.TestCase):
         self.assertEqual(p1, p2)
         self.assertNotEqual(p1, p3)
 
-    def test_in_place_addition(self):
+    def test_add_assign(self):
         p = s2.R2Point(1.0, 2.0)
         p += s2.R2Point(3.0, 4.0)
         self.assertAlmostEqual(p.x, 4.0)
         self.assertAlmostEqual(p.y, 6.0)
 
-    def test_in_place_subtraction(self):
+    def test_sub_assign(self):
         p = s2.R2Point(3.0, 4.0)
         p -= s2.R2Point(1.0, 2.0)
         self.assertAlmostEqual(p.x, 2.0)
         self.assertAlmostEqual(p.y, 2.0)
 
-    def test_in_place_multiplication(self):
+    def test_mul_assign(self):
         p = s2.R2Point(1.0, 2.0)
         p *= 3.0
         self.assertAlmostEqual(p.x, 3.0)
         self.assertAlmostEqual(p.y, 6.0)
 
-    def test_in_place_division(self):
+    def test_div_assign(self):
         p = s2.R2Point(4.0, 6.0)
         p /= 2.0
         self.assertAlmostEqual(p.x, 2.0)

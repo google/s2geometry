@@ -62,14 +62,6 @@ void bind_s2point(py::module& m) {
       .def(-py::self, "Negate point")
       .def(py::self == py::self, "Return true if points are exactly equal")
       .def(py::self != py::self, "Return true if points are not exactly equal")
-      .def(py::self += py::self, "In-place addition")
-      .def(py::self -= py::self, "In-place subtraction")
-      .def("__imul__", [](S2Point& self, double v) -> S2Point& {
-        return self *= v;
-      }, py::arg("v"), "In-place multiplication by scalar")
-      .def("__itruediv__", [](S2Point& self, double v) -> S2Point& {
-        return self /= v;
-      }, py::arg("v"), "In-place division by scalar")
 
       // String representation
       // __repr__ prefixes class name, __str__ delegates to C++ operator<<
