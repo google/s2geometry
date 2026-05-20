@@ -239,12 +239,12 @@ class TestS1ChordAngle(unittest.TestCase):
         with self.assertRaises(ValueError):
             _ = a - s2.S1ChordAngle.negative()
 
-    def test_iadd(self):
+    def test_add_assign(self):
         a = s2.S1ChordAngle.from_degrees(30.0)
         a += s2.S1ChordAngle.from_degrees(60.0)
         self.assertAlmostEqual(a.degrees, 90.0, places=5)
 
-    def test_isub(self):
+    def test_sub_assign(self):
         a = s2.S1ChordAngle.from_degrees(60.0)
         a -= s2.S1ChordAngle.from_degrees(30.0)
         self.assertAlmostEqual(a.degrees, 30.0, places=5)

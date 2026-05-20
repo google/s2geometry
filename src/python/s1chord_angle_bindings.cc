@@ -172,18 +172,6 @@ void bind_s1chord_angle(py::module& m) {
            }, py::is_operator(),
            "Subtract two chord angles, clamping the result to [0, Pi].\n\n"
            "Raises ValueError if either operand is Negative() or Infinity().")
-      .def("__iadd__", [](S1ChordAngle& self, const S1ChordAngle& other) {
-               MaybeThrowIfSpecial(self, "left operand");
-               MaybeThrowIfSpecial(other, "right operand");
-               self += other;
-               return self;
-           }, py::is_operator(), "In-place addition")
-      .def("__isub__", [](S1ChordAngle& self, const S1ChordAngle& other) {
-               MaybeThrowIfSpecial(self, "left operand");
-               MaybeThrowIfSpecial(other, "right operand");
-               self -= other;
-               return self;
-           }, py::is_operator(), "In-place subtraction")
       .def("__hash__", [](const S1ChordAngle& self) {
         return absl::Hash<double>()(self.length2());
       })
