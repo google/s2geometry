@@ -30,6 +30,7 @@ pybind_extension(
         ":r2point_bindings",
         ":r2rect_bindings",
         ":s1angle_bindings",
+        ":s1chord_angle_bindings",
         ":s1interval_bindings",
         ":s2cell_id_bindings",
         ":s2latlng_bindings",
@@ -66,6 +67,16 @@ pybind_library(
     srcs = ["s1angle_bindings.cc"],
     deps = [
         "//:s2",
+    ],
+)
+
+pybind_library(
+    name = "s1chord_angle_bindings",
+    srcs = ["s1chord_angle_bindings.cc"],
+    deps = [
+        "//:s2",
+        "@abseil-cpp//absl/hash",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -116,6 +127,12 @@ py_test(
 py_test(
     name = "s1angle_test",
     srcs = ["s1angle_test.py"],
+    deps = [":s2geometry_pybind"],
+)
+
+py_test(
+    name = "s1chord_angle_test",
+    srcs = ["s1chord_angle_test.py"],
     deps = [":s2geometry_pybind"],
 )
 
