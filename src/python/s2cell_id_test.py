@@ -57,6 +57,10 @@ class TestS2CellId(unittest.TestCase):
         self.assertEqual(cell.level, 0)
         self.assertEqual(cell.face, 0)
 
+    def test_from_face_pos_level_pos_out_of_range_raises(self):
+        with self.assertRaises(ValueError):
+            s2.S2CellId.from_face_pos_level(0, s2.S2CellId.MAX_POSITION + 1, 0)
+
     def test_from_token_roundtrip(self):
         cell = s2.S2CellId.from_face(3)
         token = cell.to_token()

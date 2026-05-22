@@ -99,6 +99,8 @@ class S2CellId {
   static constexpr int kMaxLevel =
       S2::kMaxCellLevel;  // Valid levels: 0..kMaxLevel
   static constexpr int kPosBits = 2 * kMaxLevel + 1;
+  static constexpr uint64_t kMaxPosition =
+      (~static_cast<uint64_t>(0)) >> kFaceBits;
   static constexpr int kMaxSize = 1 << kMaxLevel;
 
   explicit constexpr S2CellId(uint64_t id) : id_(id) {}
