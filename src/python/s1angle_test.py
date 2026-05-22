@@ -246,22 +246,22 @@ class TestS1Angle(unittest.TestCase):
         ratio = a / b
         self.assertAlmostEqual(ratio, 2.0)
 
-    def test_in_place_addition(self):
+    def test_add_assign(self):
         a = s2.S1Angle.from_degrees(30.0)
         a += s2.S1Angle.from_degrees(60.0)
         self.assertAlmostEqual(a.degrees, 90.0)
 
-    def test_in_place_subtraction(self):
+    def test_sub_assign(self):
         a = s2.S1Angle.from_degrees(90.0)
         a -= s2.S1Angle.from_degrees(30.0)
         self.assertAlmostEqual(a.degrees, 60.0)
 
-    def test_in_place_scalar_multiplication(self):
+    def test_mul_assign(self):
         a = s2.S1Angle.from_degrees(45.0)
         a *= 2.0
         self.assertAlmostEqual(a.degrees, 90.0)
 
-    def test_in_place_scalar_division(self):
+    def test_div_assign(self):
         a = s2.S1Angle.from_degrees(90.0)
         a /= 2.0
         self.assertAlmostEqual(a.degrees, 45.0)

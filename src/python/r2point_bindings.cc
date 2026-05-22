@@ -64,14 +64,6 @@ void bind_r2point(py::module& m) {
       .def(-py::self, "Negate point")
       .def(py::self == py::self, "Return true if points are exactly equal")
       .def(py::self != py::self, "Return true if points are not exactly equal")
-      .def(py::self += py::self, "In-place addition")
-      .def(py::self -= py::self, "In-place subtraction")
-      .def("__imul__", [](R2Point& self, double v) -> R2Point& {
-        return self *= v;
-      }, py::arg("v"), "In-place multiplication by scalar")
-      .def("__itruediv__", [](R2Point& self, double v) -> R2Point& {
-        return self /= v;
-      }, py::arg("v"), "In-place division by scalar")
 
       // String representation
       .def("__repr__", [](const R2Point& p) {
