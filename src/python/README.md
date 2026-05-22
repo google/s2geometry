@@ -57,6 +57,7 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 
 **Operators:**
 - Standard Python operators work as expected: `+`, `-`, `*`, `==`, `!=`, `<`, `>` (for C++ classes that implement those operators)
+- Binding types are intentionally immutable. In-place mutation operators are not supported. Augmented assignment (`+=`, `-=`, `*=`, `/=`) still works: Python falls back to the binary operator and rebinds the variable (e.g. `a += b` is equivalent to `a = a + b`).
 
 **Method Overloads:**
 - Instead of Python overloads, C++ overloaded methods are exposed under distinct names. For different argument types, the short name is used for the same-type argument and a longer name for other types (e.g., `R2Rect.contains(other: R2Rect)` and `R2Rect.contains_point(p: R2Point)`). For overloads with significantly different behavior, descriptive names are chosen (e.g., `R2Rect.vertex(k)` for CCW vertex index and `R2Rect.vertex_ij(i, j)` for axis-direction vertex access).
