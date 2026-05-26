@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng.h"
@@ -153,6 +154,38 @@ void bind_s2cell(py::module& m) {
            "even for leaf cells.")
       .def("get_bound_uv", &S2Cell::GetBoundUV,
            "Return the bounds of this cell in (u,v)-space")
+      .def("get_distance", py::overload_cast<const S2Point&>(
+               &S2Cell::GetDistance, py::const_),
+           py::arg("point"),
+           "Return the distance from this cell to the given point.\n\n"
+           "Returns zero if the point is inside the cell.")
+      .def("get_boundary_distance", &S2Cell::GetBoundaryDistance,
+           py::arg("point"),
+           "Return the distance from the cell boundary to the given point.")
+      .def("get_max_distance", py::overload_cast<const S2Point&>(
+               &S2Cell::GetMaxDistance, py::const_),
+           py::arg("point"),
+           "Return the maximum distance from this cell to the given point.")
+      .def("get_distance_to_edge",
+           py::overload_cast<const S2Point&, const S2Point&>(
+               &S2Cell::GetDistance, py::const_),
+           py::arg("a"), py::arg("b"),
+           "Return the minimum distance from this cell to the edge AB.\n\n"
+           "Returns zero if the edge intersects the cell interior.")
+      .def("get_max_distance_to_edge",
+           py::overload_cast<const S2Point&, const S2Point&>(
+               &S2Cell::GetMaxDistance, py::const_),
+           py::arg("a"), py::arg("b"),
+           "Return the maximum distance from this cell to the edge AB.")
+      .def("get_distance_to_cell",
+           py::overload_cast<const S2Cell&>(&S2Cell::GetDistance, py::const_),
+           py::arg("cell"),
+           "Return the distance from this cell to the given cell.\n\n"
+           "Returns zero if one cell contains the other.")
+      .def("get_max_distance_to_cell",
+           py::overload_cast<const S2Cell&>(&S2Cell::GetMaxDistance, py::const_),
+           py::arg("cell"),
+           "Return the maximum distance from this cell to the given cell.")
       .def("get_cell_union_bound", [](const S2Cell& self) {
                std::vector<S2CellId> cell_ids;
                self.GetCellUnionBound(&cell_ids);
@@ -219,15 +252,6 @@ void bind_s2cell(py::module& m) {
 
   // TODO: The following S2Cell methods are not yet bound because they depend
   // on types that have not been bound yet:
-  //   - get_cap_bound()       -> S2Cap
-  //   - get_rect_bound()      -> S2LatLngRect
-  //   - get_distance(point)         -> S1ChordAngle
-  //   - get_distance_to_edge(a, b)  -> S1ChordAngle
-  //   - get_distance_to_cell(cell)  -> S1ChordAngle
-  //   - get_boundary_distance(point) -> S1ChordAngle
-  //   - get_max_distance(*)          -> S1ChordAngle
-  //   - is_distance_less(cell, limit)          -> takes S1ChordAngle
-  //   - is_distance_less_or_equal(cell, limit) -> takes S1ChordAngle
-  //   - is_max_distance_less(cell, limit)      -> takes S1ChordAngle
-  //   - is_max_distance_less_or_equal(...)     -> takes S1ChordAngle
+  //   - get_cap_bound()   -> S2Cap
+  //   - get_rect_bound()  -> S2LatLngRect
 }
