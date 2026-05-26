@@ -93,7 +93,10 @@ void bind_s2cell(py::module& m) {
       .def_property_readonly("level", &S2Cell::level,
                              "The subdivision level (0..kMaxLevel)")
       .def_property_readonly("orientation", &S2Cell::orientation,
-                             "The Hilbert curve orientation of this cell")
+                             "The Hilbert curve orientation of this cell.\n\n"
+                             "A bitmask: bit 0 (kSwapMask) indicates swapped\n"
+                             "axes; bit 1 (kInvertMask) indicates 180-degree\n"
+                             "rotation. Values are in [0, 3].")
 
       // Predicates
       .def("is_leaf", &S2Cell::is_leaf,
@@ -109,18 +112,9 @@ void bind_s2cell(py::module& m) {
            "Lower-left, lower-right, upper-right, upper-left in the UV plane.\n"
            "The argument is reduced modulo 4 to the range [0..3].\n"
            "The returned point is normalized.")
-      .def("vertex_raw", &S2Cell::GetVertexRaw, py::arg("k"),
-           "Return the k-th vertex of the cell without normalization.\n\n"
-           "The argument is reduced modulo 4 to the range [0..3].")
       .def("edge", &S2Cell::GetEdge, py::arg("k"),
            "Return the normalized inward-facing normal of the great circle\n"
            "passing through the edge from vertex k to vertex k+1 (mod 4).\n\n"
-           "The argument is reduced modulo 4 to the range [0..3].")
-      .def("edge_raw", &S2Cell::GetEdgeRaw, py::arg("k"),
-           "Return the inward-facing normal of the great circle passing\n"
-           "through edge k without normalization.\n\n"
-           "The result is computed exactly and can be used with exact\n"
-           "predicates. Its length is bounded by sqrt(2).\n"
            "The argument is reduced modulo 4 to the range [0..3].")
       .def("uv_coord_of_edge", &S2Cell::GetUVCoordOfEdge, py::arg("k"),
            "Return either U or V for the given edge, whichever is constant\n"
@@ -134,8 +128,6 @@ void bind_s2cell(py::module& m) {
            "The argument is reduced modulo 4 to the range [0..3].")
       .def("center", &S2Cell::GetCenter,
            "Return the center of the cell as a normalized S2Point")
-      .def("center_raw", &S2Cell::GetCenterRaw,
-           "Return the cell center without normalization")
       .def_static("average_area_for_level", [](int level) {
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
                return S2Cell::AverageArea(level);
