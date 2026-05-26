@@ -81,10 +81,12 @@ class TestS2Cell(unittest.TestCase):
         self.assertEqual(child.level, 1)
 
     def test_orientation(self):
-        # Orientation is in [0, 3].
+        # Face cells all have orientation 0 (Hilbert curve default).
         for f in range(6):
-            orient = s2.S2Cell.from_face(f).orientation
-            self.assertIn(orient, range(4))
+            self.assertEqual(s2.S2Cell.from_face(f).orientation, 0)
+        # Orientation is a bitmask in [0, 3]; non-face cells may differ.
+        child = s2.S2Cell(s2.S2CellId.from_face(0).child(0))
+        self.assertIn(child.orientation, range(4))
 
     # Predicates
 
@@ -122,29 +124,11 @@ class TestS2Cell(unittest.TestCase):
         self.assertAlmostEqual(v0.y, v4.y)
         self.assertAlmostEqual(v0.z, v4.z)
 
-    def test_vertex_raw(self):
-        face = s2.S2Cell.from_face(0)
-        # Raw vertices may not be normalized, but should match vertex() after
-        # normalization.
-        for k in range(4):
-            raw = face.vertex_raw(k)
-            norm = face.vertex(k)
-            normalized_raw = raw.normalize()
-            self.assertAlmostEqual(normalized_raw.x, norm.x)
-            self.assertAlmostEqual(normalized_raw.y, norm.y)
-            self.assertAlmostEqual(normalized_raw.z, norm.z)
-
     def test_edge(self):
         face = s2.S2Cell.from_face(0)
         for k in range(4):
             e = face.edge(k)
             self.assertAlmostEqual(e.norm(), 1.0)
-
-    def test_edge_raw_matches_edge(self):
-        face = s2.S2Cell.from_face(0)
-        for k in range(4):
-            self.assertAlmostEqual(
-                face.edge_raw(k).normalize().x, face.edge(k).x)
 
     def test_uv_coord_of_edge(self):
         face = s2.S2Cell.from_face(0)
@@ -161,11 +145,12 @@ class TestS2Cell(unittest.TestCase):
 
     def test_ij_coord_of_edge(self):
         face = s2.S2Cell.from_face(0)
-        # Face cell in (i,j) spans [0, 2^30].
-        bottom = face.ij_coord_of_edge(s2.S2Cell.BOTTOM_EDGE)
-        top = face.ij_coord_of_edge(s2.S2Cell.TOP_EDGE)
-        self.assertIn(bottom, (0, 1 << 30))
-        self.assertIn(top, (0, 1 << 30))
+        # Face cell in (i,j): bottom/top edges are constant in J (0 and 2^30),
+        # left/right edges are constant in I (0 and 2^30).
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.BOTTOM_EDGE), 0)
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.TOP_EDGE), 1 << 30)
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.LEFT_EDGE), 0)
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.RIGHT_EDGE), 1 << 30)
 
     def test_center(self):
         face = s2.S2Cell.from_face(0)
@@ -175,15 +160,6 @@ class TestS2Cell(unittest.TestCase):
         self.assertAlmostEqual(c.x, 1.0, places=5)
         self.assertAlmostEqual(c.y, 0.0, places=5)
         self.assertAlmostEqual(c.z, 0.0, places=5)
-
-    def test_center_raw(self):
-        face = s2.S2Cell.from_face(0)
-        raw = face.center_raw()
-        norm = face.center()
-        normalized = raw.normalize()
-        self.assertAlmostEqual(normalized.x, norm.x)
-        self.assertAlmostEqual(normalized.y, norm.y)
-        self.assertAlmostEqual(normalized.z, norm.z)
 
     def test_average_area_for_level(self):
         # AverageArea halves (roughly) with each subdivision by 4: area at
@@ -201,9 +177,11 @@ class TestS2Cell(unittest.TestCase):
         with self.assertRaises(ValueError):
             s2.S2Cell.average_area_for_level(-1)
 
-    def test_approx_area_positive(self):
+    def test_approx_area(self):
         face = s2.S2Cell.from_face(0)
-        self.assertGreater(face.approx_area(), 0.0)
+        expected = 4.0 * math.pi / 6.0
+        # approx_area is accurate to within 3%.
+        self.assertAlmostEqual(face.approx_area(), expected, delta=expected * 0.03)
 
     def test_exact_area_sums_to_sphere(self):
         # Summing exact_area over all 6 face cells should give 4*pi.

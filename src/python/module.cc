@@ -44,6 +44,6 @@ PYBIND11_MODULE(s2geometry_bindings, m) {
   // Deps: s1angle, s2point, s2latlng, r2point, r2rect
   bind_s2cell_id(m);
 
-  // Deps: s2cell_id, s2point, s2latlng, s1chord_angle, r2rect
+  // Deps: r2rect, s1chord_angle, s2cell_id, s2latlng, s2point
   bind_s2cell(m);
 }

@@ -199,8 +199,6 @@ void bind_s2cell(py::module& m) {
            "The point does not need to be normalized.")
       .def("may_intersect", &S2Cell::MayIntersect, py::arg("cell"),
            "Return true if this cell may intersect the given cell")
-
-      // Traversal
       .def("subdivide", [](const S2Cell& self) {
                if (self.is_leaf()) {
                  throw py::value_error("Leaf cell has no children");
