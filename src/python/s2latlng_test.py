@@ -187,15 +187,15 @@ class TestS2LatLng(unittest.TestCase):
         self.assertAlmostEqual(ll.lat.radians, ll2.lat.radians)
         self.assertAlmostEqual(ll.lng.radians, ll2.lng.radians)
 
-    def test_distance(self):
+    def test_get_distance(self):
         # Distance between two points on the equator, 90 degrees apart.
         a = s2.S2LatLng.from_degrees(0.0, 0.0)
         b = s2.S2LatLng.from_degrees(0.0, 90.0)
-        self.assertAlmostEqual(a.distance(b).degrees, 90.0)
+        self.assertAlmostEqual(a.get_distance(b).degrees, 90.0)
 
-    def test_distance_same_point(self):
+    def test_get_distance_same_point(self):
         ll = s2.S2LatLng.from_degrees(37.0, -122.0)
-        self.assertAlmostEqual(ll.distance(ll).radians, 0.0)
+        self.assertAlmostEqual(ll.get_distance(ll).radians, 0.0)
 
     def test_to_string_in_degrees(self):
         ll = s2.S2LatLng.from_degrees(37.794, -122.395)

@@ -148,18 +148,18 @@ void bind_s2cell_id(py::module& m) {
            "The position along the Hilbert curve over this face")
       .def_property_readonly("level", &S2CellId::level,
            "The subdivision level (0..kMaxLevel)")
-      .def("size_ij",
+      .def("get_size_ij",
            py::overload_cast<>(&S2CellId::GetSizeIJ, py::const_),
            "Return the edge length of this cell in (i,j)-space")
-      .def_static("size_ij_for_level", [](int level) {
+      .def_static("get_size_ij_for_level", [](int level) {
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
                return S2CellId::GetSizeIJ(level);
            }, py::arg("level"),
            "Return the edge length in (i,j)-space of cells at the given level")
-      .def("size_st",
+      .def("get_size_st",
            py::overload_cast<>(&S2CellId::GetSizeST, py::const_),
            "Return the edge length of this cell in (s,t)-space")
-      .def_static("size_st_for_level", [](int level) {
+      .def_static("get_size_st_for_level", [](int level) {
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
                return S2CellId::GetSizeST(level);
            }, py::arg("level"),
@@ -168,13 +168,13 @@ void bind_s2cell_id(py::module& m) {
            "Return the center of the cell as a normalized S2Point")
       .def("to_lat_lng", &S2CellId::ToLatLng,
            "Return the S2LatLng corresponding to the center of the cell")
-      .def("center_st", &S2CellId::GetCenterST,
+      .def("get_center_st", &S2CellId::GetCenterST,
            "Return the center of the cell in (s,t)-space")
-      .def("bound_st", &S2CellId::GetBoundST,
+      .def("get_bound_st", &S2CellId::GetBoundST,
            "Return the bounds of this cell in (s,t)-space")
-      .def("center_uv", &S2CellId::GetCenterUV,
+      .def("get_center_uv", &S2CellId::GetCenterUV,
            "Return the center of the cell in (u,v)-space")
-      .def("bound_uv", &S2CellId::GetBoundUV,
+      .def("get_bound_uv", &S2CellId::GetBoundUV,
            "Return the bounds of this cell in (u,v)-space")
       .def("child_position", [](S2CellId self) {
                MaybeThrowLevelOutOfRange(self.level(), 1, S2CellId::kMaxLevel);
@@ -201,7 +201,7 @@ void bind_s2cell_id(py::module& m) {
            "Return true if the given cell is contained within this one")
       .def("intersects", &S2CellId::intersects, py::arg("other"),
            "Return true if the given cell intersects this one")
-      .def("common_ancestor_level", &S2CellId::GetCommonAncestorLevel,
+      .def("get_common_ancestor_level", &S2CellId::GetCommonAncestorLevel,
            py::arg("other"),
            "Return the level of the lowest common ancestor.\n\n"
            "Returns -1 if the cells are from different faces.")
@@ -226,14 +226,14 @@ void bind_s2cell_id(py::module& m) {
            }, py::arg("position"),
            "Return the immediate child at the given position (0..3).\n\n"
            "Raises ValueError if this is a leaf cell or position is out of range.")
-      .def("edge_neighbors", [](S2CellId self) {
+      .def("get_edge_neighbors", [](S2CellId self) {
                S2CellId neighbors[4];
                self.GetEdgeNeighbors(neighbors);
                return py::make_tuple(neighbors[0], neighbors[1],
                                      neighbors[2], neighbors[3]);
            },
            "Return the four cells adjacent across this cell's edges")
-      .def("vertex_neighbors", [](S2CellId self, int level) {
+      .def("get_vertex_neighbors", [](S2CellId self, int level) {
                MaybeThrowIfFace(self);
                MaybeThrowLevelOutOfRange(level, 0, self.level() - 1);
                std::vector<S2CellId> output;
@@ -243,7 +243,7 @@ void bind_s2cell_id(py::module& m) {
            "Return the neighbors of the closest vertex at the given level.\n\n"
            "Normally returns 4 neighbors, but may return 3 for cube vertices.\n"
            "Raises ValueError if level >= self.level().")
-      .def("all_neighbors", [](S2CellId self, int level) {
+      .def("get_all_neighbors", [](S2CellId self, int level) {
                MaybeThrowLevelOutOfRange(level, self.level(),
                                          S2CellId::kMaxLevel);
                std::vector<S2CellId> output;
