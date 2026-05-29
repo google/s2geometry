@@ -201,55 +201,55 @@ class TestS2Cell(unittest.TestCase):
         # A point on the opposite face should be at a positive distance.
         far = s2.S2Point(-1.0, 0.0, 0.0)
         d = face.distance(far)
-        self.assertGreater(d.radians(), 0.0)
+        self.assertGreater(d.radians, 0.0)
 
     def test_distance_to_point_inside(self):
         face = s2.S2Cell.from_face(0)
         # Center of face 0 is inside; distance should be zero.
         center = face.center()
-        self.assertAlmostEqual(face.distance(center).radians(), 0.0)
+        self.assertAlmostEqual(face.distance(center).radians, 0.0)
 
     def test_boundary_distance(self):
         face = s2.S2Cell.from_face(0)
         center = face.center()
         # Interior point has positive boundary distance.
-        self.assertGreater(face.boundary_distance(center).radians(), 0.0)
+        self.assertGreater(face.boundary_distance(center).radians, 0.0)
         # A far exterior point also has positive boundary distance.
         far = s2.S2Point(-1.0, 0.0, 0.0)
-        self.assertGreater(face.boundary_distance(far).radians(), 0.0)
+        self.assertGreater(face.boundary_distance(far).radians, 0.0)
 
     def test_max_distance_to_point(self):
         face = s2.S2Cell.from_face(0)
         center = face.center()
         # Max distance from a face cell to its own center should be positive
         # (distance to the farthest corner).
-        self.assertGreater(face.max_distance(center).radians(), 0.0)
+        self.assertGreater(face.max_distance(center).radians, 0.0)
 
     def test_distance_to_edge(self):
         face = s2.S2Cell.from_face(0)
         # An edge entirely on the opposite face should be at positive distance.
         a = s2.S2Point(-1.0, 0.1, 0.0)
         b = s2.S2Point(-1.0, -0.1, 0.0)
-        self.assertGreater(face.distance_to_edge(a, b).radians(), 0.0)
+        self.assertGreater(face.distance_to_edge(a, b).radians, 0.0)
 
     def test_max_distance_to_edge(self):
         face = s2.S2Cell.from_face(0)
         a = s2.S2Point(-1.0, 0.1, 0.0)
         b = s2.S2Point(-1.0, -0.1, 0.0)
-        self.assertGreater(face.max_distance_to_edge(a, b).radians(), 0.0)
+        self.assertGreater(face.max_distance_to_edge(a, b).radians, 0.0)
 
     def test_distance_to_cell(self):
         face0 = s2.S2Cell.from_face(0)
         face1 = s2.S2Cell.from_face(1)
         # Distance from a cell to itself is zero.
-        self.assertAlmostEqual(face0.distance_to_cell(face0).radians(), 0.0)
+        self.assertAlmostEqual(face0.distance_to_cell(face0).radians, 0.0)
         # Distance between disjoint faces is positive.
-        self.assertGreater(face0.distance_to_cell(face1).radians(), 0.0)
+        self.assertGreater(face0.distance_to_cell(face1).radians, 0.0)
 
     def test_max_distance_to_cell(self):
         face0 = s2.S2Cell.from_face(0)
         face1 = s2.S2Cell.from_face(1)
-        self.assertGreater(face0.max_distance_to_cell(face1).radians(), 0.0)
+        self.assertGreater(face0.max_distance_to_cell(face1).radians, 0.0)
 
     def test_cell_union_bound(self):
         cell = s2.S2Cell.from_face(0)
