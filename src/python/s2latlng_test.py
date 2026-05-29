@@ -306,6 +306,12 @@ class TestS2LatLng(unittest.TestCase):
         # 240 degrees longitude -> wrapped to -120
         self.assertAlmostEqual(result.lng.degrees, -120.0)
 
+    def test_hash(self):
+        a = s2.S2LatLng.from_degrees(45.0, 90.0)
+        b = s2.S2LatLng.from_degrees(45.0, 90.0)
+        self.assertEqual(hash(a), hash(b))
+        self.assertEqual(len({a, b}), 1)
+
     # String representation
 
     def test_repr(self):

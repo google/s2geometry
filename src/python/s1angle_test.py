@@ -266,6 +266,12 @@ class TestS1Angle(unittest.TestCase):
         a /= 2.0
         self.assertAlmostEqual(a.degrees, 45.0)
 
+    def test_hash(self):
+        a = s2.S1Angle.from_degrees(45.0)
+        b = s2.S1Angle.from_degrees(45.0)
+        self.assertEqual(hash(a), hash(b))
+        self.assertEqual(len({a, b}), 1)
+
     # String representation
 
     def test_repr(self):

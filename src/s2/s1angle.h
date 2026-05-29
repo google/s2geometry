@@ -24,6 +24,7 @@
 #include <ostream>
 #include <type_traits>
 
+#include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
@@ -386,5 +387,10 @@ inline constexpr S1Angle S1Angle::UnsignedE7(uint32_t e7) {
 // Writes the angle in degrees with 7 digits of precision after the
 // decimal point, e.g. "17.3745904".
 std::ostream& operator<<(std::ostream& os, S1Angle a);
+
+template <typename H>
+H AbslHashValue(H h, S1Angle angle) {
+  return H::combine(std::move(h), angle.radians());
+}
 
 #endif  // S2_S1ANGLE_H_

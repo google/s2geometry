@@ -43,6 +43,7 @@ pybind_library(
     srcs = ["r1interval_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
     ],
 )
 
@@ -51,6 +52,7 @@ pybind_library(
     srcs = ["r2point_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
     ],
 )
 
@@ -59,6 +61,7 @@ pybind_library(
     srcs = ["r2rect_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
     ],
 )
 
@@ -67,6 +70,8 @@ pybind_library(
     srcs = ["s1angle_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -85,6 +90,7 @@ pybind_library(
     srcs = ["s1interval_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -94,6 +100,7 @@ pybind_library(
     srcs = ["s2point_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
     ],
 )
 
@@ -102,6 +109,7 @@ pybind_library(
     srcs = ["s2latlng_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
         "@abseil-cpp//absl/strings",
     ],
 )

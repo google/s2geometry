@@ -257,6 +257,12 @@ class TestS1Interval(unittest.TestCase):
         self.assertTrue(interval1 == interval2)
         self.assertTrue(interval1 != interval3)
 
+    def test_hash(self):
+        a = s2.S1Interval(0.0, 1.0)
+        b = s2.S1Interval(0.0, 1.0)
+        self.assertEqual(hash(a), hash(b))
+        self.assertEqual(len({a, b}), 1)
+
     # String representation
 
     def test_string_representation(self):

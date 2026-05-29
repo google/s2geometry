@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 
+#include "absl/hash/hash.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
@@ -138,6 +139,9 @@ void bind_s1angle(py::module& m) {
       .def("__truediv__", [](const S1Angle& a, const S1Angle& b) -> double {
         return a / b;
       }, py::arg("other"), "Divide two angles, returning a scalar ratio")
+      .def("__hash__", [](S1Angle self) {
+        return absl::HashOf(self);
+      })
 
       // String representation
       .def("__repr__", [](S1Angle a) {

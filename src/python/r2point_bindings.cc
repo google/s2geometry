@@ -3,6 +3,7 @@
 
 #include <sstream>
 
+#include "absl/hash/hash.h"
 #include "s2/r2.h"
 
 namespace py = pybind11;
@@ -64,6 +65,9 @@ void bind_r2point(py::module& m) {
       .def(-py::self, "Negate point")
       .def(py::self == py::self, "Return true if points are exactly equal")
       .def(py::self != py::self, "Return true if points are not exactly equal")
+      .def("__hash__", [](const R2Point& self) {
+        return absl::HashOf(self);
+      })
 
       // String representation
       .def("__repr__", [](const R2Point& p) {

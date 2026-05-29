@@ -137,6 +137,12 @@ class TestS2Point(unittest.TestCase):
         self.assertEqual(p1, p2)
         self.assertNotEqual(p1, p3)
 
+    def test_hash(self):
+        a = s2.S2Point(1.0, 0.0, 0.0)
+        b = s2.S2Point(1.0, 0.0, 0.0)
+        self.assertEqual(hash(a), hash(b))
+        self.assertEqual(len({a, b}), 1)
+
     # String representation
 
     def test_string_representation(self):
