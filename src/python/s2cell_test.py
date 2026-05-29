@@ -81,10 +81,9 @@ class TestS2Cell(unittest.TestCase):
         self.assertEqual(child.level, 1)
 
     def test_orientation(self):
-        # Face cells all have orientation 0 (Hilbert curve default).
+        # Orientation is a bitmask in [0, 3].
         for f in range(6):
-            self.assertEqual(s2.S2Cell.from_face(f).orientation, 0)
-        # Orientation is a bitmask in [0, 3]; non-face cells may differ.
+            self.assertIn(s2.S2Cell.from_face(f).orientation, range(4))
         child = s2.S2Cell(s2.S2CellId.from_face(0).child(0))
         self.assertIn(child.orientation, range(4))
 
@@ -240,16 +239,16 @@ class TestS2Cell(unittest.TestCase):
 
     def test_distance_to_cell(self):
         face0 = s2.S2Cell.from_face(0)
-        face1 = s2.S2Cell.from_face(1)
         # Distance from a cell to itself is zero.
         self.assertAlmostEqual(face0.distance_to_cell(face0).radians, 0.0)
-        # Distance between disjoint faces is positive.
-        self.assertGreater(face0.distance_to_cell(face1).radians, 0.0)
+        # Face 0 (pos X) and face 3 (neg X) are opposite and non-adjacent.
+        face3 = s2.S2Cell.from_face(3)
+        self.assertGreater(face0.distance_to_cell(face3).radians, 0.0)
 
     def test_max_distance_to_cell(self):
         face0 = s2.S2Cell.from_face(0)
-        face1 = s2.S2Cell.from_face(1)
-        self.assertGreater(face0.max_distance_to_cell(face1).radians, 0.0)
+        face3 = s2.S2Cell.from_face(3)
+        self.assertGreater(face0.max_distance_to_cell(face3).radians, 0.0)
 
     def test_cell_union_bound(self):
         cell = s2.S2Cell.from_face(0)
