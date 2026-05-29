@@ -279,6 +279,12 @@ class TestR2Rect(unittest.TestCase):
         e2 = s2.R2Rect()
         self.assertTrue(e1 == e2)
 
+    def test_hash(self):
+        a = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(1.0, 1.0))
+        b = s2.R2Rect(s2.R2Point(0.0, 0.0), s2.R2Point(1.0, 1.0))
+        self.assertEqual(hash(a), hash(b))
+        self.assertEqual(len({a, b}), 1)
+
     # String representation
 
     def test_string_representation(self):

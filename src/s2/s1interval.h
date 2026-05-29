@@ -23,6 +23,7 @@
 #include <iostream>
 #include <ostream>
 
+#include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/util/math/vector.h"  // IWYU pragma: export
@@ -274,6 +275,11 @@ inline void S1Interval::set_hi(double p) {
 
 inline std::ostream& operator<<(std::ostream& os, const S1Interval& x) {
   return os << "[" << x.lo() << ", " << x.hi() << "]";
+}
+
+template <typename H>
+H AbslHashValue(H h, const S1Interval& interval) {
+  return H::combine(std::move(h), interval.lo(), interval.hi());
 }
 
 #endif  // S2_S1INTERVAL_H_

@@ -23,6 +23,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/hash/hash_testing.h"
 #include "absl/strings/string_view.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
@@ -236,4 +237,15 @@ TEST(R2Rect, Expanded) {
               ApproxEquals(R2Rect(R2Point(0.1, 0.5), R2Point(0.4, 0.6))));
   EXPECT_TRUE(R2Rect(R2Point(0.2, 0.4), R2Point(0.3, 0.7)).Expanded(0.1).
               ApproxEquals(R2Rect(R2Point(0.1, 0.3), R2Point(0.4, 0.8))));
+}
+
+TEST(R2Rect, SupportsAbslHash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+    R2Rect::Empty(),
+    R2Rect(R2Point(0, 0), R2Point(0, 0)),
+    R2Rect(R2Point(0, 0), R2Point(1, 1)),
+    R2Rect(R2Point(1, 2), R2Point(3, 4)),
+    R2Rect(R2Point(-1, -2), R2Point(1, 2)),
+    R2Rect(R1Interval(0, 1), R1Interval(2, 3)),
+  }));
 }

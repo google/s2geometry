@@ -24,6 +24,7 @@
 #include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 
+#include "absl/hash/hash_testing.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
 
@@ -272,4 +273,16 @@ TEST(S1Angle, DegreesVsRadians) {
   // We also spot check a couple of non-identities.
   EXPECT_NE(S1Angle::Degrees(3), S1Angle::Radians(M_PI / 60));
   EXPECT_NE(60, S1Angle::Degrees(60).degrees());
+}
+
+TEST(S1Angle, SupportsAbslHash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+    S1Angle::Zero(),
+    S1Angle::Radians(1),
+    S1Angle::Radians(-1),
+    S1Angle::Degrees(90),
+    S1Angle::Degrees(180),
+    S1Angle::Degrees(-90),
+    S1Angle::Infinity(),
+  }));
 }

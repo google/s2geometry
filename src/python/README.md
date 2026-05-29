@@ -58,6 +58,7 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 
 **Operators:**
 - Standard Python operators work as expected: `+`, `-`, `*`, `==`, `!=`, `<`, `>` (for C++ classes that implement those operators)
+- Types that define `__eq__` also define `__hash__`, so they can be used as dictionary keys and in sets.
 - Binding types are intentionally immutable. In-place mutation operators are not supported. Augmented assignment (`+=`, `-=`, `*=`, `/=`) still works: Python falls back to the binary operator and rebinds the variable (e.g. `a += b` is equivalent to `a = a + b`).
 
 **Method Overloads:**

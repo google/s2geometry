@@ -21,6 +21,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/hash/hash_testing.h"
 #include "absl/strings/string_view.h"
 
 using absl::string_view;
@@ -186,4 +187,15 @@ TEST(R1Interval, ApproxEquals) {
   EXPECT_FALSE(R1Interval(1 + kHi, 2 - kLo).ApproxEquals(R1Interval(1, 2)));
   EXPECT_FALSE(R1Interval(1 - kLo, 2 + kHi).ApproxEquals(R1Interval(1, 2)));
   EXPECT_FALSE(R1Interval(1 + kLo, 2 - kHi).ApproxEquals(R1Interval(1, 2)));
+}
+
+TEST(R1Interval, SupportsAbslHash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+    R1Interval::Empty(),
+    R1Interval(0, 0),
+    R1Interval(0, 1),
+    R1Interval(1, 2),
+    R1Interval(-1, 1),
+    R1Interval(0.5, 1.5),
+  }));
 }
