@@ -11,7 +11,10 @@ if (CALL_FROM_SETUP_PY)
 else()
     # The Python package is installed directly in the folder of the
     # detected interpreter (system, user, or virtualenv)
-    set(S2GEOMETRY_INSTALL_PREFIX ${Python3_SITELIB})
+    execute_process(COMMAND ${Python3_EXECUTABLE} -c
+                    "import sys, sysconfig; print(sysconfig.get_path('platlib').replace(sys.prefix+'/','')+'/s2geometry')"
+                    OUTPUT_VARIABLE S2GEOMETRY_INSTALL_PREFIX
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
 
 include(${SWIG_USE_FILE})
