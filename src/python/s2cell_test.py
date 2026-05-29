@@ -227,15 +227,15 @@ class TestS2Cell(unittest.TestCase):
 
     def test_distance_to_edge(self):
         face = s2.S2Cell.from_face(0)
-        # An edge entirely on the opposite face should be at positive distance.
-        a = s2.S2Point(-1.0, 0.1, 0.0)
-        b = s2.S2Point(-1.0, -0.1, 0.0)
+        # An edge on the opposite face; use unit-length endpoints.
+        a = s2.S2Point(-1.0, 1.0, 0.0).normalize()
+        b = s2.S2Point(-1.0, -1.0, 0.0).normalize()
         self.assertGreater(face.distance_to_edge(a, b).radians, 0.0)
 
     def test_max_distance_to_edge(self):
         face = s2.S2Cell.from_face(0)
-        a = s2.S2Point(-1.0, 0.1, 0.0)
-        b = s2.S2Point(-1.0, -0.1, 0.0)
+        a = s2.S2Point(-1.0, 1.0, 0.0).normalize()
+        b = s2.S2Point(-1.0, -1.0, 0.0).normalize()
         self.assertGreater(face.max_distance_to_edge(a, b).radians, 0.0)
 
     def test_distance_to_cell(self):
