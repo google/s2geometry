@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 
+#include "absl/hash/hash.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
@@ -17,6 +18,7 @@ namespace py = pybind11;
 
 namespace {
 
+// These three helpers are duplicated from s2cell_id_bindings.cc.
 void MaybeThrowFaceOutOfRange(int face) {
   if (face < 0 || face >= S2CellId::kNumFaces) {
     throw py::value_error(
@@ -63,6 +65,8 @@ void bind_s2cell(py::module& m) {
            "Construct a leaf cell containing the given point.\n\n"
            "The point does not need to be normalized.")
       .def(py::init([](const S2LatLng& ll) {
+               // No validity check needed: all S2LatLng objects reachable from
+               // Python are guaranteed valid by the S2LatLng bindings.
                return S2Cell(ll);
            }),
            py::arg("latlng"),
@@ -103,9 +107,9 @@ void bind_s2cell(py::module& m) {
            "Return true if this is a leaf cell (level == kMaxLevel)")
 
       // Geometric operations
-      .def("get_size_ij", &S2Cell::GetSizeIJ,
+      .def("size_ij", &S2Cell::GetSizeIJ,
            "Return the edge length of this cell in (i,j)-space")
-      .def("get_size_st", &S2Cell::GetSizeST,
+      .def("size_st", &S2Cell::GetSizeST,
            "Return the edge length of this cell in (s,t)-space")
       .def("vertex", &S2Cell::GetVertex, py::arg("k"),
            "Return the k-th vertex of the cell (k = 0,1,2,3) in CCW order.\n\n"
@@ -144,41 +148,41 @@ void bind_s2cell(py::module& m) {
            "in steradians.\n\n"
            "More expensive than approx_area but accurate to 6 digits\n"
            "even for leaf cells.")
-      .def("get_bound_uv", &S2Cell::GetBoundUV,
+      .def("bound_uv", &S2Cell::GetBoundUV,
            "Return the bounds of this cell in (u,v)-space")
-      .def("get_distance", py::overload_cast<const S2Point&>(
+      .def("distance", py::overload_cast<const S2Point&>(
                &S2Cell::GetDistance, py::const_),
            py::arg("point"),
            "Return the distance from this cell to the given point.\n\n"
            "Returns zero if the point is inside the cell.")
-      .def("get_boundary_distance", &S2Cell::GetBoundaryDistance,
+      .def("boundary_distance", &S2Cell::GetBoundaryDistance,
            py::arg("point"),
            "Return the distance from the cell boundary to the given point.")
-      .def("get_max_distance", py::overload_cast<const S2Point&>(
+      .def("max_distance", py::overload_cast<const S2Point&>(
                &S2Cell::GetMaxDistance, py::const_),
            py::arg("point"),
            "Return the maximum distance from this cell to the given point.")
-      .def("get_distance_to_edge",
+      .def("distance_to_edge",
            py::overload_cast<const S2Point&, const S2Point&>(
                &S2Cell::GetDistance, py::const_),
            py::arg("a"), py::arg("b"),
            "Return the minimum distance from this cell to the edge AB.\n\n"
            "Returns zero if the edge intersects the cell interior.")
-      .def("get_max_distance_to_edge",
+      .def("max_distance_to_edge",
            py::overload_cast<const S2Point&, const S2Point&>(
                &S2Cell::GetMaxDistance, py::const_),
            py::arg("a"), py::arg("b"),
            "Return the maximum distance from this cell to the edge AB.")
-      .def("get_distance_to_cell",
+      .def("distance_to_cell",
            py::overload_cast<const S2Cell&>(&S2Cell::GetDistance, py::const_),
            py::arg("cell"),
            "Return the distance from this cell to the given cell.\n\n"
            "Returns zero if one cell contains the other.")
-      .def("get_max_distance_to_cell",
+      .def("max_distance_to_cell",
            py::overload_cast<const S2Cell&>(&S2Cell::GetMaxDistance, py::const_),
            py::arg("cell"),
            "Return the maximum distance from this cell to the given cell.")
-      .def("get_cell_union_bound", [](const S2Cell& self) {
+      .def("cell_union_bound", [](const S2Cell& self) {
                std::vector<S2CellId> cell_ids;
                self.GetCellUnionBound(&cell_ids);
                return cell_ids;
@@ -219,7 +223,7 @@ void bind_s2cell(py::module& m) {
       .def(py::self <= py::self, "Compare cells by their cell id")
       .def(py::self >= py::self, "Compare cells by their cell id")
       .def("__hash__", [](const S2Cell& self) {
-        return absl::Hash<S2CellId>()(self.id());
+        return absl::HashOf(self.id());
       })
 
       // String representation
@@ -234,11 +238,12 @@ void bind_s2cell(py::module& m) {
         return oss.str();
       });
 
-  // Edge boundary constants (from S2Cell::Boundary enum).
-  cls.attr("BOTTOM_EDGE") = static_cast<int>(S2Cell::kBottomEdge);
-  cls.attr("RIGHT_EDGE")  = static_cast<int>(S2Cell::kRightEdge);
-  cls.attr("TOP_EDGE")    = static_cast<int>(S2Cell::kTopEdge);
-  cls.attr("LEFT_EDGE")   = static_cast<int>(S2Cell::kLeftEdge);
+  py::enum_<S2Cell::Boundary>(cls, "Boundary", py::arithmetic())
+      .value("BOTTOM_EDGE", S2Cell::kBottomEdge)
+      .value("RIGHT_EDGE",  S2Cell::kRightEdge)
+      .value("TOP_EDGE",    S2Cell::kTopEdge)
+      .value("LEFT_EDGE",   S2Cell::kLeftEdge)
+      .export_values();
 
   // TODO: The following S2Cell methods are not yet bound because they depend
   // on types that have not been bound yet:

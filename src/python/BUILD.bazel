@@ -121,6 +121,7 @@ pybind_library(
     srcs = ["s2cell_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
         "@abseil-cpp//absl/strings",
     ],
 )

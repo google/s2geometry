@@ -58,10 +58,10 @@ class TestS2Cell(unittest.TestCase):
     # Constants
 
     def test_boundary_constants(self):
-        self.assertEqual(s2.S2Cell.BOTTOM_EDGE, 0)
-        self.assertEqual(s2.S2Cell.RIGHT_EDGE, 1)
-        self.assertEqual(s2.S2Cell.TOP_EDGE, 2)
-        self.assertEqual(s2.S2Cell.LEFT_EDGE, 3)
+        self.assertEqual(int(s2.S2Cell.BOTTOM_EDGE), 0)
+        self.assertEqual(int(s2.S2Cell.RIGHT_EDGE), 1)
+        self.assertEqual(int(s2.S2Cell.TOP_EDGE), 2)
+        self.assertEqual(int(s2.S2Cell.LEFT_EDGE), 3)
 
     # Properties
 
@@ -98,15 +98,15 @@ class TestS2Cell(unittest.TestCase):
 
     # Geometric operations
 
-    def test_get_size_ij(self):
+    def test_size_ij(self):
         # A face cell spans 2^kMaxLevel in (i,j).
         face = s2.S2Cell.from_face(0)
-        self.assertEqual(face.get_size_ij(), 1 << s2.S2CellId.MAX_LEVEL)
+        self.assertEqual(face.size_ij(), 1 << s2.S2CellId.MAX_LEVEL)
 
-    def test_get_size_st(self):
+    def test_size_st(self):
         # A face cell spans the full [0,1] range in (s,t).
         face = s2.S2Cell.from_face(0)
-        self.assertAlmostEqual(face.get_size_st(), 1.0)
+        self.assertAlmostEqual(face.size_st(), 1.0)
 
     def test_vertex_count_and_normalization(self):
         face = s2.S2Cell.from_face(0)
@@ -134,12 +134,12 @@ class TestS2Cell(unittest.TestCase):
         face = s2.S2Cell.from_face(0)
         # Face cell UV bounds are [-1, 1] x [-1, 1]. Bottom/top edges are
         # constant in V; left/right constant in U.
-        bottom = face.uv_coord_of_edge(s2.S2Cell.BOTTOM_EDGE)
-        top = face.uv_coord_of_edge(s2.S2Cell.TOP_EDGE)
+        bottom = face.uv_coord_of_edge(s2.S2Cell.Boundary.BOTTOM_EDGE)
+        top = face.uv_coord_of_edge(s2.S2Cell.Boundary.TOP_EDGE)
         self.assertAlmostEqual(bottom, -1.0)
         self.assertAlmostEqual(top, 1.0)
-        right = face.uv_coord_of_edge(s2.S2Cell.RIGHT_EDGE)
-        left = face.uv_coord_of_edge(s2.S2Cell.LEFT_EDGE)
+        right = face.uv_coord_of_edge(s2.S2Cell.Boundary.RIGHT_EDGE)
+        left = face.uv_coord_of_edge(s2.S2Cell.Boundary.LEFT_EDGE)
         self.assertAlmostEqual(right, 1.0)
         self.assertAlmostEqual(left, -1.0)
 
@@ -147,10 +147,10 @@ class TestS2Cell(unittest.TestCase):
         face = s2.S2Cell.from_face(0)
         # Face cell in (i,j): bottom/top edges are constant in J (0 and 2^30),
         # left/right edges are constant in I (0 and 2^30).
-        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.BOTTOM_EDGE), 0)
-        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.TOP_EDGE), 1 << 30)
-        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.LEFT_EDGE), 0)
-        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.RIGHT_EDGE), 1 << 30)
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.Boundary.BOTTOM_EDGE), 0)
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.Boundary.TOP_EDGE), 1 << 30)
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.Boundary.LEFT_EDGE), 0)
+        self.assertEqual(face.ij_coord_of_edge(s2.S2Cell.Boundary.RIGHT_EDGE), 1 << 30)
 
     def test_center(self):
         face = s2.S2Cell.from_face(0)
@@ -188,17 +188,72 @@ class TestS2Cell(unittest.TestCase):
         total = sum(s2.S2Cell.from_face(f).exact_area() for f in range(6))
         self.assertAlmostEqual(total, 4.0 * math.pi, places=10)
 
-    def test_get_bound_uv_face(self):
+    def test_bound_uv_face(self):
         face = s2.S2Cell.from_face(0)
-        uv = face.get_bound_uv()
+        uv = face.bound_uv()
         self.assertAlmostEqual(uv.lo.x, -1.0)
         self.assertAlmostEqual(uv.lo.y, -1.0)
         self.assertAlmostEqual(uv.hi.x, 1.0)
         self.assertAlmostEqual(uv.hi.y, 1.0)
 
-    def test_get_cell_union_bound(self):
+    def test_distance_to_point_outside(self):
+        face = s2.S2Cell.from_face(0)
+        # A point on the opposite face should be at a positive distance.
+        far = s2.S2Point(-1.0, 0.0, 0.0)
+        d = face.distance(far)
+        self.assertGreater(d.radians(), 0.0)
+
+    def test_distance_to_point_inside(self):
+        face = s2.S2Cell.from_face(0)
+        # Center of face 0 is inside; distance should be zero.
+        center = face.center()
+        self.assertAlmostEqual(face.distance(center).radians(), 0.0)
+
+    def test_boundary_distance(self):
+        face = s2.S2Cell.from_face(0)
+        center = face.center()
+        # Interior point has positive boundary distance.
+        self.assertGreater(face.boundary_distance(center).radians(), 0.0)
+        # A far exterior point also has positive boundary distance.
+        far = s2.S2Point(-1.0, 0.0, 0.0)
+        self.assertGreater(face.boundary_distance(far).radians(), 0.0)
+
+    def test_max_distance_to_point(self):
+        face = s2.S2Cell.from_face(0)
+        center = face.center()
+        # Max distance from a face cell to its own center should be positive
+        # (distance to the farthest corner).
+        self.assertGreater(face.max_distance(center).radians(), 0.0)
+
+    def test_distance_to_edge(self):
+        face = s2.S2Cell.from_face(0)
+        # An edge entirely on the opposite face should be at positive distance.
+        a = s2.S2Point(-1.0, 0.1, 0.0)
+        b = s2.S2Point(-1.0, -0.1, 0.0)
+        self.assertGreater(face.distance_to_edge(a, b).radians(), 0.0)
+
+    def test_max_distance_to_edge(self):
+        face = s2.S2Cell.from_face(0)
+        a = s2.S2Point(-1.0, 0.1, 0.0)
+        b = s2.S2Point(-1.0, -0.1, 0.0)
+        self.assertGreater(face.max_distance_to_edge(a, b).radians(), 0.0)
+
+    def test_distance_to_cell(self):
+        face0 = s2.S2Cell.from_face(0)
+        face1 = s2.S2Cell.from_face(1)
+        # Distance from a cell to itself is zero.
+        self.assertAlmostEqual(face0.distance_to_cell(face0).radians(), 0.0)
+        # Distance between disjoint faces is positive.
+        self.assertGreater(face0.distance_to_cell(face1).radians(), 0.0)
+
+    def test_max_distance_to_cell(self):
+        face0 = s2.S2Cell.from_face(0)
+        face1 = s2.S2Cell.from_face(1)
+        self.assertGreater(face0.max_distance_to_cell(face1).radians(), 0.0)
+
+    def test_cell_union_bound(self):
         cell = s2.S2Cell.from_face(0)
-        bound = cell.get_cell_union_bound()
+        bound = cell.cell_union_bound()
         self.assertEqual(len(bound), 1)
         self.assertEqual(bound[0], cell.id)
 
