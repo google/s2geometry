@@ -129,7 +129,7 @@ void bind_s2latlng(py::module& m) {
       // Geometric operations
       .def("to_point", &S2LatLng::ToPoint,
            "Convert to the equivalent unit-length S2Point")
-      .def("get_distance", &S2LatLng::GetDistance,
+      .def("distance", &S2LatLng::GetDistance,
            py::arg("other"),
            "Return the surface distance to another S2LatLng.\n\n"
            "Uses the Haversine formula.")
@@ -142,7 +142,7 @@ void bind_s2latlng(py::module& m) {
            py::arg("max_error") = S1Angle::Radians(1e-15),
            "Return true if approximately equal to 'other'.\n\n"
            "Note: this compares coordinates in rectangular lat/lng space.\n"
-           "For points near the poles, consider using get_distance() instead.")
+           "For points near the poles, consider using distance() instead.")
 
       // Operators
       .def(py::self == py::self, "Return true if exactly equal")
