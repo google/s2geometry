@@ -34,6 +34,7 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 - Core classes exist within the top-level module; we may define submodules for utility classes.
 - Class names remain unchanged (e.g., `S2Point`, `S1Angle`, `R1Interval`)
 - Method names are converted to snake_case (converted from UpperCamelCase C++ function names)
+- The `Get` prefix is dropped: C++ `GetDistance` becomes Python `distance`, `GetBoundUV` becomes `bound_uv`, etc.
 
 **Properties vs. Methods:**
 - Simple accessors that return internal state (including trivial unit conversions) are properties: `point.x`, `point.y`, `interval.lo`, `interval.hi`, `angle.radians`, `angle.degrees`
