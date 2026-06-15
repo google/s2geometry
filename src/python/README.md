@@ -81,7 +81,7 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 
 **Iterators:**
 - Some classes expose methods that return iterables (e.g., `S2CellId.children()`, `S2CellId.cells(level)`).
-- Iterables support forward iteration, `len()`, indexing, slicing (with step=1), `in`, and `reversed()` unless otherwise noted.
+- Iterables support forward iteration, `len()`, indexing, slicing, `in`, and `reversed()` unless otherwise noted.
 
 **Serialization:**
 - The C++ Encoder/Decoder serialization functions are not currently supported
