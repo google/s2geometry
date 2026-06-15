@@ -30,10 +30,9 @@ struct S2CellIdRange {
   // Return the number of cells in the range.
   int64_t size() const;
 
-  // Return the cell at 0-based position i, or std::nullopt if i is out of
-  // range [0, size()).  Negative indices are not normalized; callers that want
-  // Python-style negative indexing should add size() before calling.
-  std::optional<S2CellId> at(int64_t i) const;
+  // Return the cell at 0-based offset i.  i must be in [0, size()); behavior
+  // is undefined otherwise.
+  S2CellId at(int64_t i) const;
 
   // Return the sub-range [start, stop).  start and stop must satisfy
   // 0 <= start <= stop <= size(); behavior is undefined otherwise.
@@ -44,7 +43,7 @@ struct S2CellIdRange {
 };
 
 // Forward iterator over an S2CellIdRange.
-struct S2CellIdForwardIter {
+struct S2CellIdForwardIterator {
   S2CellId cur;
   S2CellId end;
 
@@ -53,7 +52,7 @@ struct S2CellIdForwardIter {
 };
 
 // Reverse iterator over an S2CellIdRange.
-struct S2CellIdReverseIter {
+struct S2CellIdReverseIterator {
   S2CellId cur;
   S2CellId begin;
   bool done;

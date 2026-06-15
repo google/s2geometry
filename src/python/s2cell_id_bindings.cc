@@ -78,25 +78,27 @@ void MaybeThrowPositionOutOfRange(uint64_t pos) {
 Py_ssize_t RangeLenOrThrow(int64_t n) {
   if (n > std::numeric_limits<Py_ssize_t>::max()) {
     throw std::overflow_error(absl::StrCat(
-        "S2CellIdRange size ", n, " exceeds Py_ssize_t max ",
+        "S2CellIdRange size ", n, " exceeds Py_ssize_t max (",
         std::numeric_limits<Py_ssize_t>::max(),
-        "; use .size() instead"));
+        ") on this platform. On 32-bit Python, cells() ranges above "
+        "level ~15 exceed ssize_t. Use .size() for the full int64 count."));
   }
   return static_cast<Py_ssize_t>(n);
 }
 
-// Normalize a Python-style index (negative counts from end), look up the cell,
-// and raise IndexError if out of range.
+// Normalize a Python-style index (negative counts from end) and return the
+// cell.  Raises IndexError if the index is still out of [0, size()) after
+// normalization.
 S2CellId RangeItemOrThrow(const S2CellIdRange& r, int64_t i) {
-  if (i < 0) i += r.size();
-  auto result = r.at(i);
-  if (!result) throw py::index_error("index out of range");
-  return *result;
+  int64_t n = r.size();
+  if (i < 0) i += n;
+  if (i < 0 || i >= n) throw py::index_error("index out of range");
+  return r.at(i);
 }
 
-// Parse a Python slice against r, validate that step==1, and return the
-// corresponding sub-range.  Raises ValueError for any other step.
-S2CellIdRange RangeSliceOrThrow(const S2CellIdRange& r, py::slice s) {
+// Raise ValueError if the slice step is anything other than 1 (or None).
+// S2CellIdRange slices must be contiguous; reversed() covers step=-1.
+void ValidateSliceStepOrThrow(py::slice s) {
   py::object step_obj = s.attr("step");
   if (!step_obj.is_none()) {
     int64_t step = step_obj.cast<int64_t>();
@@ -106,6 +108,11 @@ S2CellIdRange RangeSliceOrThrow(const S2CellIdRange& r, py::slice s) {
           step, ")"));
     }
   }
+}
+
+// Resolve a Python slice's start/stop against a range of length n, clamping
+// to [0, n] and applying Python negative-index semantics.
+S2CellIdRange ComputeSlice(const S2CellIdRange& r, py::slice s) {
   int64_t n = r.size();
   auto clamp = [n](int64_t i) -> int64_t {
     if (i < 0) i += n;
@@ -119,6 +126,11 @@ S2CellIdRange RangeSliceOrThrow(const S2CellIdRange& r, py::slice s) {
   int64_t stop  = stop_obj.is_none()  ? n           : clamp(stop_obj.cast<int64_t>());
   if (stop < start) stop = start;
   return r.slice(start, stop);
+}
+
+S2CellIdRange RangeSliceOrThrow(const S2CellIdRange& r, py::slice s) {
+  ValidateSliceStepOrThrow(s);
+  return ComputeSlice(r, s);
 }
 
 // Dereference an optional S2CellId from an iterator's next(), or raise
@@ -392,28 +404,28 @@ void bind_s2cell_id(py::module& m) {
       }, py::arg("slice"))
       .def("__contains__", &S2CellIdRange::contains, py::arg("cell"))
       .def("__iter__", [](const S2CellIdRange& self) {
-        return S2CellIdForwardIter{self.begin, self.end};
+        return S2CellIdForwardIterator{self.begin, self.end};
       })
       .def("__reversed__", [](const S2CellIdRange& self) {
         if (self.size() == 0) {
-          return S2CellIdReverseIter{self.begin, self.begin, true};
+          return S2CellIdReverseIterator{self.begin, self.begin, true};
         }
-        return S2CellIdReverseIter{self.end.prev(), self.begin, false};
+        return S2CellIdReverseIterator{self.end.prev(), self.begin, false};
       });
 
-  py::class_<S2CellIdForwardIter>(m, "S2CellIdForwardIter", py::module_local())
-      .def("__iter__", [](S2CellIdForwardIter& self) -> S2CellIdForwardIter& {
+  py::class_<S2CellIdForwardIterator>(m, "S2CellIdForwardIterator", py::module_local())
+      .def("__iter__", [](S2CellIdForwardIterator& self) -> S2CellIdForwardIterator& {
         return self;
       })
-      .def("__next__", [](S2CellIdForwardIter& self) {
+      .def("__next__", [](S2CellIdForwardIterator& self) {
         return NextOrStop(self.next());
       });
 
-  py::class_<S2CellIdReverseIter>(m, "S2CellIdReverseIter", py::module_local())
-      .def("__iter__", [](S2CellIdReverseIter& self) -> S2CellIdReverseIter& {
+  py::class_<S2CellIdReverseIterator>(m, "S2CellIdReverseIterator", py::module_local())
+      .def("__iter__", [](S2CellIdReverseIterator& self) -> S2CellIdReverseIterator& {
         return self;
       })
-      .def("__next__", [](S2CellIdReverseIter& self) {
+      .def("__next__", [](S2CellIdReverseIterator& self) {
         return NextOrStop(self.next());
       });
 }

@@ -15,7 +15,6 @@
 #include "s2/s2cellid_range.h"
 
 #include <cstdint>
-#include <optional>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -33,7 +32,7 @@ S2CellIdRange FaceRange(int face, int level) {
 // Collect all cells produced by iterating a range forward.
 std::vector<S2CellId> Collect(S2CellIdRange r) {
   std::vector<S2CellId> result;
-  S2CellIdForwardIter it{r.begin, r.end};
+  S2CellIdForwardIterator it{r.begin, r.end};
   while (auto cell = it.next()) {
     result.push_back(*cell);
   }
@@ -44,7 +43,7 @@ std::vector<S2CellId> Collect(S2CellIdRange r) {
 std::vector<S2CellId> CollectReverse(S2CellIdRange r) {
   std::vector<S2CellId> result;
   if (r.size() == 0) return result;
-  S2CellIdReverseIter it{r.end.prev(), r.begin, false};
+  S2CellIdReverseIterator it{r.end.prev(), r.begin, false};
   while (auto cell = it.next()) {
     result.push_back(*cell);
   }
@@ -97,23 +96,6 @@ TEST(S2CellIdRangeTest, AtMiddleCell) {
   EXPECT_EQ(r.at(7), r.begin.advance(7));
 }
 
-TEST(S2CellIdRangeTest, AtNegativeIndexReturnsNullopt) {
-  S2CellIdRange r = FaceRange(0, 1);
-  EXPECT_EQ(r.at(-1), std::nullopt);
-}
-
-TEST(S2CellIdRangeTest, AtOutOfRangeReturnsNullopt) {
-  S2CellIdRange r = FaceRange(0, 1);
-  EXPECT_EQ(r.at(4), std::nullopt);
-  EXPECT_EQ(r.at(100), std::nullopt);
-}
-
-TEST(S2CellIdRangeTest, AtEmptyRangeReturnsNullopt) {
-  S2CellId face = S2CellId::FromFace(0);
-  S2CellIdRange r{face.child_begin(1), face.child_begin(1)};
-  EXPECT_EQ(r.at(0), std::nullopt);
-}
-
 // ---------------------------------------------------------------------------
 // S2CellIdRange::slice
 // ---------------------------------------------------------------------------
@@ -152,7 +134,7 @@ TEST(S2CellIdRangeTest, SliceSingleCell) {
   S2CellIdRange r = FaceRange(0, 1);
   S2CellIdRange s = r.slice(1, 2);
   EXPECT_EQ(s.size(), 1);
-  EXPECT_EQ(*s.at(0), r.begin.advance(1));
+  EXPECT_EQ(s.at(0), r.begin.advance(1));
 }
 
 // ---------------------------------------------------------------------------
@@ -191,10 +173,10 @@ TEST(S2CellIdRangeTest, ContainsEmptyRange) {
 }
 
 // ---------------------------------------------------------------------------
-// S2CellIdForwardIter
+// S2CellIdForwardIterator
 // ---------------------------------------------------------------------------
 
-TEST(S2CellIdForwardIterTest, IteratesAllCells) {
+TEST(S2CellIdForwardIteratorTest, IteratesAllCells) {
   S2CellIdRange r = FaceRange(0, 1);
   std::vector<S2CellId> cells = Collect(r);
   ASSERT_EQ(cells.size(), 4u);
@@ -203,15 +185,15 @@ TEST(S2CellIdForwardIterTest, IteratesAllCells) {
   }
 }
 
-TEST(S2CellIdForwardIterTest, EmptyRangeProducesNoItems) {
+TEST(S2CellIdForwardIteratorTest, EmptyRangeProducesNoItems) {
   S2CellId face = S2CellId::FromFace(0);
   S2CellIdRange r{face.child_begin(1), face.child_begin(1)};
   EXPECT_TRUE(Collect(r).empty());
 }
 
-TEST(S2CellIdForwardIterTest, ReturnsNulloptWhenExhausted) {
+TEST(S2CellIdForwardIteratorTest, ReturnsNulloptWhenExhausted) {
   S2CellIdRange r = FaceRange(0, 1);
-  S2CellIdForwardIter it{r.begin, r.end};
+  S2CellIdForwardIterator it{r.begin, r.end};
   for (int i = 0; i < 4; ++i) it.next();
   EXPECT_EQ(it.next(), std::nullopt);
   // Calling next() again is safe.
@@ -219,10 +201,10 @@ TEST(S2CellIdForwardIterTest, ReturnsNulloptWhenExhausted) {
 }
 
 // ---------------------------------------------------------------------------
-// S2CellIdReverseIter
+// S2CellIdReverseIterator
 // ---------------------------------------------------------------------------
 
-TEST(S2CellIdReverseIterTest, IteratesAllCellsInReverse) {
+TEST(S2CellIdReverseIteratorTest, IteratesAllCellsInReverse) {
   S2CellIdRange r = FaceRange(0, 1);
   std::vector<S2CellId> cells = CollectReverse(r);
   ASSERT_EQ(cells.size(), 4u);
@@ -231,23 +213,23 @@ TEST(S2CellIdReverseIterTest, IteratesAllCellsInReverse) {
   }
 }
 
-TEST(S2CellIdReverseIterTest, EmptyRangeProducesNoItems) {
+TEST(S2CellIdReverseIteratorTest, EmptyRangeProducesNoItems) {
   S2CellId face = S2CellId::FromFace(0);
   S2CellIdRange r{face.child_begin(1), face.child_begin(1)};
   EXPECT_TRUE(CollectReverse(r).empty());
 }
 
-TEST(S2CellIdReverseIterTest, SingleCellRange) {
+TEST(S2CellIdReverseIteratorTest, SingleCellRange) {
   S2CellIdRange r = FaceRange(0, 1);
   S2CellIdRange single = r.slice(2, 3);
   std::vector<S2CellId> cells = CollectReverse(single);
   ASSERT_EQ(cells.size(), 1u);
-  EXPECT_EQ(cells[0], *single.at(0));
+  EXPECT_EQ(cells[0], single.at(0));
 }
 
-TEST(S2CellIdReverseIterTest, ReturnsNulloptWhenExhausted) {
+TEST(S2CellIdReverseIteratorTest, ReturnsNulloptWhenExhausted) {
   S2CellIdRange r = FaceRange(0, 1);
-  S2CellIdReverseIter it{r.end.prev(), r.begin, false};
+  S2CellIdReverseIterator it{r.end.prev(), r.begin, false};
   for (int i = 0; i < 4; ++i) it.next();
   EXPECT_EQ(it.next(), std::nullopt);
   EXPECT_EQ(it.next(), std::nullopt);

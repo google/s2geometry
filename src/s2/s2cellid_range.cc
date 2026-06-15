@@ -14,16 +14,22 @@
 
 #include "s2/s2cellid_range.h"
 
+#include "absl/log/absl_check.h"
+
 int64_t S2CellIdRange::size() const {
   return end.distance_from_begin() - begin.distance_from_begin();
 }
 
-std::optional<S2CellId> S2CellIdRange::at(int64_t i) const {
-  if (i < 0 || i >= size()) return std::nullopt;
+S2CellId S2CellIdRange::at(int64_t i) const {
+  ABSL_DCHECK_GE(i, 0);
+  ABSL_DCHECK_LT(i, size());
   return begin.advance(i);
 }
 
 S2CellIdRange S2CellIdRange::slice(int64_t start, int64_t stop) const {
+  ABSL_DCHECK_GE(start, 0);
+  ABSL_DCHECK_LE(start, stop);
+  ABSL_DCHECK_LE(stop, size());
   return S2CellIdRange{begin.advance(start), begin.advance(stop)};
 }
 
@@ -31,14 +37,14 @@ bool S2CellIdRange::contains(S2CellId cell) const {
   return cell >= begin && cell < end && cell.level() == begin.level();
 }
 
-std::optional<S2CellId> S2CellIdForwardIter::next() {
+std::optional<S2CellId> S2CellIdForwardIterator::next() {
   if (cur == end) return std::nullopt;
   S2CellId result = cur;
   cur = cur.next();
   return result;
 }
 
-std::optional<S2CellId> S2CellIdReverseIter::next() {
+std::optional<S2CellId> S2CellIdReverseIterator::next() {
   if (done) return std::nullopt;
   S2CellId result = cur;
   if (cur == begin) {
