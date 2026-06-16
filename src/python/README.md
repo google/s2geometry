@@ -156,7 +156,7 @@ Use the following sections to organize functions within the bindings files and t
 1. **Properties** - Mutable and read-only properties (e.g., coordinate accessors like `x`, `y`, `lo`, `hi`)
 1. **Predicates** - Simple boolean state checks (e.g., `is_empty`, `is_valid`, `is_full`)
 1. **Geometric operations** - All other methods including conversions, computations, containment checks, set operations, normalization, and distance calculations
-1. **Traversal** - Methods for navigating a cell hierarchy (e.g., `parent`, `child`, `children()`, `cells()`, neighbor methods)
+1. **Traversal** - Methods for navigating a cell hierarchy (e.g., `parent`, `child`, neighbor methods)
 1. **Vector operations** - Methods from the Vector base class (e.g., `norm`, `norm2`, `normalize`, `dot_prod`, `cross_prod`, `angle`). Only applicable to classes that inherit from `util/math/vector.h`
 1. **Operators** - Operator overloads (e.g., `==`, `+`, `*`, comparison operators)
 1. **String representation** - `__repr__` (which also provides `__str__`), and string conversion methods like `to_string_in_degrees`

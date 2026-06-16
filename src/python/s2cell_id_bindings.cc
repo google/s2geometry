@@ -89,7 +89,7 @@ Py_ssize_t LenOrThrow(int64_t n) {
 // of length n and return the 0-based index.  Raises IndexError if the index
 // is still out of [0, n) after normalization.
 // https://docs.python.org/3/reference/datamodel.html#object.__getitem__
-int64_t SliceIndexOrThrow(int64_t i, int64_t n) {
+int64_t IndexOrThrow(int64_t i, int64_t n) {
   if (i < 0) i += n;
   if (i < 0 || i >= n) throw py::index_error("index out of range");
   return i;
@@ -97,7 +97,7 @@ int64_t SliceIndexOrThrow(int64_t i, int64_t n) {
 
 // Raise ValueError if the slice step is anything other than 1 (or None).
 // S2CellIdRange slices must be contiguous; reversed() covers step=-1.
-void ValidateSliceStepOrThrow(py::slice s) {
+void StepOrThrow(py::slice s) {
   py::object step_obj = s.attr("step");
   if (step_obj.is_none()) return;
   int64_t step = step_obj.cast<int64_t>();
@@ -108,12 +108,10 @@ void ValidateSliceStepOrThrow(py::slice s) {
   }
 }
 
-// Validate and resolve a Python slice against a range of length n. Returns
-// the clamped [start, stop) bounds.  Raises ValueError for unsupported steps.
-// Slice indices are silently clamped to the valid range per the data model:
-// https://docs.python.org/3/reference/datamodel.html#object.__getitem__
-std::pair<int64_t, int64_t> SliceBoundsOrThrow(int64_t n, py::slice s) {
-  ValidateSliceStepOrThrow(s);
+// Resolve a Python slice against a range of length n and return the clamped
+// [start, stop) bounds.  Slice indices are silently clamped per:
+// https://docs.python.org/3/reference/datamodel.html#sequences
+std::pair<int64_t, int64_t> ClampedSlice(int64_t n, py::slice s) {
   auto clamp = [n](int64_t i) -> int64_t {
     if (i < 0) i += n;
     if (i < 0) return int64_t{0};
@@ -392,10 +390,11 @@ void bind_s2cell_id(py::module& m) {
            "the range may exceed Py_ssize_t (e.g. very large cells() ranges\n"
            "on 32-bit Python).")
       .def("__getitem__",  [](const S2CellIdRange& self, int64_t i) {
-        return self.at(SliceIndexOrThrow(i, self.size()));
+        return self.at(IndexOrThrow(i, self.size()));
       }, py::arg("index"))
       .def("__getitem__",  [](const S2CellIdRange& self, py::slice s) {
-        auto [start, stop] = SliceBoundsOrThrow(self.size(), s);
+        StepOrThrow(s);
+        auto [start, stop] = ClampedSlice(self.size(), s);
         return self.slice(start, stop);
       }, py::arg("slice"))
       .def("__contains__", &S2CellIdRange::contains, py::arg("cell"))
