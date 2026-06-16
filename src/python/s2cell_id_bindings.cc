@@ -97,7 +97,7 @@ int64_t IndexOrThrow(int64_t i, int64_t n) {
 
 // Raise ValueError if the slice step is anything other than 1 (or None).
 // S2CellIdRange slices must be contiguous; reversed() covers step=-1.
-void StepOrThrow(py::slice s) {
+void ValidateStepIsOne(py::slice s) {
   py::object step_obj = s.attr("step");
   if (step_obj.is_none()) return;
   int64_t step = step_obj.cast<int64_t>();
@@ -389,7 +389,7 @@ void bind_s2cell_id(py::module& m) {
         return self.at(IndexOrThrow(i, self.size()));
       }, py::arg("index"))
       .def("__getitem__",  [](const S2CellIdRange& self, py::slice s) {
-        StepOrThrow(s);
+        ValidateStepIsOne(s);
         auto [start, stop] = ClampedSlice(self.size(), s);
         return self.slice(start, stop);
       }, py::arg("slice"))
