@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "s2/s2cellid_range.h"
+#include "s2/s2cell_id_range.h"
 
 #include "absl/log/absl_check.h"
 
 int64_t S2CellIdRange::size() const {
+  ABSL_DCHECK(begin == end || begin.level() == end.level())
+      << "S2CellIdRange: begin and end must be at the same level";
   return end.distance_from_begin() - begin.distance_from_begin();
 }
 
@@ -45,12 +47,7 @@ std::optional<S2CellId> S2CellIdForwardIterator::next() {
 }
 
 std::optional<S2CellId> S2CellIdReverseIterator::next() {
-  if (done) return std::nullopt;
-  S2CellId result = cur;
-  if (cur == begin) {
-    done = true;
-  } else {
-    cur = cur.prev();
-  }
-  return result;
+  if (cur == begin) return std::nullopt;
+  cur = cur.prev();
+  return cur;
 }

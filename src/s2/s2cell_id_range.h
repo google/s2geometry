@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef S2_S2CELLID_RANGE_H_
-#define S2_S2CELLID_RANGE_H_
+#ifndef S2_S2CELL_ID_RANGE_H_
+#define S2_S2CELL_ID_RANGE_H_
 
 #include <cstdint>
 #include <optional>
@@ -51,15 +51,16 @@ struct S2CellIdForwardIterator {
   std::optional<S2CellId> next();
 };
 
-// Reverse iterator over an S2CellIdRange.
+// Reverse iterator over an S2CellIdRange.  Construct with cur = range.end;
+// next() decrements cur before yielding, so the empty-range case (begin ==
+// end) is handled without a separate flag.
 struct S2CellIdReverseIterator {
-  S2CellId cur;
-  S2CellId begin;
-  bool done;
+  S2CellId cur;    // one-past-current; starts at range.end
+  S2CellId begin;  // stop when cur reaches here
 
   // Return the next cell (in reverse order) and advance, or std::nullopt if
   // exhausted.
   std::optional<S2CellId> next();
 };
 
-#endif  // S2_S2CELLID_RANGE_H_
+#endif  // S2_S2CELL_ID_RANGE_H_

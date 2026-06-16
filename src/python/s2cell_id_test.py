@@ -327,7 +327,12 @@ class TestS2CellId(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             list(leaf.children())
         self.assertEqual(str(cm.exception),
-                         "Leaf cell has no children")
+                         "Function invalid for leaf cells")
+
+    def test_children_at_own_level_raises(self):
+        cell = s2.S2CellId.from_face(0)
+        with self.assertRaises(ValueError):
+            cell.children(0)
 
     def test_cells_level_0(self):
         cells = list(s2.S2CellId.cells(0))

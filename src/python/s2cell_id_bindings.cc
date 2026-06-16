@@ -10,7 +10,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "s2/s2cell_id.h"
-#include "s2/s2cellid_range.h"
+#include "s2/s2cell_id_range.h"
 #include "s2/s2latlng.h"
 
 namespace py = pybind11;
@@ -299,7 +299,7 @@ void bind_s2cell_id(py::module& m) {
                  end = self.child_end();
                } else {
                  int level = level_obj.cast<int>();
-                 MaybeThrowLevelOutOfRange(level, self.level(),
+                 MaybeThrowLevelOutOfRange(level, self.level() + 1,
                                            S2CellId::kMaxLevel);
                  begin = self.child_begin(level);
                  end = self.child_end(level);
@@ -398,13 +398,10 @@ void bind_s2cell_id(py::module& m) {
         return S2CellIdForwardIterator{self.begin, self.end};
       })
       .def("__reversed__", [](const S2CellIdRange& self) {
-        if (self.size() == 0) {
-          return S2CellIdReverseIterator{self.begin, self.begin, true};
-        }
-        return S2CellIdReverseIterator{self.end.prev(), self.begin, false};
+        return S2CellIdReverseIterator{self.end, self.begin};
       });
 
-  py::class_<S2CellIdForwardIterator>(m, "S2CellIdForwardIterator", py::module_local())
+  py::class_<S2CellIdForwardIterator>(m, "_S2CellIdForwardIterator", py::module_local())
       .def("__iter__", [](S2CellIdForwardIterator& self) -> S2CellIdForwardIterator& {
         return self;
       })
@@ -412,7 +409,7 @@ void bind_s2cell_id(py::module& m) {
         return NextOrStop(self.next());
       });
 
-  py::class_<S2CellIdReverseIterator>(m, "S2CellIdReverseIterator", py::module_local())
+  py::class_<S2CellIdReverseIterator>(m, "_S2CellIdReverseIterator", py::module_local())
       .def("__iter__", [](S2CellIdReverseIterator& self) -> S2CellIdReverseIterator& {
         return self;
       })

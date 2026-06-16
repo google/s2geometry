@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "s2/s2cellid_range.h"
+#include "s2/s2cell_id_range.h"
 
 #include <cstdint>
 #include <vector>
@@ -42,8 +42,7 @@ std::vector<S2CellId> Collect(S2CellIdRange r) {
 // Collect all cells produced by iterating a range in reverse.
 std::vector<S2CellId> CollectReverse(S2CellIdRange r) {
   std::vector<S2CellId> result;
-  if (r.size() == 0) return result;
-  S2CellIdReverseIterator it{r.end.prev(), r.begin, false};
+  S2CellIdReverseIterator it{r.end, r.begin};
   while (auto cell = it.next()) {
     result.push_back(*cell);
   }
@@ -229,7 +228,7 @@ TEST(S2CellIdReverseIteratorTest, SingleCellRange) {
 
 TEST(S2CellIdReverseIteratorTest, ReturnsNulloptWhenExhausted) {
   S2CellIdRange r = FaceRange(0, 1);
-  S2CellIdReverseIterator it{r.end.prev(), r.begin, false};
+  S2CellIdReverseIterator it{r.end, r.begin};
   for (int i = 0; i < 4; ++i) it.next();
   EXPECT_EQ(it.next(), std::nullopt);
   EXPECT_EQ(it.next(), std::nullopt);
