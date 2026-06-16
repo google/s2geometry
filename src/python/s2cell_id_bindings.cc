@@ -73,9 +73,8 @@ void MaybeThrowPositionOutOfRange(uint64_t pos) {
 }
 
 // Raise OverflowError if n exceeds Py_ssize_t; otherwise return it cast.
-// Used by S2CellIdRange.__len__, where the largest range (6 * 4^30) fits on
-// 64-bit Python but overflows on 32-bit.
-Py_ssize_t RangeLenOrThrow(int64_t n) {
+// On 32-bit Python, cells() ranges above level ~15 exceed ssize_t max.
+Py_ssize_t LenOrThrow(int64_t n) {
   if (n > std::numeric_limits<Py_ssize_t>::max()) {
     throw std::overflow_error(absl::StrCat(
         "S2CellIdRange size ", n, " exceeds Py_ssize_t max (",
@@ -86,34 +85,35 @@ Py_ssize_t RangeLenOrThrow(int64_t n) {
   return static_cast<Py_ssize_t>(n);
 }
 
-// Normalize a Python-style index (negative counts from end) and return the
-// cell.  Raises IndexError if the index is still out of [0, size()) after
-// normalization.
-S2CellId RangeItemOrThrow(const S2CellIdRange& r, int64_t i) {
-  int64_t n = r.size();
+// Normalize a Python-style index (negative counts from end) against a range
+// of length n and return the 0-based index.  Raises IndexError if the index
+// is still out of [0, n) after normalization.
+// https://docs.python.org/3/reference/datamodel.html#object.__getitem__
+int64_t SliceIndexOrThrow(int64_t i, int64_t n) {
   if (i < 0) i += n;
   if (i < 0 || i >= n) throw py::index_error("index out of range");
-  return r.at(i);
+  return i;
 }
 
 // Raise ValueError if the slice step is anything other than 1 (or None).
 // S2CellIdRange slices must be contiguous; reversed() covers step=-1.
 void ValidateSliceStepOrThrow(py::slice s) {
   py::object step_obj = s.attr("step");
-  if (!step_obj.is_none()) {
-    int64_t step = step_obj.cast<int64_t>();
-    if (step != 1) {
-      throw py::value_error(absl::StrCat(
-          "S2CellIdRange only supports slices with step 1 (got step ",
-          step, ")"));
-    }
+  if (step_obj.is_none()) return;
+  int64_t step = step_obj.cast<int64_t>();
+  if (step != 1) {
+    throw py::value_error(absl::StrCat(
+        "S2CellIdRange only supports slices with step 1 (got step ",
+        step, ")"));
   }
 }
 
-// Resolve a Python slice's start/stop against a range of length n, clamping
-// to [0, n] and applying Python negative-index semantics.
-S2CellIdRange ComputeSlice(const S2CellIdRange& r, py::slice s) {
-  int64_t n = r.size();
+// Validate and resolve a Python slice against a range of length n. Returns
+// the clamped [start, stop) bounds.  Raises ValueError for unsupported steps.
+// Slice indices are silently clamped to the valid range per the data model:
+// https://docs.python.org/3/reference/datamodel.html#object.__getitem__
+std::pair<int64_t, int64_t> SliceBoundsOrThrow(int64_t n, py::slice s) {
+  ValidateSliceStepOrThrow(s);
   auto clamp = [n](int64_t i) -> int64_t {
     if (i < 0) i += n;
     if (i < 0) return int64_t{0};
@@ -125,12 +125,7 @@ S2CellIdRange ComputeSlice(const S2CellIdRange& r, py::slice s) {
   int64_t start = start_obj.is_none() ? int64_t{0} : clamp(start_obj.cast<int64_t>());
   int64_t stop  = stop_obj.is_none()  ? n           : clamp(stop_obj.cast<int64_t>());
   if (stop < start) stop = start;
-  return r.slice(start, stop);
-}
-
-S2CellIdRange RangeSliceOrThrow(const S2CellIdRange& r, py::slice s) {
-  ValidateSliceStepOrThrow(s);
-  return ComputeSlice(r, s);
+  return {start, stop};
 }
 
 // Dereference an optional S2CellId from an iterator's next(), or raise
@@ -389,7 +384,7 @@ void bind_s2cell_id(py::module& m) {
       "Slicing: only step=1 is supported. Use reversed() for step=-1.\n"
       "Other step values raise ValueError.")
       .def("__len__",      [](const S2CellIdRange& self) {
-        return RangeLenOrThrow(self.size());
+        return LenOrThrow(self.size());
       })
       .def("size", &S2CellIdRange::size,
            "Return the number of cells in the range as a 64-bit integer.\n\n"
@@ -397,10 +392,11 @@ void bind_s2cell_id(py::module& m) {
            "the range may exceed Py_ssize_t (e.g. very large cells() ranges\n"
            "on 32-bit Python).")
       .def("__getitem__",  [](const S2CellIdRange& self, int64_t i) {
-        return RangeItemOrThrow(self, i);
+        return self.at(SliceIndexOrThrow(i, self.size()));
       }, py::arg("index"))
       .def("__getitem__",  [](const S2CellIdRange& self, py::slice s) {
-        return RangeSliceOrThrow(self, s);
+        auto [start, stop] = SliceBoundsOrThrow(self.size(), s);
+        return self.slice(start, stop);
       }, py::arg("slice"))
       .def("__contains__", &S2CellIdRange::contains, py::arg("cell"))
       .def("__iter__", [](const S2CellIdRange& self) {
