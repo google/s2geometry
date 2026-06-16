@@ -309,8 +309,6 @@ void bind_s2cell_id(py::module& m) {
            "Return a range over the children of this cell.\n\n"
            "With no argument, returns the 4 immediate children.\n"
            "With a level argument, returns all descendants at that level.\n"
-           "The range supports len(), indexing, slicing, iteration, and\n"
-           "reversed().\n"
            "Raises ValueError if this is a leaf cell or level is out of range.")
       .def_static("cells", [](int level) {
                MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
@@ -318,8 +316,6 @@ void bind_s2cell_id(py::module& m) {
                                     S2CellId::End(level)};
            }, py::arg("level"),
            "Return a range over all cells at the given level across all 6 faces.\n\n"
-           "The range supports len(), indexing, slicing, iteration, and\n"
-           "reversed().\n"
            "Warning: the number of cells grows as 6 * 4^level.")
       .def("edge_neighbors", [](S2CellId self) {
                S2CellId neighbors[4];
