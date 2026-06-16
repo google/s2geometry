@@ -118,7 +118,8 @@ std::optional<Bignum> Bignum::FromString(absl::string_view s) {
 
   const char* end = s.data() + s.size();
   while (begin < end) {
-    size_t chunk_len = std::min(end - begin, kMaxChunkDigits);
+    size_t chunk_len =
+        std::min(static_cast<size_t>(end - begin), kMaxChunkDigits);
     Bigit chunk = 0;
     auto result = std::from_chars(begin, begin + chunk_len, chunk);
     if (result.ec != std::errc() ||
