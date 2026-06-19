@@ -56,8 +56,8 @@ ExactFloat::ExactFloat(double v) {
     // by the number of mantissa bits in a double (53, including the leading
     // "1") then the result is always an integer.
     int exp;
-    double f = frexp(fabs(v), &exp);
-    uint64_t m = static_cast<uint64_t>(ldexp(f, kDoubleMantissaBits));
+    double f = std::frexp(std::fabs(v), &exp);
+    uint64_t m = static_cast<uint64_t>(std::ldexp(f, kDoubleMantissaBits));
     bn_ = Bignum(m);
     bn_exp_ = exp - kDoubleMantissaBits;
     Canonicalize();
@@ -146,7 +146,7 @@ ExactFloat::operator double() const {
 double ExactFloat::ToDoubleHelper() const {
   ABSL_DCHECK_LE(bit_width(bn_), kDoubleMantissaBits);
   if (!isnormal(*this)) {
-    if (is_zero()) return copysign(0, sign_);
+    if (is_zero()) return std::copysign(0, sign_);
     if (isinf(*this)) {
       return std::copysign(std::numeric_limits<double>::infinity(), sign_);
     }
@@ -157,7 +157,7 @@ double ExactFloat::ToDoubleHelper() const {
 
   // We rely on ldexp() to handle overflow and underflow.  (It will return a
   // signed zero or infinity if the result is too small or too large.)
-  return sign_ * ldexp(d_mantissa, bn_exp_);
+  return sign_ * std::ldexp(d_mantissa, bn_exp_);
 }
 
 ExactFloat ExactFloat::RoundToMaxPrec(int max_prec, RoundingMode mode) const {
@@ -244,7 +244,7 @@ int ExactFloat::NumSignificantDigitsForPrec(int prec) {
   //
   // Since either of these bounds can be too large by 0, 1, or 2 digits, we
   // stick with the simpler first bound.
-  return static_cast<int>(1 + ceil(prec * (M_LN2 / M_LN10)));
+  return static_cast<int>(1 + std::ceil(prec * (M_LN2 / M_LN10)));
 }
 
 // Numbers are always formatted with at least this many significant digits.
