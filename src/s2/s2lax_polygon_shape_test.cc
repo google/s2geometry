@@ -348,7 +348,7 @@ TEST(S2LaxPolygonShape, ManyLoopPolygon) {
     }
   }
   std::shuffle(edges.begin(), edges.end(), std::mt19937_64());
-  for (const auto [e, i, j] : edges) {
+  for (const auto& [e, i, j] : edges) {
     EXPECT_EQ(shape.chain_position(e), S2Shape::ChainPosition(i, j));
     auto v0 = loops[i][j];
     auto v1 = loops[i][(j + 1) % loops[i].size()];

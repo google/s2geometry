@@ -817,7 +817,8 @@ TEST_F(MutableS2ShapeIndexTest, DecoderCatchesInvalidIndex) {
   Decoder decoder(encoded.data(), encoded.size());
   MutableS2ShapeIndex index;
 
-  bool ok = index.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder));
+  S2Error error;
+  bool ok = index.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder, error));
   EXPECT_FALSE(ok);
 }
 
