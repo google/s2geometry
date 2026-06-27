@@ -77,6 +77,41 @@ class TestS2Cap(unittest.TestCase):
         self.assertTrue(cap.is_full())
         self.assertFalse(cap.is_empty())
 
+    def test_from_points_empty(self):
+        cap = s2.S2Cap.from_points([])
+        self.assertTrue(cap.is_empty())
+
+    def test_from_points_single(self):
+        p = s2.S2Point(1.0, 0.0, 0.0)
+        cap = s2.S2Cap.from_points([p])
+        self.assertTrue(cap.contains_point(p))
+        self.assertTrue(cap.is_empty() or cap.height >= 0)
+
+    def test_from_points_multiple(self):
+        p1 = s2.S2Point(1.0, 0.0, 0.0)
+        p2 = s2.S2Point(0.0, 1.0, 0.0)
+        p3 = s2.S2Point(0.0, 0.0, 1.0)
+        cap = s2.S2Cap.from_points([p1, p2, p3])
+        self.assertTrue(cap.contains_point(p1))
+        self.assertTrue(cap.contains_point(p2))
+        self.assertTrue(cap.contains_point(p3))
+
+    def test_from_caps_empty(self):
+        cap = s2.S2Cap.from_caps([])
+        self.assertTrue(cap.is_empty())
+
+    def test_from_caps_single(self):
+        c = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_degrees(10.0))
+        result = s2.S2Cap.from_caps([c])
+        self.assertTrue(result.contains_point(c.center))
+
+    def test_from_caps_multiple(self):
+        c1 = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_degrees(10.0))
+        c2 = s2.S2Cap(s2.S2Point(0.0, 1.0, 0.0), s2.S1Angle.from_degrees(10.0))
+        result = s2.S2Cap.from_caps([c1, c2])
+        self.assertTrue(result.contains_point(c1.center))
+        self.assertTrue(result.contains_point(c2.center))
+
     # --- Properties ---
 
     def test_center(self):
@@ -216,21 +251,6 @@ class TestS2Cap(unittest.TestCase):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cell = s2.S2Cell(s2.S2CellId(center))
         self.assertTrue(s2.S2Cap.full().may_intersect(cell))
-
-    # --- Mutation ---
-
-    def test_add_point(self):
-        cap = s2.S2Cap.empty()
-        p = s2.S2Point(1.0, 0.0, 0.0)
-        cap.add_point(p)
-        self.assertTrue(cap.contains_point(p))
-
-    def test_add_cap(self):
-        cap1 = s2.S2Cap.empty()
-        p = s2.S2Point(1.0, 0.0, 0.0)
-        cap2 = s2.S2Cap.from_point(p)
-        cap1.add_cap(cap2)
-        self.assertTrue(cap1.contains_point(p))
 
     # --- S2Region interface ---
 

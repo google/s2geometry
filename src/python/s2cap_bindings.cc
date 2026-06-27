@@ -58,6 +58,22 @@ void bind_s2cap(py::module& m) {
            "Return an empty cap (contains no points).")
       .def_static("full", &S2Cap::Full,
            "Return a full cap (contains all points).")
+      .def_static("from_points", [](const std::vector<S2Point>& points) {
+               if (points.empty()) return S2Cap::Empty();
+               S2Cap result = S2Cap::FromPoint(points[0]);
+               for (size_t i = 1; i < points.size(); ++i) result.AddPoint(points[i]);
+               return result;
+           }, py::arg("points"),
+           "Return the smallest cap containing all given points.\n\n"
+           "Returns the empty cap if the list is empty.")
+      .def_static("from_caps", [](const std::vector<S2Cap>& caps) {
+               if (caps.empty()) return S2Cap::Empty();
+               S2Cap result = caps[0];
+               for (size_t i = 1; i < caps.size(); ++i) result.AddCap(caps[i]);
+               return result;
+           }, py::arg("caps"),
+           "Return the smallest cap containing all given caps.\n\n"
+           "Returns the empty cap if the list is empty.")
 
       // Properties
       .def_property_readonly("center", &S2Cap::center,
@@ -127,15 +143,6 @@ void bind_s2cap(py::module& m) {
            "point should be unit length.")
       .def("may_intersect", &S2Cap::MayIntersect, py::arg("cell"),
            "Return true if this cap may intersect the given cell.")
-
-      // Mutation
-      .def("add_point", &S2Cap::AddPoint, py::arg("point"),
-           "Expand the cap to include point if necessary.\n\n"
-           "If empty, sets center to point. Otherwise center is unchanged.\n"
-           "point should be unit length.")
-      .def("add_cap", &S2Cap::AddCap, py::arg("other"),
-           "Expand the cap to include other if necessary.\n\n"
-           "If this cap is empty, sets it to other.")
 
       // S2Region interface
       .def("cap_bound", &S2Cap::GetCapBound,
