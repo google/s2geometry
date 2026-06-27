@@ -6,8 +6,9 @@ import s2geometry_pybind as s2
 
 
 class TestS2Cap(unittest.TestCase):
+    """Test cases for S2Cap bindings."""
 
-    # --- Constructors ---
+    # Constructors
 
     def test_default_constructor_is_empty(self):
         cap = s2.S2Cap()
@@ -42,7 +43,7 @@ class TestS2Cap(unittest.TestCase):
         cap = s2.S2Cap(p, s2.S1Angle.from_degrees(10.0))
         self.assertAlmostEqual(cap.center.norm(), 1.0, places=15)
 
-    # --- Static factories ---
+    # Factory methods
 
     def test_from_point(self):
         p = s2.S2Point(0.0, 1.0, 0.0)
@@ -86,7 +87,6 @@ class TestS2Cap(unittest.TestCase):
         p = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap.from_points([p])
         self.assertTrue(cap.contains_point(p))
-        self.assertTrue(cap.is_empty() or cap.height >= 0)
 
     def test_from_points_multiple(self):
         p1 = s2.S2Point(1.0, 0.0, 0.0)
@@ -113,48 +113,25 @@ class TestS2Cap(unittest.TestCase):
         self.assertTrue(result.contains_point(c1.center))
         self.assertTrue(result.contains_point(c2.center))
 
-    # --- Properties ---
+    # Properties
 
     def test_center(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap.from_point(center)
         self.assertEqual(cap.center, center)
 
-    def test_radius_type(self):
+    def test_radius(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         chord = s2.S1ChordAngle(s2.S1Angle.from_radians(1.0))
         cap = s2.S2Cap(center, chord)
-        self.assertIsInstance(cap.radius, s2.S1ChordAngle)
+        self.assertEqual(cap.radius, chord)
 
     def test_height(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap.from_center_height(center, 0.5)
         self.assertAlmostEqual(cap.height, 0.5)
 
-    def test_get_radius(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        angle = s2.S1Angle.from_radians(1.0)
-        cap = s2.S2Cap(center, angle)
-        self.assertIsInstance(cap.radius_angle(), s2.S1Angle)
-        self.assertAlmostEqual(cap.radius_angle().radians, 1.0, places=14)
-
-    def test_get_area(self):
-        # Full cap has area 4*pi
-        self.assertAlmostEqual(s2.S2Cap.full().area(), 4 * math.pi)
-        # Empty cap has area 0
-        self.assertAlmostEqual(s2.S2Cap.empty().area(), 0.0)
-
-    def test_get_centroid(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap.from_center_height(center, 0.5)
-        centroid = cap.centroid()
-        self.assertIsInstance(centroid, s2.S2Point)
-        # Centroid lies along the same axis as center
-        self.assertGreater(centroid.x, 0.0)
-        self.assertAlmostEqual(centroid.y, 0.0)
-        self.assertAlmostEqual(centroid.z, 0.0)
-
-    # --- Predicates ---
+    # Predicates
 
     def test_is_empty(self):
         self.assertTrue(s2.S2Cap.empty().is_empty())
@@ -164,7 +141,25 @@ class TestS2Cap(unittest.TestCase):
         self.assertTrue(s2.S2Cap.full().is_full())
         self.assertFalse(s2.S2Cap.empty().is_full())
 
-    # --- Geometric operations ---
+    # Geometric operations
+
+    def test_radius_angle(self):
+        center = s2.S2Point(1.0, 0.0, 0.0)
+        cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
+        self.assertAlmostEqual(cap.radius_angle().radians, 1.0, places=14)
+
+    def test_area(self):
+        self.assertAlmostEqual(s2.S2Cap.full().area(), 4 * math.pi)
+        self.assertAlmostEqual(s2.S2Cap.empty().area(), 0.0)
+
+    def test_centroid(self):
+        center = s2.S2Point(1.0, 0.0, 0.0)
+        cap = s2.S2Cap.from_center_height(center, 0.5)
+        centroid = cap.centroid()
+        # Centroid lies along the same axis as center.
+        self.assertGreater(centroid.x, 0.0)
+        self.assertAlmostEqual(centroid.y, 0.0)
+        self.assertAlmostEqual(centroid.z, 0.0)
 
     def test_complement_of_empty_is_full(self):
         self.assertTrue(s2.S2Cap.empty().complement().is_full())
@@ -197,29 +192,23 @@ class TestS2Cap(unittest.TestCase):
         cap1 = s2.S2Cap(p1, s2.S1Angle.from_radians(0.01))
         cap2 = s2.S2Cap(p2, s2.S1Angle.from_radians(0.01))
         u = cap1.union(cap2)
-        # The centers of both input caps are strictly inside the union radius,
-        # so contains_point is reliable here.
+        # Centers lie strictly inside the union radius, so contains_point is reliable.
         self.assertTrue(u.contains_point(p1))
         self.assertTrue(u.contains_point(p2))
 
-    # --- Containment / intersection ---
-
     def test_full_contains_any_cap(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
+        cap = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_radians(1.0))
         self.assertTrue(s2.S2Cap.full().contains(cap))
 
     def test_empty_contained_by_any_cap(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
+        cap = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_radians(1.0))
         self.assertTrue(cap.contains(s2.S2Cap.empty()))
 
     def test_contains_point(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
         self.assertTrue(cap.contains_point(center))
-        antipode = s2.S2Point(-1.0, 0.0, 0.0)
-        self.assertFalse(cap.contains_point(antipode))
+        self.assertFalse(cap.contains_point(s2.S2Point(-1.0, 0.0, 0.0)))
 
     def test_contains_cell(self):
         cell = s2.S2Cell(s2.S2CellId(s2.S2Point(1.0, 0.0, 0.0)))
@@ -227,14 +216,12 @@ class TestS2Cap(unittest.TestCase):
         self.assertFalse(s2.S2Cap.empty().contains_cell(cell))
 
     def test_intersects(self):
-        p = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap(p, s2.S1Angle.from_radians(1.0))
+        cap = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_radians(1.0))
         self.assertTrue(cap.intersects(cap))
         self.assertFalse(cap.intersects(s2.S2Cap.empty()))
 
     def test_interior_intersects(self):
-        p = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap(p, s2.S1Angle.from_radians(1.0))
+        cap = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_radians(1.0))
         self.assertTrue(cap.interior_intersects(cap))
 
     def test_interior_contains_point(self):
@@ -242,52 +229,57 @@ class TestS2Cap(unittest.TestCase):
         cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
         self.assertTrue(cap.interior_contains_point(center))
 
-    def test_may_intersect_cell(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        cell = s2.S2Cell(s2.S2CellId(center))
+    def test_may_intersect(self):
+        cell = s2.S2Cell(s2.S2CellId(s2.S2Point(1.0, 0.0, 0.0)))
         self.assertTrue(s2.S2Cap.full().may_intersect(cell))
 
-    # --- S2Region interface ---
-
-    def test_get_cap_bound(self):
+    def test_cap_bound(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
         bound = cap.cap_bound()
-        self.assertIsInstance(bound, s2.S2Cap)
         self.assertTrue(bound.approx_equals(cap))
 
     def test_cell_union_bound(self):
-        cap = s2.S2Cap.full()
-        cell_ids = cap.cell_union_bound()
-        self.assertIsInstance(cell_ids, list)
+        cell_ids = s2.S2Cap.full().cell_union_bound()
         self.assertGreater(len(cell_ids), 0)
-        for cid in cell_ids:
-            self.assertIsInstance(cid, s2.S2CellId)
 
-    # --- Operators ---
+    # Operators
 
     def test_equality(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap1 = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
         cap2 = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
-        self.assertEqual(cap1, cap2)
+        self.assertTrue(cap1 == cap2)
+        self.assertFalse(cap1 != cap2)
 
     def test_inequality(self):
         cap1 = s2.S2Cap.from_point(s2.S2Point(1.0, 0.0, 0.0))
         cap2 = s2.S2Cap.from_point(s2.S2Point(0.0, 1.0, 0.0))
-        self.assertNotEqual(cap1, cap2)
+        self.assertTrue(cap1 != cap2)
+        self.assertFalse(cap1 == cap2)
 
     def test_approx_equals(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
+        cap = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_radians(1.0))
         self.assertTrue(cap.approx_equals(cap))
 
     def test_approx_equals_with_max_error(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
+        cap = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_radians(1.0))
         self.assertTrue(cap.approx_equals(cap, s2.S1Angle.from_radians(1e-10)))
 
-    # --- String representation ---
+    def test_approx_equals_false(self):
+        cap1 = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0), s2.S1Angle.from_radians(1.0))
+        cap2 = s2.S2Cap(s2.S2Point(0.0, 1.0, 0.0), s2.S1Angle.from_radians(1.0))
+        self.assertFalse(cap1.approx_equals(cap2))
+
+    def test_hash(self):
+        center = s2.S2Point(1.0, 0.0, 0.0)
+        cap1 = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
+        cap2 = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
+        self.assertEqual(hash(cap1), hash(cap2))
+        s = {cap1, cap2}
+        self.assertEqual(len(s), 1)
+
+    # String representation
 
     def test_repr(self):
         cap = s2.S2Cap.empty()
@@ -298,33 +290,9 @@ class TestS2Cap(unittest.TestCase):
 
     def test_str(self):
         cap = s2.S2Cap.empty()
-        self.assertIsInstance(str(cap), str)
-
-    # --- S2Cell.cap_bound ---
-
-    # --- __hash__ ---
-
-    def test_hash(self):
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        cap = s2.S2Cap(center, s2.S1Angle.from_radians(1.0))
-        # S2Cap must be hashable.
-        h = hash(cap)
-        self.assertIsInstance(h, int)
-        # Can be used as a dict key.
-        d = {cap: "value"}
-        self.assertEqual(d[cap], "value")
-        # Can be used in a set.
-        s = {cap}
-        self.assertIn(cap, s)
-
-    # --- approx_equals false case ---
-
-    def test_approx_equals_false(self):
-        cap1 = s2.S2Cap(s2.S2Point(1.0, 0.0, 0.0),
-                        s2.S1Angle.from_radians(1.0))
-        cap2 = s2.S2Cap(s2.S2Point(0.0, 1.0, 0.0),
-                        s2.S1Angle.from_radians(1.0))
-        self.assertFalse(cap1.approx_equals(cap2))
+        s = str(cap)
+        self.assertIn("Center=", s)
+        self.assertIn("Radius=", s)
 
 
 if __name__ == "__main__":
