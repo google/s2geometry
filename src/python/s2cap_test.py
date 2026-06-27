@@ -27,10 +27,6 @@ class TestS2Cap(unittest.TestCase):
         cap = s2.S2Cap(center, radius)
         self.assertFalse(cap.is_empty())
 
-    def test_constructor_rejects_non_unit_center(self):
-        with self.assertRaises(ValueError):
-            s2.S2Cap(s2.S2Point(1.0, 1.0, 1.0), s2.S1Angle.from_degrees(10.0))
-
     def test_constructor_negative_radius_is_empty(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap(center, s2.S1Angle.from_radians(-1.0))
@@ -40,6 +36,11 @@ class TestS2Cap(unittest.TestCase):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap(center, s2.S1Angle.from_radians(math.pi))
         self.assertTrue(cap.is_full())
+
+    def test_constructor_normalizes_center(self):
+        p = s2.S2Point(2.0, 0.0, 0.0)  # not unit length
+        cap = s2.S2Cap(p, s2.S1Angle.from_degrees(10.0))
+        self.assertAlmostEqual(cap.center.norm(), 1.0, places=15)
 
     # --- Static factories ---
 

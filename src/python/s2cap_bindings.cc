@@ -28,24 +28,18 @@ void bind_s2cap(py::module& m) {
       .def(py::init<>(),
            "Construct an empty S2Cap.")
       .def(py::init([](const S2Point& center, S1Angle radius) {
-               if (!S2::IsUnitLength(center)) {
-                 throw py::value_error("center must be a unit-length S2Point");
-               }
-               return S2Cap(center, radius);
+               return S2Cap(center.Normalize(), radius);
            }),
            py::arg("center"), py::arg("radius"),
            "Construct a cap with the given center and radius.\n\n"
-           "center must be unit length. Negative radius produces the empty cap;\n"
-           "radius >= 180 degrees produces the full cap.")
+           "center is normalized if not already unit length. Negative radius\n"
+           "produces the empty cap; radius >= 180 degrees produces the full cap.")
       .def(py::init([](const S2Point& center, S1ChordAngle radius) {
-               if (!S2::IsUnitLength(center)) {
-                 throw py::value_error("center must be a unit-length S2Point");
-               }
-               return S2Cap(center, radius);
+               return S2Cap(center.Normalize(), radius);
            }),
            py::arg("center"), py::arg("radius"),
            "Construct a cap with the given center and radius as S1ChordAngle.\n\n"
-           "center must be unit length.")
+           "center is normalized if not already unit length.")
 
       // Factory methods
       .def_static("from_point", &S2Cap::FromPoint, py::arg("center"),
