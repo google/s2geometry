@@ -240,7 +240,7 @@ void bind_s2cell(py::module& m) {
       })
 
       // S2Region bound methods (depends on S2Cap, bound before S2Cell)
-      .def("get_cap_bound", &S2Cell::GetCapBound,
+      .def("cap_bound", &S2Cell::GetCapBound,
            "Return the smallest cap containing this cell.");
       // TODO: bind get_rect_bound() once S2LatLngRect is bound.
 

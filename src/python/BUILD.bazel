@@ -130,6 +130,7 @@ pybind_library(
     srcs = ["s2cap_bindings.cc"],
     deps = [
         "//:s2",
+        "@abseil-cpp//absl/hash",
     ],
 )
 

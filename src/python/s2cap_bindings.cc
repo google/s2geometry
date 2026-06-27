@@ -5,6 +5,8 @@
 #include <sstream>
 #include <vector>
 
+#include "absl/hash/hash.h"
+
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
@@ -66,13 +68,13 @@ void bind_s2cap(py::module& m) {
            "The height of the cap (distance from center point to cutoff plane).")
 
       // Computed accessors
-      .def("get_radius", &S2Cap::GetRadius,
+      .def("radius_angle", &S2Cap::GetRadius,
            "Return the radius as an S1Angle.\n\n"
            "Requires a trigonometric operation; may differ slightly from the\n"
            "value passed to the S1Angle constructor.")
-      .def("get_area", &S2Cap::GetArea,
+      .def("area", &S2Cap::GetArea,
            "Return the surface area of the cap in steradians.")
-      .def("get_centroid", &S2Cap::GetCentroid,
+      .def("centroid", &S2Cap::GetCentroid,
            "Return the true centroid of the cap multiplied by its surface area.\n\n"
            "The result lies on the ray from the origin through the cap's center.\n"
            "For zero-radius caps, always returns the origin (0, 0, 0).")
@@ -136,7 +138,7 @@ void bind_s2cap(py::module& m) {
            "If this cap is empty, sets it to other.")
 
       // S2Region interface
-      .def("get_cap_bound", &S2Cap::GetCapBound,
+      .def("cap_bound", &S2Cap::GetCapBound,
            "Return a bounding cap for this cap (returns self).")
       // get_rect_bound() is deferred until S2LatLngRect is bound.
       .def("cell_union_bound", [](const S2Cap& self) {
@@ -155,11 +157,14 @@ void bind_s2cap(py::module& m) {
            "Return true if this cap is approximately equal to other.\n\n"
            "Checks that the angle between centers and the difference in chord\n"
            "radii are both within max_error radians.")
+      .def("__hash__", [](const S2Cap& self) {
+           return absl::HashOf(self.center(), self.radius().length2());
+      })
 
       // String representation
       .def("__repr__", [](const S2Cap& self) {
            std::ostringstream oss;
-           oss << self;
+           oss << "S2Cap(" << self << ")";
            return oss.str();
       })
       .def("__str__", [](const S2Cap& self) {
