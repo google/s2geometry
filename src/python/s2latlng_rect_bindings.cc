@@ -62,6 +62,14 @@ void bind_s2latlng_rect(py::module& m) {
            "Return the full allowable latitude range as an R1Interval.")
       .def_static("full_lng", &S2LatLngRect::FullLng,
            "Return the full allowable longitude range as an S1Interval.")
+      .def_static("from_latlngs", [](const std::vector<S2LatLng>& latlngs) {
+               if (latlngs.empty()) return S2LatLngRect::Empty();
+               S2LatLngRect result = S2LatLngRect::FromPoint(latlngs[0]);
+               for (size_t i = 1; i < latlngs.size(); ++i) result.AddPoint(latlngs[i]);
+               return result;
+           }, py::arg("latlngs"),
+           "Return the smallest rectangle containing all given S2LatLng points.\n\n"
+           "Returns the empty rectangle if the list is empty.")
 
       // Properties
       .def_property_readonly("lat", &S2LatLngRect::lat,
@@ -168,18 +176,6 @@ void bind_s2latlng_rect(py::module& m) {
       .def("may_intersect", &S2LatLngRect::MayIntersect, py::arg("cell"),
            "Return true if this rectangle may intersect the given cell.\n\n"
            "Cheap but not exact; use intersects_cell() for an exact test.")
-
-      // Mutation
-      .def("add_point", py::overload_cast<const S2Point&>(
-               &S2LatLngRect::AddPoint),
-           py::arg("p"),
-           "Expand the rectangle to include the given S2Point.\n\n"
-           "The point does not need to be normalized.")
-      .def("add_point", py::overload_cast<const S2LatLng&>(
-               &S2LatLngRect::AddPoint),
-           py::arg("ll"),
-           "Expand the rectangle to include the given S2LatLng.\n\n"
-           "The argument must be normalized.")
 
       // Set operations
       .def("expanded", &S2LatLngRect::Expanded, py::arg("margin"),

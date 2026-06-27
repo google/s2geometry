@@ -49,6 +49,26 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertTrue(rect.contains_latlng(p1))
         self.assertTrue(rect.contains_latlng(p2))
 
+    def test_from_latlngs_empty(self):
+        rect = s2.S2LatLngRect.from_latlngs([])
+        self.assertTrue(rect.is_empty())
+
+    def test_from_latlngs_single(self):
+        ll = s2.S2LatLng.from_degrees(10.0, 20.0)
+        rect = s2.S2LatLngRect.from_latlngs([ll])
+        self.assertTrue(rect.contains_latlng(ll))
+        self.assertTrue(rect.is_point())
+
+    def test_from_latlngs_multiple(self):
+        lls = [
+            s2.S2LatLng.from_degrees(-10.0, -20.0),
+            s2.S2LatLng.from_degrees(10.0, 20.0),
+            s2.S2LatLng.from_degrees(5.0, 0.0),
+        ]
+        rect = s2.S2LatLngRect.from_latlngs(lls)
+        for ll in lls:
+            self.assertTrue(rect.contains_latlng(ll))
+
     def test_empty(self):
         self.assertTrue(s2.S2LatLngRect.empty().is_empty())
         self.assertFalse(s2.S2LatLngRect.empty().is_full())
@@ -263,19 +283,6 @@ class TestS2LatLngRect(unittest.TestCase):
         rect = s2.S2LatLngRect.full()
         cell = s2.S2Cell(s2.S2CellId.from_face(0))
         self.assertTrue(rect.may_intersect(cell))
-
-    # --- Mutation ---
-
-    def test_add_point_s2point(self):
-        rect = s2.S2LatLngRect.empty()
-        rect.add_point(s2.S2Point(1.0, 0.0, 0.0))
-        self.assertFalse(rect.is_empty())
-
-    def test_add_point_latlng(self):
-        rect = s2.S2LatLngRect.empty()
-        ll = s2.S2LatLng.from_degrees(10.0, 20.0)
-        rect.add_point(ll)
-        self.assertTrue(rect.contains_latlng(ll))
 
     # --- Set operations ---
 
