@@ -18,14 +18,25 @@ class TestS2LatLngRect(unittest.TestCase):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
         rect = s2.S2LatLngRect(lo, hi)
-        self.assertTrue(rect.is_valid())
         self.assertFalse(rect.is_empty())
 
     def test_constructor_from_intervals(self):
         lat = s2.R1Interval(-0.5, 0.5)
         lng = s2.S1Interval(-1.0, 1.0)
         rect = s2.S2LatLngRect(lat, lng)
-        self.assertTrue(rect.is_valid())
+        self.assertFalse(rect.is_empty())
+
+    def test_constructor_rejects_lat_out_of_range(self):
+        lat = s2.R1Interval(0.0, 2.0)  # hi > pi/2 (~1.5708)
+        lng = s2.S1Interval(0.0, 1.0)
+        with self.assertRaises(ValueError):
+            s2.S2LatLngRect(lat, lng)
+
+    def test_constructor_rejects_empty_mismatch(self):
+        lat = s2.R1Interval.empty()
+        lng = s2.S1Interval(0.0, 1.0)  # non-empty lng with empty lat
+        with self.assertRaises(ValueError):
+            s2.S2LatLngRect(lat, lng)
 
     # --- Static factories ---
 
@@ -33,7 +44,6 @@ class TestS2LatLngRect(unittest.TestCase):
         center = s2.S2LatLng.from_degrees(10.0, 20.0)
         size = s2.S2LatLng.from_degrees(4.0, 6.0)
         rect = s2.S2LatLngRect.from_center_size(center, size)
-        self.assertTrue(rect.is_valid())
         self.assertTrue(rect.contains_latlng(center))
 
     def test_from_point(self):
@@ -126,10 +136,6 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertAlmostEqual(rect.hi.lat.degrees, 10.0)
 
     # --- Predicates ---
-
-    def test_is_valid(self):
-        self.assertTrue(s2.S2LatLngRect.empty().is_valid())
-        self.assertTrue(s2.S2LatLngRect.full().is_valid())
 
     def test_is_empty(self):
         self.assertTrue(s2.S2LatLngRect.empty().is_empty())
