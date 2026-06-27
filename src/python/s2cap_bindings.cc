@@ -47,7 +47,7 @@ void bind_s2cap(py::module& m) {
            "Construct a cap with the given center and radius as S1ChordAngle.\n\n"
            "center must be unit length.")
 
-      // Static factories
+      // Factory methods
       .def_static("from_point", &S2Cap::FromPoint, py::arg("center"),
            "Return a cap containing a single point.\n\n"
            "More efficient than S2Cap(center, S1ChordAngle::Zero()).")
@@ -92,7 +92,7 @@ void bind_s2cap(py::module& m) {
       .def_property_readonly("height", &S2Cap::height,
            "The height of the cap (distance from center point to cutoff plane).")
 
-      // Computed accessors
+      // Geometric operations
       .def("radius_angle", &S2Cap::GetRadius,
            "Return the radius as an S1Angle.\n\n"
            "Requires a trigonometric operation; may differ slightly from the\n"
@@ -110,7 +110,6 @@ void bind_s2cap(py::module& m) {
       .def("is_full", &S2Cap::is_full,
            "Return true if the cap contains all points.")
 
-      // Geometric operations
       .def("complement", &S2Cap::Complement,
            "Return the complement of the interior of the cap.\n\n"
            "Same boundary as this cap but no shared interior points.\n"
@@ -150,7 +149,6 @@ void bind_s2cap(py::module& m) {
       .def("may_intersect", &S2Cap::MayIntersect, py::arg("cell"),
            "Return true if this cap may intersect the given cell.")
 
-      // S2Region interface
       .def("cap_bound", &S2Cap::GetCapBound,
            "Return a bounding cap for this cap (returns self).")
       // get_rect_bound() is deferred until S2LatLngRect is bound.
