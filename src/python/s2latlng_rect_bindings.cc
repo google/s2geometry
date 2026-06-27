@@ -104,9 +104,9 @@ void bind_s2latlng_rect(py::module& m) {
       .def("size", &S2LatLngRect::GetSize,
            "Return the width and height of this rectangle as an S2LatLng.\n\n"
            "Empty rectangles have a negative width and height.")
-      .def("get_area", &S2LatLngRect::Area,
+      .def("area", &S2LatLngRect::Area,
            "Return the surface area of this rectangle on the unit sphere.")
-      .def("get_centroid", &S2LatLngRect::GetCentroid,
+      .def("centroid", &S2LatLngRect::GetCentroid,
            "Return the true centroid multiplied by its surface area.\n\n"
            "The result is not unit length. The centroid may not be contained\n"
            "by the rectangle.")
@@ -231,7 +231,7 @@ void bind_s2latlng_rect(py::module& m) {
 
       // S2Region interface
       // get_cap_bound() is deferred until S2Cap is bound.
-      .def("get_rect_bound", &S2LatLngRect::GetRectBound,
+      .def("rect_bound", &S2LatLngRect::GetRectBound,
            "Return a bounding rectangle for this rectangle (returns self).")
       .def("cell_union_bound", [](const S2LatLngRect& self) {
                std::vector<S2CellId> cell_ids;
@@ -260,7 +260,7 @@ void bind_s2latlng_rect(py::module& m) {
       })
       .def("__repr__", [](const S2LatLngRect& self) {
            std::ostringstream oss;
-           oss << self;
+           oss << "S2LatLngRect(" << self << ")";
            return oss.str();
       })
       .def("__str__", [](const S2LatLngRect& self) {
