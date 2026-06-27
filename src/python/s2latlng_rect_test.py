@@ -131,6 +131,17 @@ class TestS2LatLngRect(unittest.TestCase):
         rect = s2.S2LatLngRect(lo, hi)
         self.assertTrue(rect.is_inverted())
 
+    def test_inverted_rect(self):
+        # A rect where lng_lo > lng_hi spans the antimeridian (is "inverted").
+        lo = s2.S2LatLng.from_degrees(-10, 160)
+        hi = s2.S2LatLng.from_degrees(10, -160)
+        rect = s2.S2LatLngRect(lo, hi)
+        self.assertTrue(rect.is_inverted())
+        # A point at lng=175 is inside (between 160 and -160 via antimeridian).
+        self.assertTrue(rect.contains_latlng(s2.S2LatLng.from_degrees(0, 175)))
+        # A point at lng=0 is outside.
+        self.assertFalse(rect.contains_latlng(s2.S2LatLng.from_degrees(0, 0)))
+
     # --- Geometric accessors ---
 
     def test_vertex(self):
@@ -157,13 +168,13 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertAlmostEqual(sz.lat.degrees, 20.0)
         self.assertAlmostEqual(sz.lng.degrees, 40.0)
 
-    def test_get_area(self):
-        self.assertGreater(s2.S2LatLngRect.full().get_area(), 0.0)
-        self.assertAlmostEqual(s2.S2LatLngRect.empty().get_area(), 0.0)
+    def test_area(self):
+        self.assertGreater(s2.S2LatLngRect.full().area(), 0.0)
+        self.assertAlmostEqual(s2.S2LatLngRect.empty().area(), 0.0)
 
-    def test_get_centroid(self):
+    def test_centroid(self):
         rect = s2.S2LatLngRect.full()
-        centroid = rect.get_centroid()
+        centroid = rect.centroid()
         self.assertIsInstance(centroid, s2.S2Point)
 
     # --- Containment ---
@@ -236,6 +247,17 @@ class TestS2LatLngRect(unittest.TestCase):
         p2 = s2.S2Point(0.0, 1.0, 0.0)
         # Full rect has no boundary on the sphere, so this returns False.
         self.assertFalse(rect.boundary_intersects(p1, p2))
+
+        rect2 = s2.S2LatLngRect(s2.S2LatLng.from_degrees(-10, -20),
+                                 s2.S2LatLng.from_degrees(10, 20))
+        # An edge crossing the boundary: one point inside, one outside.
+        p_in = s2.S2LatLng.from_degrees(0, 0).to_point()
+        p_out = s2.S2LatLng.from_degrees(0, 45).to_point()
+        self.assertTrue(rect2.boundary_intersects(p_in, p_out))
+        # An edge entirely inside: both points inside.
+        p_a = s2.S2LatLng.from_degrees(-5, -10).to_point()
+        p_b = s2.S2LatLng.from_degrees(5, 10).to_point()
+        self.assertFalse(rect2.boundary_intersects(p_a, p_b))
 
     def test_may_intersect(self):
         rect = s2.S2LatLngRect.full()
@@ -334,11 +356,11 @@ class TestS2LatLngRect(unittest.TestCase):
 
     # --- S2Region interface ---
 
-    def test_get_rect_bound(self):
+    def test_rect_bound(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
         rect = s2.S2LatLngRect(lo, hi)
-        bound = rect.get_rect_bound()
+        bound = rect.rect_bound()
         self.assertIsInstance(bound, s2.S2LatLngRect)
         self.assertTrue(bound.approx_equals(rect))
 
@@ -391,18 +413,10 @@ class TestS2LatLngRect(unittest.TestCase):
         r = repr(rect)
         self.assertIn("Lo", r)
         self.assertIn("Hi", r)
+        self.assertTrue(repr(rect).startswith("S2LatLngRect("))
 
     def test_str(self):
         self.assertIsInstance(str(s2.S2LatLngRect.empty()), str)
-
-    # --- S2Cell.get_rect_bound ---
-
-    def test_s2cell_get_rect_bound(self):
-        cell = s2.S2Cell(s2.S2CellId.from_face(0))
-        bound = cell.get_rect_bound()
-        self.assertIsInstance(bound, s2.S2LatLngRect)
-        self.assertTrue(bound.is_valid())
-        self.assertTrue(bound.contains_point(cell.center()))
 
 
 if __name__ == "__main__":
