@@ -2,6 +2,7 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
+#include <cmath>
 #include <sstream>
 #include <vector>
 
@@ -33,11 +34,22 @@ void bind_s2latlng_rect(py::module& m) {
            "Construct a rectangle from lo and hi corner points.\n\n"
            "If lo.lng() > hi.lng() the rectangle spans the 180-degree line.\n"
            "Both points must be normalized with lo.lat() <= hi.lat().")
-      .def(py::init<const R1Interval&, const S1Interval&>(),
+      .def(py::init([](const R1Interval& lat, const S1Interval& lng) {
+               if (std::fabs(lat.lo()) > M_PI_2 || std::fabs(lat.hi()) > M_PI_2) {
+                 throw py::value_error(
+                     "lat interval must be within [-pi/2, pi/2]");
+               }
+               if (lat.is_empty() != lng.is_empty()) {
+                 throw py::value_error(
+                     "lat and lng intervals must both be empty or both non-empty");
+               }
+               return S2LatLngRect(lat, lng);
+           }),
            py::arg("lat"), py::arg("lng"),
            "Construct a rectangle from latitude and longitude intervals.\n\n"
            "Both intervals must be empty or both non-empty. The latitude\n"
-           "interval must not extend outside [-90, 90] degrees.")
+           "interval must lie within [-pi/2, pi/2] radians.\n\n"
+           "Raises ValueError if either condition is violated.")
 
       // Static factories
       .def_static("from_center_size", &S2LatLngRect::FromCenterSize,
@@ -90,8 +102,6 @@ void bind_s2latlng_rect(py::module& m) {
            "The upper-right corner as an S2LatLng.")
 
       // Predicates
-      .def("is_valid", &S2LatLngRect::is_valid,
-           "Return true if the rectangle is valid.")
       .def("is_empty", &S2LatLngRect::is_empty,
            "Return true if the rectangle contains no points.")
       .def("is_full", &S2LatLngRect::is_full,
