@@ -51,7 +51,7 @@ void bind_s2latlng_rect(py::module& m) {
            "interval must lie within [-pi/2, pi/2] radians.\n\n"
            "Raises ValueError if either condition is violated.")
 
-      // Static factories
+      // Factory methods
       .def_static("from_center_size", &S2LatLngRect::FromCenterSize,
            py::arg("center"), py::arg("size"),
            "Construct a rectangle of the given size centered around center.\n\n"
@@ -111,7 +111,7 @@ void bind_s2latlng_rect(py::module& m) {
       .def("is_inverted", &S2LatLngRect::is_inverted,
            "Return true if the longitude interval crosses the 180-degree line.")
 
-      // Geometric accessors
+      // Geometric operations
       .def("vertex", &S2LatLngRect::GetVertex, py::arg("k"),
            "Return the k-th vertex in CCW order (k = 0,1,2,3).\n\n"
            "Order: lower-left, lower-right, upper-right, upper-left.\n"
@@ -235,7 +235,6 @@ void bind_s2latlng_rect(py::module& m) {
            "Return the Hausdorff distance between this rectangle and other.\n\n"
            "H(A,B) = max(h(A,B), h(B,A)).")
 
-      // S2Region interface
       // get_cap_bound() is deferred until S2Cap is bound.
       .def("rect_bound", &S2LatLngRect::GetRectBound,
            "Return a bounding rectangle for this rectangle (returns self).")
