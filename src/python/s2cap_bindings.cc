@@ -42,21 +42,25 @@ void bind_s2cap(py::module& m) {
            "center is normalized if not already unit length.")
 
       // Factory methods
-      .def_static("from_point", &S2Cap::FromPoint, py::arg("center"),
+      .def_static("from_point", [](const S2Point& center) {
+               return S2Cap::FromPoint(center.Normalize());
+           }, py::arg("center"),
            "Return a cap containing a single point.\n\n"
-           "More efficient than S2Cap(center, S1ChordAngle::Zero()).")
-      .def_static("from_center_height", &S2Cap::FromCenterHeight,
-           py::arg("center"), py::arg("height"),
+           "center is normalized if not already unit length.")
+      .def_static("from_center_height", [](const S2Point& center, double height) {
+               return S2Cap::FromCenterHeight(center.Normalize(), height);
+           }, py::arg("center"), py::arg("height"),
            "Return a cap with the given center and height.\n\n"
            "Height is the distance from the center point to the cutoff plane.\n"
-           "A negative height yields an empty cap; height >= 2 yields a full\n"
-           "cap. center should be unit length.")
-      .def_static("from_center_area", &S2Cap::FromCenterArea,
-           py::arg("center"), py::arg("area"),
+           "center is normalized if not already unit length.\n"
+           "A negative height yields an empty cap; height >= 2 yields a full cap.")
+      .def_static("from_center_area", [](const S2Point& center, double area) {
+               return S2Cap::FromCenterArea(center.Normalize(), area);
+           }, py::arg("center"), py::arg("area"),
            "Return a cap with the given center and surface area in steradians.\n\n"
            "The area also equals the solid angle subtended by the cap.\n"
-           "A negative area yields an empty cap; area >= 4*Pi yields a full cap.\n"
-           "center should be unit length.")
+           "center is normalized if not already unit length.\n"
+           "A negative area yields an empty cap; area >= 4*Pi yields a full cap.")
       .def_static("empty", &S2Cap::Empty,
            "Return an empty cap (contains no points).")
       .def_static("full", &S2Cap::Full,

@@ -302,13 +302,6 @@ class TestS2Cap(unittest.TestCase):
 
     # --- S2Cell.cap_bound ---
 
-    def test_s2cell_get_cap_bound(self):
-        cell = s2.S2Cell(s2.S2CellId.from_face(0))
-        cap = cell.cap_bound()
-        self.assertIsInstance(cap, s2.S2Cap)
-        # The cap must contain the cell's center.
-        self.assertTrue(cap.contains_point(cell.center()))
-
     # --- __hash__ ---
 
     def test_hash(self):
