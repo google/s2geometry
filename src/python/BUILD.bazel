@@ -36,6 +36,7 @@ pybind_extension(
         ":s2cell_bindings",
         ":s2cell_id_bindings",
         ":s2latlng_bindings",
+        ":s2latlng_rect_bindings",
         ":s2point_bindings",
     ],
 )
@@ -135,6 +136,15 @@ pybind_library(
 )
 
 pybind_library(
+    name = "s2latlng_rect_bindings",
+    srcs = ["s2latlng_rect_bindings.cc"],
+    deps = [
+        "//:s2",
+        "@abseil-cpp//absl/hash",
+    ],
+)
+
+pybind_library(
     name = "s2cell_bindings",
     srcs = ["s2cell_bindings.cc"],
     deps = [
@@ -199,6 +209,12 @@ py_test(
 py_test(
     name = "s2cap_test",
     srcs = ["s2cap_test.py"],
+    deps = [":s2geometry_pybind"],
+)
+
+py_test(
+    name = "s2latlng_rect_test",
+    srcs = ["s2latlng_rect_test.py"],
     deps = [":s2geometry_pybind"],
 )
 
