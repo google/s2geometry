@@ -247,6 +247,6 @@ void bind_s2cell(py::module& m) {
 
   // TODO: The following S2Cell methods are not yet bound because they depend
   // on types that have not been bound yet:
-  //   - cap_bound()    -> S2Cap
-  //   - rect_bound()   -> S2LatLngRect
+  //   - get_cap_bound()   -> S2Cap
+  //   - get_rect_bound()  -> S2LatLngRect
 }
