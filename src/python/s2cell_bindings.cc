@@ -9,7 +9,6 @@
 #include "absl/hash/hash.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s1chord_angle.h"
-#include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng.h"
@@ -237,12 +236,7 @@ void bind_s2cell(py::module& m) {
         std::ostringstream oss;
         oss << cell.id();
         return oss.str();
-      })
-
-      // S2Region bound methods (depends on S2Cap, bound before S2Cell)
-      .def("cap_bound", &S2Cell::GetCapBound,
-           "Return the smallest cap containing this cell.");
-      // TODO: bind get_rect_bound() once S2LatLngRect is bound.
+      });
 
   py::enum_<S2Cell::Boundary>(cls, "Boundary", py::arithmetic())
       .value("BOTTOM_EDGE", S2Cell::kBottomEdge)
