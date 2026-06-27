@@ -244,4 +244,9 @@ void bind_s2cell(py::module& m) {
       .value("TOP_EDGE",    S2Cell::kTopEdge)
       .value("LEFT_EDGE",   S2Cell::kLeftEdge)
       .export_values();
+
+  // TODO: The following S2Cell methods are not yet bound because they depend
+  // on types that have not been bound yet:
+  //   - cap_bound()    -> S2Cap
+  //   - rect_bound()   -> S2LatLngRect
 }
