@@ -18,7 +18,6 @@ class TestS2Cap(unittest.TestCase):
         center = s2.S2Point(1.0, 0.0, 0.0)
         radius = s2.S1Angle.from_radians(math.pi / 4)
         cap = s2.S2Cap(center, radius)
-        self.assertTrue(cap.is_valid())
         self.assertFalse(cap.is_empty())
         self.assertFalse(cap.is_full())
 
@@ -26,7 +25,11 @@ class TestS2Cap(unittest.TestCase):
         center = s2.S2Point(1.0, 0.0, 0.0)
         radius = s2.S1ChordAngle(s2.S1Angle.from_radians(math.pi / 4))
         cap = s2.S2Cap(center, radius)
-        self.assertTrue(cap.is_valid())
+        self.assertFalse(cap.is_empty())
+
+    def test_constructor_rejects_non_unit_center(self):
+        with self.assertRaises(ValueError):
+            s2.S2Cap(s2.S2Point(1.0, 1.0, 1.0), s2.S1Angle.from_degrees(10.0))
 
     def test_constructor_negative_radius_is_empty(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
@@ -44,12 +47,10 @@ class TestS2Cap(unittest.TestCase):
         p = s2.S2Point(0.0, 1.0, 0.0)
         cap = s2.S2Cap.from_point(p)
         self.assertTrue(cap.contains_point(p))
-        self.assertTrue(cap.is_valid())
 
     def test_from_center_height(self):
         center = s2.S2Point(1.0, 0.0, 0.0)
         cap = s2.S2Cap.from_center_height(center, 0.5)
-        self.assertTrue(cap.is_valid())
         self.assertAlmostEqual(cap.height, 0.5)
 
     def test_from_center_height_negative_is_empty(self):
@@ -64,7 +65,6 @@ class TestS2Cap(unittest.TestCase):
         center = s2.S2Point(1.0, 0.0, 0.0)
         area = 2 * math.pi  # hemisphere
         cap = s2.S2Cap.from_center_area(center, area)
-        self.assertTrue(cap.is_valid())
         self.assertAlmostEqual(cap.area(), area, places=10)
 
     def test_empty(self):
@@ -154,12 +154,6 @@ class TestS2Cap(unittest.TestCase):
         self.assertAlmostEqual(centroid.z, 0.0)
 
     # --- Predicates ---
-
-    def test_is_valid(self):
-        self.assertTrue(s2.S2Cap.empty().is_valid())
-        self.assertTrue(s2.S2Cap.full().is_valid())
-        center = s2.S2Point(1.0, 0.0, 0.0)
-        self.assertTrue(s2.S2Cap(center, s2.S1Angle.from_radians(1.0)).is_valid())
 
     def test_is_empty(self):
         self.assertTrue(s2.S2Cap.empty().is_empty())
@@ -311,7 +305,6 @@ class TestS2Cap(unittest.TestCase):
         cell = s2.S2Cell(s2.S2CellId.from_face(0))
         cap = cell.cap_bound()
         self.assertIsInstance(cap, s2.S2Cap)
-        self.assertTrue(cap.is_valid())
         # The cap must contain the cell's center.
         self.assertTrue(cap.contains_point(cell.center()))
 

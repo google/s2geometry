@@ -27,16 +27,25 @@ void bind_s2cap(py::module& m) {
       // Constructors
       .def(py::init<>(),
            "Construct an empty S2Cap.")
-      .def(py::init<const S2Point&, S1Angle>(),
+      .def(py::init([](const S2Point& center, S1Angle radius) {
+               if (!S2::IsUnitLength(center)) {
+                 throw py::value_error("center must be a unit-length S2Point");
+               }
+               return S2Cap(center, radius);
+           }),
            py::arg("center"), py::arg("radius"),
-           "Construct a cap with the given center and S1Angle radius.\n\n"
-           "A negative radius yields an empty cap; radius >= Pi yields a full\n"
-           "cap. center should be unit length.")
-      .def(py::init<const S2Point&, S1ChordAngle>(),
+           "Construct a cap with the given center and radius.\n\n"
+           "center must be unit length. Negative radius produces the empty cap;\n"
+           "radius >= 180 degrees produces the full cap.")
+      .def(py::init([](const S2Point& center, S1ChordAngle radius) {
+               if (!S2::IsUnitLength(center)) {
+                 throw py::value_error("center must be a unit-length S2Point");
+               }
+               return S2Cap(center, radius);
+           }),
            py::arg("center"), py::arg("radius"),
-           "Construct a cap with the given center and S1ChordAngle radius.\n\n"
-           "More efficient than the S1Angle constructor.\n"
-           "center should be unit length.")
+           "Construct a cap with the given center and radius as S1ChordAngle.\n\n"
+           "center must be unit length.")
 
       // Static factories
       .def_static("from_point", &S2Cap::FromPoint, py::arg("center"),
@@ -96,9 +105,6 @@ void bind_s2cap(py::module& m) {
            "For zero-radius caps, always returns the origin (0, 0, 0).")
 
       // Predicates
-      .def("is_valid", &S2Cap::is_valid,
-           "Return true if the cap is valid (center is unit-length, "
-           "radius in [-1, 4]).")
       .def("is_empty", &S2Cap::is_empty,
            "Return true if the cap contains no points.")
       .def("is_full", &S2Cap::is_full,
