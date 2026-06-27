@@ -79,6 +79,10 @@ The Python bindings follow the C++ API closely but with Pythonic conventions:
 - C++ functions that accept or return a vector object use a Python tuple (of length matching the vector dimension)
 - Array indexing operators (e.g., `point[0]`) are not currently supported
 
+**Iterators:**
+- Some classes expose methods that return iterables (e.g., `S2CellId.children()`, `S2CellId.cells(level)`).
+- Iterables support forward iteration, `len()`, indexing, slicing, `in`, and `reversed()` unless otherwise noted.
+
 **Serialization:**
 - The C++ Encoder/Decoder serialization functions are not currently supported
 

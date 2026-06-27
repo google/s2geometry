@@ -2,11 +2,15 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
+#include <cstdint>
+#include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #include "absl/strings/str_cat.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2cell_id_range.h"
 #include "s2/s2latlng.h"
 
 namespace py = pybind11;
@@ -66,6 +70,67 @@ void MaybeThrowPositionOutOfRange(uint64_t pos) {
         absl::StrCat("pos ", pos, " out of range [0, ", S2CellId::kMaxPosition,
                      "]"));
   }
+}
+
+// Raise OverflowError if n exceeds Py_ssize_t; otherwise return it cast.
+// On 32-bit Python, cells() ranges above level ~15 exceed ssize_t max.
+Py_ssize_t LenOrThrow(int64_t n) {
+  if (n > std::numeric_limits<Py_ssize_t>::max()) {
+    throw std::overflow_error(absl::StrCat(
+        "S2CellIdRange size ", n, " exceeds Py_ssize_t max (",
+        std::numeric_limits<Py_ssize_t>::max(),
+        ") on this platform. On 32-bit Python, cells() ranges above "
+        "level ~15 exceed ssize_t. Use .size() for the full int64 count."));
+  }
+  return static_cast<Py_ssize_t>(n);
+}
+
+// Normalize a Python-style index (negative counts from end) against a range
+// of length n and return the 0-based index.  Raises IndexError if the index
+// is still out of [0, n) after normalization.
+// https://docs.python.org/3/reference/datamodel.html#object.__getitem__
+int64_t IndexOrThrow(int64_t i, int64_t n) {
+  if (i < 0) i += n;
+  if (i < 0 || i >= n) throw py::index_error("index out of range");
+  return i;
+}
+
+// Raise ValueError if the slice step is anything other than 1 (or None).
+// S2CellIdRange slices must be contiguous; reversed() covers step=-1.
+void ValidateStepIsOne(py::slice s) {
+  py::object step_obj = s.attr("step");
+  if (step_obj.is_none()) return;
+  int64_t step = step_obj.cast<int64_t>();
+  if (step != 1) {
+    throw py::value_error(absl::StrCat(
+        "S2CellIdRange only supports slices with step 1 (got step ",
+        step, ")"));
+  }
+}
+
+// Resolve a Python slice against a range of length n and return the clamped
+// [start, stop) bounds.  Slice indices are silently clamped per:
+// https://docs.python.org/3/reference/datamodel.html#sequences
+std::pair<int64_t, int64_t> ClampedSlice(int64_t n, py::slice s) {
+  auto clamp = [n](int64_t i) -> int64_t {
+    if (i < 0) i += n;
+    if (i < 0) return int64_t{0};
+    if (i > n) return n;
+    return i;
+  };
+  py::object start_obj = s.attr("start");
+  py::object stop_obj  = s.attr("stop");
+  int64_t start = start_obj.is_none() ? int64_t{0} : clamp(start_obj.cast<int64_t>());
+  int64_t stop  = stop_obj.is_none()  ? n           : clamp(stop_obj.cast<int64_t>());
+  if (stop < start) stop = start;
+  return {start, stop};
+}
+
+// Dereference an optional S2CellId from an iterator's next(), or raise
+// StopIteration if the iterator is exhausted.
+S2CellId NextOrStop(std::optional<S2CellId> result) {
+  if (!result) throw py::stop_iteration();
+  return *result;
 }
 
 }  // namespace
@@ -226,6 +291,32 @@ void bind_s2cell_id(py::module& m) {
            }, py::arg("position"),
            "Return the immediate child at the given position (0..3).\n\n"
            "Raises ValueError if this is a leaf cell or position is out of range.")
+      .def("children", [](S2CellId self, py::object level_obj) {
+               MaybeThrowIfLeaf(self);
+               S2CellId begin, end;
+               if (level_obj.is_none()) {
+                 begin = self.child_begin();
+                 end = self.child_end();
+               } else {
+                 int level = level_obj.cast<int>();
+                 MaybeThrowLevelOutOfRange(level, self.level() + 1,
+                                           S2CellId::kMaxLevel);
+                 begin = self.child_begin(level);
+                 end = self.child_end(level);
+               }
+               return S2CellIdRange{begin, end};
+           }, py::arg("level") = py::none(),
+           "Return a range over the children of this cell.\n\n"
+           "With no argument, returns the 4 immediate children.\n"
+           "With a level argument, returns all descendants at that level.\n"
+           "Raises ValueError if this is a leaf cell or level is out of range.")
+      .def_static("cells", [](int level) {
+               MaybeThrowLevelOutOfRange(level, 0, S2CellId::kMaxLevel);
+               return S2CellIdRange{S2CellId::Begin(level),
+                                    S2CellId::End(level)};
+           }, py::arg("level"),
+           "Return a range over all cells at the given level across all 6 faces.\n\n"
+           "Warning: the number of cells grows as 6 * 4^level.")
       .def("edge_neighbors", [](S2CellId self) {
                S2CellId neighbors[4];
                self.GetEdgeNeighbors(neighbors);
@@ -279,4 +370,50 @@ void bind_s2cell_id(py::module& m) {
   cls.attr("MAX_LEVEL")    = S2CellId::kMaxLevel;
   cls.attr("MAX_POSITION") = S2CellId::kMaxPosition;
   cls.attr("NUM_FACES")    = S2CellId::kNumFaces;
+
+  py::class_<S2CellIdRange>(m, "S2CellIdRange",
+      "A range of S2CellIds at the same level along the Hilbert curve.\n\n"
+      "Supports len(), indexing, slicing, iteration, reversed(), and 'in'.\n"
+      "Returned from S2CellId.children() and S2CellId.cells().\n\n"
+      "Slicing: only step=1 is supported. Use reversed() for step=-1.\n"
+      "Other step values raise ValueError.")
+      .def("__len__",      [](const S2CellIdRange& self) {
+        return LenOrThrow(self.size());
+      })
+      .def("size", &S2CellIdRange::size,
+           "Return the number of cells in the range as a 64-bit integer.\n\n"
+           "Equivalent to len() on 64-bit platforms; use this method when\n"
+           "the range may exceed Py_ssize_t (e.g. very large cells() ranges\n"
+           "on 32-bit Python).")
+      .def("__getitem__",  [](const S2CellIdRange& self, int64_t i) {
+        return self.at(IndexOrThrow(i, self.size()));
+      }, py::arg("index"))
+      .def("__getitem__",  [](const S2CellIdRange& self, py::slice s) {
+        ValidateStepIsOne(s);
+        auto [start, stop] = ClampedSlice(self.size(), s);
+        return self.slice(start, stop);
+      }, py::arg("slice"))
+      .def("__contains__", &S2CellIdRange::contains, py::arg("cell"))
+      .def("__iter__", [](const S2CellIdRange& self) {
+        return S2CellIdForwardIterator{self.begin, self.end};
+      })
+      .def("__reversed__", [](const S2CellIdRange& self) {
+        return S2CellIdReverseIterator{self.end, self.begin};
+      });
+
+  py::class_<S2CellIdForwardIterator>(m, "_S2CellIdForwardIterator", py::module_local())
+      .def("__iter__", [](S2CellIdForwardIterator& self) -> S2CellIdForwardIterator& {
+        return self;
+      })
+      .def("__next__", [](S2CellIdForwardIterator& self) {
+        return NextOrStop(self.next());
+      });
+
+  py::class_<S2CellIdReverseIterator>(m, "_S2CellIdReverseIterator", py::module_local())
+      .def("__iter__", [](S2CellIdReverseIterator& self) -> S2CellIdReverseIterator& {
+        return self;
+      })
+      .def("__next__", [](S2CellIdReverseIterator& self) {
+        return NextOrStop(self.next());
+      });
 }

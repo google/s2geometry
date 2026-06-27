@@ -45,6 +45,7 @@ cc_library(
         ":s2/s2cap.cc",
         ":s2/s2cell.cc",
         ":s2/s2cell_id.cc",
+        ":s2/s2cell_id_range.cc",
         ":s2/s2cell_index.cc",
         ":s2/s2cell_union.cc",
         ":s2/s2centroids.cc",
@@ -151,6 +152,7 @@ cc_library(
         ":s2/s2cap.h",
         ":s2/s2cell.h",
         ":s2/s2cell_id.h",
+        ":s2/s2cell_id_range.h",
         ":s2/s2cell_index.h",
         ":s2/s2cell_iterator.h",
         ":s2/s2cell_iterator_join.h",
@@ -314,6 +316,7 @@ cc_binary(
         ":s2/s2cap.cc",
         ":s2/s2cell.cc",
         ":s2/s2cell_id.cc",
+        ":s2/s2cell_id_range.cc",
         ":s2/s2cell_index.cc",
         ":s2/s2cell_union.cc",
         ":s2/s2centroids.cc",
@@ -736,6 +739,15 @@ cc_test(
     deps = [
         ":s2",
         ":s2_testing_headers",
+        "//s2/testing:test_main",
+    ],
+)
+
+cc_test(
+    name = "s2cell_id_range_test",
+    srcs = [":s2/s2cell_id_range_test.cc"],
+    deps = [
+        ":s2",
         "//s2/testing:test_main",
     ],
 )
