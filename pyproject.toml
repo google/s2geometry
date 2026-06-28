@@ -1,6 +1,7 @@
 [project]
 name = "s2geometry"
 description = "Computational geometry and spatial indexing on the sphere"
+readme = "README.md"
 authors = [
     { name = "Dan Larkin-York", email = "dan@arangodb.com" },
     { name = "Eric Veach", email = "ericv@google.com" },
