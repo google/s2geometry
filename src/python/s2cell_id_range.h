@@ -1,4 +1,4 @@
-// Copyright 2026 Google Inc. All Rights Reserved.
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef S2_S2CELL_ID_RANGE_H_
-#define S2_S2CELL_ID_RANGE_H_
+// Helpers for S2CellId sequence iteration used by Python bindings.
+//
+// S2CellIdRange represents a contiguous range of S2CellIds at a fixed level,
+// with forward and reverse iterators.  These types are exposed to pybind11 to
+// support Python's sequence protocol (len, indexing, slicing, iteration,
+// reversed) on S2CellId ranges returned by methods such as children() and
+// cells_at_level().
+
+#ifndef PYTHON_S2CELL_ID_RANGE_H_
+#define PYTHON_S2CELL_ID_RANGE_H_
 
 #include <cstdint>
 #include <optional>
@@ -63,4 +71,4 @@ struct S2CellIdReverseIterator {
   std::optional<S2CellId> next();
 };
 
-#endif  // S2_S2CELL_ID_RANGE_H_
+#endif  // PYTHON_S2CELL_ID_RANGE_H_

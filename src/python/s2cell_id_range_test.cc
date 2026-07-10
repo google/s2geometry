@@ -1,4 +1,4 @@
-// Copyright 2026 Google Inc. All Rights Reserved.
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "s2/s2cell_id_range.h"
+#include "python/s2cell_id_range.h"
 
 #include <cstdint>
 #include <vector>
@@ -33,7 +33,7 @@ S2CellIdRange FaceRange(int face, int level) {
 std::vector<S2CellId> Collect(S2CellIdRange r) {
   std::vector<S2CellId> result;
   S2CellIdForwardIterator it{r.begin, r.end};
-  while (auto cell = it.next()) {
+  while (std::optional<S2CellId> cell = it.next()) {
     result.push_back(*cell);
   }
   return result;
@@ -42,8 +42,8 @@ std::vector<S2CellId> Collect(S2CellIdRange r) {
 // Collect all cells produced by iterating a range in reverse.
 std::vector<S2CellId> CollectReverse(S2CellIdRange r) {
   std::vector<S2CellId> result;
-  S2CellIdReverseIterator it{r.end, r.begin};
-  while (auto cell = it.next()) {
+  S2CellIdReverseIterator rit{r.end, r.begin};
+  while (std::optional<S2CellId> cell = rit.next()) {
     result.push_back(*cell);
   }
   return result;

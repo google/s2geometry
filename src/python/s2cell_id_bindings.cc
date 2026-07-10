@@ -10,7 +10,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "s2/s2cell_id.h"
-#include "s2/s2cell_id_range.h"
+#include "python/s2cell_id_range.h"
 #include "s2/s2latlng.h"
 
 namespace py = pybind11;
@@ -111,6 +111,10 @@ void ValidateStepIsOne(py::slice s) {
 // Resolve a Python slice against a range of length n and return the clamped
 // [start, stop) bounds.  Slice indices are silently clamped per:
 // https://docs.python.org/3/reference/datamodel.html#sequences
+//
+// py::slice::compute() is not used because it requires Py_ssize_t, which is
+// 32-bit on 32-bit platforms; S2CellIdRange can have up to 2^60 cells so
+// indices are handled as int64_t directly.
 std::pair<int64_t, int64_t> ClampedSlice(int64_t n, py::slice s) {
   auto clamp = [n](int64_t i) -> int64_t {
     if (i < 0) i += n;
@@ -119,9 +123,9 @@ std::pair<int64_t, int64_t> ClampedSlice(int64_t n, py::slice s) {
     return i;
   };
   py::object start_obj = s.attr("start");
-  py::object stop_obj  = s.attr("stop");
+  py::object stop_obj = s.attr("stop");
   int64_t start = start_obj.is_none() ? int64_t{0} : clamp(start_obj.cast<int64_t>());
-  int64_t stop  = stop_obj.is_none()  ? n           : clamp(stop_obj.cast<int64_t>());
+  int64_t stop = stop_obj.is_none() ? n : clamp(stop_obj.cast<int64_t>());
   if (stop < start) stop = start;
   return {start, stop};
 }
@@ -394,6 +398,15 @@ void bind_s2cell_id(py::module& m) {
         return self.slice(start, stop);
       }, py::arg("slice"))
       .def("__contains__", &S2CellIdRange::contains, py::arg("cell"))
+      .def("__eq__", [](const S2CellIdRange& self, const S2CellIdRange& other) {
+        return self.begin == other.begin && self.end == other.end;
+      }, py::arg("other"))
+      .def("__repr__", [](const S2CellIdRange& self) {
+        std::ostringstream oss;
+        oss << "S2CellIdRange(begin=" << self.begin.id()
+            << ", end=" << self.end.id() << ")";
+        return oss.str();
+      })
       .def("__iter__", [](const S2CellIdRange& self) {
         return S2CellIdForwardIterator{self.begin, self.end};
       })

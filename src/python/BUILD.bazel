@@ -1,5 +1,5 @@
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 
 package(default_visibility = ["//visibility:private"])
@@ -115,12 +115,33 @@ pybind_library(
     ],
 )
 
+cc_library(
+    name = "s2cell_id_range",
+    srcs = ["s2cell_id_range.cc"],
+    hdrs = ["s2cell_id_range.h"],
+    deps = [
+        "//:s2",
+        "@abseil-cpp//absl/log:absl_check",
+    ],
+)
+
 pybind_library(
     name = "s2cell_id_bindings",
     srcs = ["s2cell_id_bindings.cc"],
     deps = [
+        ":s2cell_id_range",
         "//:s2",
         "@abseil-cpp//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "s2cell_id_range_test",
+    srcs = ["s2cell_id_range_test.cc"],
+    deps = [
+        ":s2cell_id_range",
+        "//:s2",
+        "//s2/testing:test_main",
     ],
 )
 

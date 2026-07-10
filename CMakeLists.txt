@@ -181,7 +181,6 @@ add_library(s2
             src/s2/s2cap.cc
             src/s2/s2cell.cc
             src/s2/s2cell_id.cc
-            src/s2/s2cell_id_range.cc
             src/s2/s2cell_index.cc
             src/s2/s2cell_union.cc
             src/s2/s2centroids.cc
@@ -399,7 +398,6 @@ if (BUILD_TESTS)
       src/s2/s2builderutil_testing_test.cc
       src/s2/s2cap_test.cc
       src/s2/s2cell_id_test.cc
-      src/s2/s2cell_id_range_test.cc
       src/s2/s2cell_index_test.cc
       src/s2/s2cell_iterator_join_test.cc
       src/s2/s2cell_iterator_testing_test.cc
@@ -583,7 +581,6 @@ if(S2_ENABLE_INSTALL)
                 src/s2/s2cap.h
                 src/s2/s2cell.h
                 src/s2/s2cell_id.h
-                src/s2/s2cell_id_range.h
                 src/s2/s2cell_index.h
                 src/s2/s2cell_iterator.h
                 src/s2/s2cell_iterator_join.h
