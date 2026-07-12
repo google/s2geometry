@@ -216,6 +216,11 @@ class S2Cap final : public S2Region {
   bool ApproxEquals(const S2Cap& other,
                     S1Angle max_error = S1Angle::Radians(1e-14)) const;
 
+  template <typename H>
+  friend H AbslHashValue(H h, const S2Cap& cap) {
+    return H::combine(std::move(h), cap.center_, cap.radius_.length2());
+  }
+
  private:
   // Implements the S2Region interface.  Note that the copy constructor should
   // be used instead.

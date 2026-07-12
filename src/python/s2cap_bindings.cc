@@ -67,8 +67,8 @@ void bind_s2cap(py::module& m) {
            "Return a full cap (contains all points).")
       .def_static("from_points", [](const std::vector<S2Point>& points) {
                if (points.empty()) return S2Cap::Empty();
-               S2Cap result = S2Cap::FromPoint(points[0]);
-               for (size_t i = 1; i < points.size(); ++i) result.AddPoint(points[i]);
+               S2Cap result = S2Cap::FromPoint(points[0].Normalize());
+               for (size_t i = 1; i < points.size(); ++i) result.AddPoint(points[i].Normalize());
                return result;
            }, py::arg("points"),
            "Return the smallest cap containing all given points.\n\n"
@@ -167,7 +167,7 @@ void bind_s2cap(py::module& m) {
            "Checks that the angle between centers and the difference in chord\n"
            "radii are both within max_error radians.")
       .def("__hash__", [](const S2Cap& self) {
-           return absl::HashOf(self.center(), self.radius().length2());
+           return absl::HashOf(self);
       })
 
       // String representation
