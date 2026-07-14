@@ -26,6 +26,7 @@
 #include "absl/strings/escaping.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s2error.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2point_vector_shape.h"
@@ -58,8 +59,10 @@ TEST(FastEncodeTaggedShapes, MixedShapes) {
   index->Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
   MutableS2ShapeIndex decoded_index;
+  S2Error error;
   ASSERT_TRUE(decoded_index.Init(
-      &decoder, s2shapeutil::FullDecodeShapeFactory(&decoder)));
+      &decoder, s2shapeutil::FullDecodeShapeFactory(&decoder, error)));
+  ASSERT_TRUE(error.ok()) << error.message();
   EXPECT_EQ(s2textformat::ToString(*index),
             s2textformat::ToString(decoded_index));
 }
@@ -71,7 +74,8 @@ TEST(DecodeTaggedShapes, DecodeFromByteString) {
   auto polyline = s2textformat::MakePolylineOrDie("1:1, 1:2, 1:3");
   index->Add(make_unique<S2LaxPolylineShape>(*polyline));
   index->Add(make_unique<S2LaxPolygonShape>(*polygon));
-  string bytes = absl::HexStringToBytes(
+  string bytes;
+  ASSERT_TRUE(absl::HexStringToBytes(
       "2932007C00E4002E0192010310000000000000F03F000000000000000000000000000000"
       "008AAFF597C0FEEF3F1EDD892B0BDF913F00000000000000000418B4825F3C81FDEF3F27"
       "DCF7C958DE913F1EDD892B0BDF913FD44A8442C3F9EF3FCE5B5A6FA6DDA13F1EDD892B0B"
@@ -85,11 +89,14 @@ TEST(DecodeTaggedShapes, DecodeFromByteString) {
       "00000000003C4A985423D8EF3F199E8D966CD0B13F28516A6D8FDBB13FF6FF70710BECEF"
       "3F000000000000000028516A6D8FDBB13F28C83900010003010403040504070400073807"
       "0E1B24292B3213000009030002130000110300092B00010001000000010D000002230410"
-      "04020400020113082106110A4113000111030101");
+      "04020400020113082106110A4113000111030101",
+      &bytes));
   Decoder decoder(bytes.data(), bytes.length());
   MutableS2ShapeIndex decoded_index;
+  S2Error decode_error;
   ASSERT_TRUE(decoded_index.Init(
-      &decoder, s2shapeutil::FullDecodeShapeFactory(&decoder)));
+      &decoder, s2shapeutil::FullDecodeShapeFactory(&decoder, decode_error)));
+  ASSERT_TRUE(decode_error.ok()) << decode_error.message();
   EXPECT_EQ(s2textformat::ToString(*index),
             s2textformat::ToString(decoded_index));
 }

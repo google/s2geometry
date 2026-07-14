@@ -50,6 +50,7 @@
 #include "s2/s2closest_edge_query_testing.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2error.h"
 #include "s2/s2fractal.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
@@ -343,8 +344,6 @@ TEST_F(VisitClosestEdgesTest, CanBreakFromShapeIteration) {
 }
 
 TEST_F(VisitClosestEdgesTest, CanBreakFromBruteForce) {
-  using Result = S2ClosestEdgeQuery::Result;
-
   S2ClosestEdgeQuery::Options options;
   options.set_use_brute_force(true);
   options.set_include_interiors(false);
@@ -969,8 +968,11 @@ static void BenchmarkFindClosest(
         e_data = string(encoder.base(), encoder.length());
         Decoder decoder(e_data.data(), e_data.length());
         if (encode_shapes) {
+          S2Error lazy_error;
           ABSL_CHECK(e_index.Init(
-              &decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+              &decoder,
+              s2shapeutil::LazyDecodeShapeFactory(&decoder, lazy_error)));
+          ABSL_CHECK(lazy_error.ok()) << lazy_error.message();
         } else {
           ABSL_CHECK(e_index.Init(
               &decoder, s2shapeutil::VectorShapeFactory(m_index.ReleaseAll())));
