@@ -59,7 +59,7 @@ This issue may require revision of boringssl or exactfloat.
     [g++ >= 7.5](https://gcc.gnu.org/) or
     [clang >= 14.0.0](https://clang.llvm.org/)
 *   [Abseil](https://github.com/abseil/abseil-cpp) LTS
-    [`20250814`](https://github.com/abseil/abseil-cpp/releases/tag/20250814.1)
+    [`20260526`](https://github.com/abseil/abseil-cpp/releases/tag/20260526.0)
     (standard library extensions). This exact version must be used.
 *   [googletest testing framework >= 1.10](https://github.com/google/googletest)
     (to build tests and example programs, optional)
