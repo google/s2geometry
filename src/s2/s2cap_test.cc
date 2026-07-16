@@ -24,6 +24,7 @@
 
 #include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
+#include "absl/hash/hash_testing.h"
 #include "absl/log/log_streamer.h"
 #include "absl/random/random.h"
 #include "s2/util/coding/coder.h"
@@ -404,6 +405,17 @@ TEST(S2Cap, S2CoderWorks) {
   S2Error error;
   auto decoded = s2coding::RoundTrip(S2Cap::Coder(), cap, error);
   EXPECT_EQ(cap, decoded);
+}
+
+TEST(S2Cap, Hash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+      S2Cap::Empty(),
+      S2Cap::Full(),
+      S2Cap::FromPoint(S2Point(1, 0, 0)),
+      S2Cap::FromPoint(S2Point(0, 1, 0)),
+      S2Cap(S2Point(1, 0, 0), S1Angle::Degrees(10)),
+      S2Cap(S2Point(1, 0, 0), S1Angle::Degrees(90)),
+  }));
 }
 
 void BM_MayIntersectWholeFaceEmptyCap(benchmark::State& state) {
