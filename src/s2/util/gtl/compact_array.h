@@ -49,9 +49,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "absl/base/internal/throw_delegate.h"
 #include "absl/base/macros.h"
 #include "absl/base/optimization.h"
+#include "absl/base/throw_delegate.h"
 #include "absl/log/absl_check.h"
 #include "absl/meta/type_traits.h"
 #include "absl/numeric/bits.h"
@@ -245,8 +245,7 @@ class compact_array_base {
   // This Insert() is private because it might return the end().
   iterator Insert(const_iterator p, const value_type& v) {
     if (ABSL_PREDICT_FALSE(size() >= kMaxSize)) {
-      // NOLINTNEXTLINE(build/namespaces)
-      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
+      absl::ThrowStdLengthError("compact_array size exceeded");
     }
     iterator r = make_hole(p, 1);
     *r = v;
@@ -260,8 +259,7 @@ class compact_array_base {
 
   void insert(const_iterator p, size_type n, const value_type& v) {
     if (ABSL_PREDICT_FALSE(n > kMaxSize - size())) {
-      // NOLINTNEXTLINE(build/namespaces)
-      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
+      absl::ThrowStdLengthError("compact_array size exceeded");
     }
     value_insert(p, n, v);
   }
@@ -321,16 +319,14 @@ class compact_array_base {
 
   reference at(size_type n) {
     if (ABSL_PREDICT_FALSE(n >= size_)) {
-      // NOLINTNEXTLINE(build/namespaces)
-      absl::base_internal::ThrowStdOutOfRange("compact_array_base::at");
+      absl::ThrowStdOutOfRange("compact_array_base::at");
     }
     return Array()[n];
   }
 
   const_reference at(size_type n) const {
     if (ABSL_PREDICT_FALSE(n >= size_)) {
-      // NOLINTNEXTLINE(build/namespaces)
-      absl::base_internal::ThrowStdOutOfRange("compact_array_base::at");
+      absl::ThrowStdOutOfRange("compact_array_base::at");
     }
     return ConstArray()[n];
   }
@@ -477,8 +473,7 @@ class compact_array_base {
 
   void value_insert(const_iterator p, size_type n, const value_type& v) {
     if (ABSL_PREDICT_FALSE(n > kMaxSize - size())) {
-      // NOLINTNEXTLINE(build/namespaces)
-      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
+      absl::ThrowStdLengthError("compact_array size exceeded");
     }
     iterator hole = make_hole(p, n);
     std::fill(hole, hole + n, v);
@@ -498,8 +493,7 @@ class compact_array_base {
                     std::forward_iterator_tag) {
     size_type n = std::distance(first, last);
     if (ABSL_PREDICT_FALSE(n > kMaxSize - size())) {
-      // NOLINTNEXTLINE(build/namespaces)
-      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
+      absl::ThrowStdLengthError("compact_array size exceeded");
     }
     std::copy(first, last, make_hole(p, n));
   }
