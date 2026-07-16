@@ -76,7 +76,7 @@ if (NOT TARGET absl::base)
         message(STATUS "Downloading and building abseil-cpp...")
         FetchContent_Declare(
             absl
-            URL https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.1.zip
+            URL https://github.com/abseil/abseil-cpp/archive/refs/tags/20260526.0.zip
             DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         )
         set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
