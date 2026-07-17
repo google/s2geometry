@@ -9,6 +9,7 @@
 #include "absl/hash/hash.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s1chord_angle.h"
+#include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng.h"
@@ -190,6 +191,9 @@ void bind_s2cell(py::module& m) {
            "Return a list of S2CellIds whose union covers this cell.\n\n"
            "For a single S2Cell, this always returns a list containing\n"
            "just this cell's id.")
+      .def("get_cap_bound", &S2Cell::GetCapBound,
+           "Return a bounding cap for this cell.")
+      // get_rect_bound() is deferred until S2LatLngRect is bound.
       .def("contains", py::overload_cast<const S2Cell&>(
                &S2Cell::Contains, py::const_),
            py::arg("cell"),
@@ -245,8 +249,6 @@ void bind_s2cell(py::module& m) {
       .value("LEFT_EDGE",   S2Cell::kLeftEdge)
       .export_values();
 
-  // TODO: The following S2Cell methods are not yet bound because they depend
-  // on types that have not been bound yet:
-  //   - get_cap_bound()   -> S2Cap
-  //   - get_rect_bound()  -> S2LatLngRect
+  // TODO: get_rect_bound() is not yet bound because it depends on
+  // S2LatLngRect, which has not been bound yet.
 }

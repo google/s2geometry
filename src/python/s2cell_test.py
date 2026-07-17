@@ -256,6 +256,14 @@ class TestS2Cell(unittest.TestCase):
         self.assertEqual(len(bound), 1)
         self.assertEqual(bound[0], cell.id)
 
+    def test_get_cap_bound(self):
+        cell = s2.S2Cell.from_face(0)
+        bound = cell.get_cap_bound()
+        # The bounding cap must contain the cell's center and all vertices.
+        self.assertTrue(bound.contains_point(cell.center()))
+        for k in range(4):
+            self.assertTrue(bound.contains_point(cell.vertex(k)))
+
     def test_contains_cell(self):
         face = s2.S2Cell.from_face(0)
         child = s2.S2Cell(face.id.child(0))
