@@ -18,7 +18,7 @@
 // with forward and reverse iterators.  These types are exposed to pybind11 to
 // support Python's sequence protocol (len, indexing, slicing, iteration,
 // reversed) on S2CellId ranges returned by methods such as children() and
-// cells_at_level().
+// cells().
 
 #ifndef PYTHON_S2CELL_ID_RANGE_H_
 #define PYTHON_S2CELL_ID_RANGE_H_
