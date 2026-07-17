@@ -82,9 +82,9 @@ void bind_s2latlng_rect(py::module& m) {
            "Return the full allowable latitude range as an R1Interval.")
       .def_static("full_lng", &S2LatLngRect::FullLng,
            "Return the full allowable longitude range as an S1Interval.")
-      // Replaces the mutable AddPoint pattern: the Python interface is
-      // immutable, so callers pass a list and get back a new rectangle.
       .def_static("from_latlngs", [](const std::vector<S2LatLng>& latlngs) {
+               // Replaces the mutable AddPoint pattern: the Python interface is
+               // immutable, so callers pass a list and get back a new rectangle.
                if (latlngs.empty()) return S2LatLngRect::Empty();
                S2LatLngRect result = S2LatLngRect::FromPoint(latlngs[0]);
                for (size_t i = 1; i < latlngs.size(); ++i) result.AddPoint(latlngs[i]);
@@ -240,8 +240,8 @@ void bind_s2latlng_rect(py::module& m) {
            "Return the smallest cap containing this rectangle.")
       .def("rect_bound", &S2LatLngRect::GetRectBound,
            "Return a bounding rectangle for this rectangle (returns self).")
-      // Lambda converts the output parameter of GetCellUnionBound to a return value.
       .def("cell_union_bound", [](const S2LatLngRect& self) {
+               // GetCellUnionBound uses an output parameter; return by value instead.
                std::vector<S2CellId> cell_ids;
                self.GetCellUnionBound(&cell_ids);
                return cell_ids;

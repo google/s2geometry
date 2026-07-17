@@ -90,13 +90,11 @@ class TestS2LatLngRect(unittest.TestCase):
 
     def test_full_lat(self):
         lat = s2.S2LatLngRect.full_lat()
-        self.assertIsInstance(lat, s2.R1Interval)
         self.assertAlmostEqual(lat.lo, -math.pi / 2)
         self.assertAlmostEqual(lat.hi, math.pi / 2)
 
     def test_full_lng(self):
         lng = s2.S2LatLngRect.full_lng()
-        self.assertIsInstance(lng, s2.S1Interval)
         self.assertTrue(lng.is_full())
 
     # Properties
@@ -105,7 +103,6 @@ class TestS2LatLngRect(unittest.TestCase):
         lo = s2.S2LatLng.from_degrees(-10.0, 0.0)
         hi = s2.S2LatLng.from_degrees(10.0, 0.0)
         rect = s2.S2LatLngRect(lo, hi)
-        self.assertIsInstance(rect.lat, s2.R1Interval)
         self.assertAlmostEqual(rect.lat.lo, lo.lat.radians)
         self.assertAlmostEqual(rect.lat.hi, hi.lat.radians)
 
@@ -113,7 +110,8 @@ class TestS2LatLngRect(unittest.TestCase):
         lo = s2.S2LatLng.from_degrees(0.0, -30.0)
         hi = s2.S2LatLng.from_degrees(0.0, 30.0)
         rect = s2.S2LatLngRect(lo, hi)
-        self.assertIsInstance(rect.lng, s2.S1Interval)
+        self.assertAlmostEqual(rect.lng.lo, lo.lng.radians)
+        self.assertAlmostEqual(rect.lng.hi, hi.lng.radians)
 
     def test_lat_lo_lat_hi(self):
         lo = s2.S2LatLng.from_degrees(-10.0, 0.0)
@@ -175,9 +173,12 @@ class TestS2LatLngRect(unittest.TestCase):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
         rect = s2.S2LatLngRect(lo, hi)
-        for k in range(4):
+        # Vertices in CCW order: lower-left, lower-right, upper-right, upper-left.
+        expected = [(-10.0, -20.0), (-10.0, 20.0), (10.0, 20.0), (10.0, -20.0)]
+        for k, (lat, lng) in enumerate(expected):
             v = rect.vertex(k)
-            self.assertIsInstance(v, s2.S2LatLng)
+            self.assertAlmostEqual(v.lat.degrees, lat)
+            self.assertAlmostEqual(v.lng.degrees, lng)
 
     def test_center(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
@@ -200,9 +201,11 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertAlmostEqual(s2.S2LatLngRect.empty().area(), 0.0)
 
     def test_centroid(self):
-        rect = s2.S2LatLngRect.full()
-        centroid = rect.centroid()
-        self.assertIsInstance(centroid, s2.S2Point)
+        # Full sphere is symmetric; centroid (area-weighted) is the zero vector.
+        centroid = s2.S2LatLngRect.full().centroid()
+        self.assertAlmostEqual(centroid.x, 0.0)
+        self.assertAlmostEqual(centroid.y, 0.0)
+        self.assertAlmostEqual(centroid.z, 0.0)
 
     def test_contains_rect(self):
         outer = s2.S2LatLngRect.full()
@@ -334,7 +337,6 @@ class TestS2LatLngRect(unittest.TestCase):
         r1 = s2.S2LatLngRect(lo1, hi1)
         r2 = s2.S2LatLngRect(lo2, hi2)
         d = r1.distance(r2)
-        self.assertIsInstance(d, s2.S1Angle)
         self.assertGreater(d.radians, 0.0)
 
     def test_distance_latlng(self):
@@ -346,12 +348,12 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertAlmostEqual(d.radians, 0.0)
 
     def test_directed_hausdorff_distance(self):
-        r1 = s2.S2LatLngRect.full()
         lo = s2.S2LatLng.from_degrees(-10.0, -10.0)
         hi = s2.S2LatLng.from_degrees(10.0, 10.0)
         r2 = s2.S2LatLngRect(lo, hi)
-        d = r2.directed_hausdorff_distance(r1)
-        self.assertIsInstance(d, s2.S1Angle)
+        # Every point in r2 is in the full rect, so the directed distance is 0.
+        d = r2.directed_hausdorff_distance(s2.S2LatLngRect.full())
+        self.assertAlmostEqual(d.radians, 0.0)
 
     def test_hausdorff_distance(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -10.0)
@@ -361,26 +363,20 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertAlmostEqual(d.radians, 0.0)
 
     def test_cap_bound(self):
-        rect = s2.S2LatLngRect.full()
-        bound = rect.cap_bound()
-        self.assertIsInstance(bound, s2.S2Cap)
+        bound = s2.S2LatLngRect.full().cap_bound()
         self.assertTrue(bound.is_full())
 
     def test_rect_bound(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
         rect = s2.S2LatLngRect(lo, hi)
-        bound = rect.rect_bound()
-        self.assertIsInstance(bound, s2.S2LatLngRect)
-        self.assertTrue(bound.approx_equals(rect))
+        self.assertTrue(rect.rect_bound().approx_equals(rect))
 
     def test_cell_union_bound(self):
-        rect = s2.S2LatLngRect.full()
-        cell_ids = rect.cell_union_bound()
-        self.assertIsInstance(cell_ids, list)
+        cell_ids = s2.S2LatLngRect.full().cell_union_bound()
         self.assertGreater(len(cell_ids), 0)
         for cid in cell_ids:
-            self.assertIsInstance(cid, s2.S2CellId)
+            self.assertTrue(cid.is_valid())
 
     # Operators
 
