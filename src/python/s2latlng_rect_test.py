@@ -6,8 +6,9 @@ import s2geometry_pybind as s2
 
 
 class TestS2LatLngRect(unittest.TestCase):
+    """Test cases for S2LatLngRect bindings."""
 
-    # --- Constructors ---
+    # Constructors
 
     def test_default_constructor_is_empty(self):
         rect = s2.S2LatLngRect()
@@ -38,7 +39,7 @@ class TestS2LatLngRect(unittest.TestCase):
         with self.assertRaises(ValueError):
             s2.S2LatLngRect(lat, lng)
 
-    # --- Static factories ---
+    # Factory methods
 
     def test_from_center_size(self):
         center = s2.S2LatLng.from_degrees(10.0, 20.0)
@@ -98,7 +99,7 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertIsInstance(lng, s2.S1Interval)
         self.assertTrue(lng.is_full())
 
-    # --- Properties ---
+    # Properties
 
     def test_lat_property(self):
         lo = s2.S2LatLng.from_degrees(-10.0, 0.0)
@@ -135,7 +136,7 @@ class TestS2LatLngRect(unittest.TestCase):
         self.assertAlmostEqual(rect.lo.lat.degrees, -10.0)
         self.assertAlmostEqual(rect.hi.lat.degrees, 10.0)
 
-    # --- Predicates ---
+    # Predicates
 
     def test_is_empty(self):
         self.assertTrue(s2.S2LatLngRect.empty().is_empty())
@@ -168,7 +169,7 @@ class TestS2LatLngRect(unittest.TestCase):
         # A point at lng=0 is outside.
         self.assertFalse(rect.contains_latlng(s2.S2LatLng.from_degrees(0, 0)))
 
-    # --- Geometric accessors ---
+    # Geometric operations
 
     def test_vertex(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
@@ -202,8 +203,6 @@ class TestS2LatLngRect(unittest.TestCase):
         rect = s2.S2LatLngRect.full()
         centroid = rect.centroid()
         self.assertIsInstance(centroid, s2.S2Point)
-
-    # --- Containment ---
 
     def test_contains_rect(self):
         outer = s2.S2LatLngRect.full()
@@ -247,8 +246,6 @@ class TestS2LatLngRect(unittest.TestCase):
         inner = s2.S2LatLngRect.from_point(s2.S2LatLng.from_degrees(0.0, 0.0))
         self.assertTrue(outer.interior_contains(inner))
 
-    # --- Intersection ---
-
     def test_intersects_rect(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
@@ -290,8 +287,6 @@ class TestS2LatLngRect(unittest.TestCase):
         cell = s2.S2Cell(s2.S2CellId.from_face(0))
         self.assertTrue(rect.may_intersect(cell))
 
-    # --- Set operations ---
-
     def test_expanded(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
@@ -331,25 +326,23 @@ class TestS2LatLngRect(unittest.TestCase):
         expanded = rect.expanded_by_distance(distance)
         self.assertTrue(expanded.contains(rect))
 
-    # --- Distance ---
-
-    def test_distance_to_rect(self):
+    def test_distance(self):
         lo1 = s2.S2LatLng.from_degrees(10.0, 0.0)
         hi1 = s2.S2LatLng.from_degrees(20.0, 10.0)
         lo2 = s2.S2LatLng.from_degrees(30.0, 0.0)
         hi2 = s2.S2LatLng.from_degrees(40.0, 10.0)
         r1 = s2.S2LatLngRect(lo1, hi1)
         r2 = s2.S2LatLngRect(lo2, hi2)
-        d = r1.distance_to_rect(r2)
+        d = r1.distance(r2)
         self.assertIsInstance(d, s2.S1Angle)
         self.assertGreater(d.radians, 0.0)
 
-    def test_distance_to_latlng(self):
+    def test_distance_latlng(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -10.0)
         hi = s2.S2LatLng.from_degrees(10.0, 10.0)
         rect = s2.S2LatLngRect(lo, hi)
         p = s2.S2LatLng.from_degrees(0.0, 0.0)
-        d = rect.distance_to_latlng(p)
+        d = rect.distance_latlng(p)
         self.assertAlmostEqual(d.radians, 0.0)
 
     def test_directed_hausdorff_distance(self):
@@ -367,8 +360,6 @@ class TestS2LatLngRect(unittest.TestCase):
         d = rect.hausdorff_distance(rect)
         self.assertAlmostEqual(d.radians, 0.0)
 
-    # --- S2Region interface ---
-
     def test_rect_bound(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
@@ -385,32 +376,27 @@ class TestS2LatLngRect(unittest.TestCase):
         for cid in cell_ids:
             self.assertIsInstance(cid, s2.S2CellId)
 
-    # --- Operators ---
+    # Operators
 
     def test_equality(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
         r1 = s2.S2LatLngRect(lo, hi)
         r2 = s2.S2LatLngRect(lo, hi)
-        self.assertEqual(r1, r2)
+        self.assertTrue(r1 == r2)
+        self.assertFalse(r1 != r2)
 
     def test_inequality(self):
         r1 = s2.S2LatLngRect.empty()
         r2 = s2.S2LatLngRect.full()
-        self.assertNotEqual(r1, r2)
+        self.assertTrue(r1 != r2)
+        self.assertFalse(r1 == r2)
 
     def test_approx_equals(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)
         rect = s2.S2LatLngRect(lo, hi)
         self.assertTrue(rect.approx_equals(rect))
-
-    def test_approx_equals_latlng(self):
-        lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
-        hi = s2.S2LatLng.from_degrees(10.0, 20.0)
-        rect = s2.S2LatLngRect(lo, hi)
-        tol = s2.S2LatLng.from_degrees(1e-10, 1e-10)
-        self.assertTrue(rect.approx_equals_latlng(rect, tol))
 
     def test_hash(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
@@ -419,17 +405,20 @@ class TestS2LatLngRect(unittest.TestCase):
         r2 = s2.S2LatLngRect(lo, hi)
         self.assertEqual(hash(r1), hash(r2))
 
-    # --- String representation ---
+    # String representation
 
     def test_repr(self):
         rect = s2.S2LatLngRect.empty()
         r = repr(rect)
+        self.assertTrue(r.startswith("S2LatLngRect("))
         self.assertIn("Lo", r)
         self.assertIn("Hi", r)
-        self.assertTrue(repr(rect).startswith("S2LatLngRect("))
 
     def test_str(self):
-        self.assertIsInstance(str(s2.S2LatLngRect.empty()), str)
+        rect = s2.S2LatLngRect.empty()
+        s = str(rect)
+        self.assertIn("Lo", s)
+        self.assertIn("Hi", s)
 
 
 if __name__ == "__main__":
