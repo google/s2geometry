@@ -14,6 +14,7 @@ void bind_s2cap(py::module& m);
 void bind_s2cell(py::module& m);
 void bind_s2cell_id(py::module& m);
 void bind_s2latlng(py::module& m);
+void bind_s2latlng_rect(py::module& m);
 void bind_s2point(py::module& m);
 // keep-sorted end
 
@@ -50,4 +51,7 @@ PYBIND11_MODULE(s2geometry_bindings, m) {
 
   // Deps: r2rect, s1chord_angle, s2cap, s2cell_id, s2latlng, s2point
   bind_s2cell(m);
+
+  // Deps: r1interval, s1angle, s1interval, s2cell, s2cell_id, s2latlng, s2point
+  bind_s2latlng_rect(m);
 }
