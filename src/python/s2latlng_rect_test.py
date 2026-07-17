@@ -360,6 +360,12 @@ class TestS2LatLngRect(unittest.TestCase):
         d = rect.hausdorff_distance(rect)
         self.assertAlmostEqual(d.radians, 0.0)
 
+    def test_cap_bound(self):
+        rect = s2.S2LatLngRect.full()
+        bound = rect.cap_bound()
+        self.assertIsInstance(bound, s2.S2Cap)
+        self.assertTrue(bound.is_full())
+
     def test_rect_bound(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
         hi = s2.S2LatLng.from_degrees(10.0, 20.0)

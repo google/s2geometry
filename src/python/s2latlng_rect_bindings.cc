@@ -10,6 +10,7 @@
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
+#include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng.h"
@@ -235,7 +236,8 @@ void bind_s2latlng_rect(py::module& m) {
            py::arg("other"),
            "Return the Hausdorff distance between this rectangle and other.\n\n"
            "H(A,B) = max(h(A,B), h(B,A)).")
-      // get_cap_bound() is deferred until S2Cap is bound.
+      .def("cap_bound", &S2LatLngRect::GetCapBound,
+           "Return the smallest cap containing this rectangle.")
       .def("rect_bound", &S2LatLngRect::GetRectBound,
            "Return a bounding rectangle for this rectangle (returns self).")
       // Lambda converts the output parameter of GetCellUnionBound to a return value.
