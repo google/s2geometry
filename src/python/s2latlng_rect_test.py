@@ -374,9 +374,7 @@ class TestS2LatLngRect(unittest.TestCase):
 
     def test_cell_union_bound(self):
         cell_ids = s2.S2LatLngRect.full().cell_union_bound()
-        self.assertGreater(len(cell_ids), 0)
-        for cid in cell_ids:
-            self.assertTrue(cid.is_valid())
+        self.assertEqual(cell_ids, [s2.S2CellId.from_face(i) for i in range(6)])
 
     # Operators
 
