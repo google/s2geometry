@@ -19,6 +19,8 @@
 
 namespace py = pybind11;
 
+namespace {
+
 void MaybeThrowInvalidLatInterval(const R1Interval& lat) {
   if (std::fabs(lat.lo()) > M_PI_2 || std::fabs(lat.hi()) > M_PI_2) {
     throw py::value_error("lat interval must be within [-pi/2, pi/2]");
@@ -32,6 +34,26 @@ void MaybeThrowEmptyMismatch(const R1Interval& lat, const S1Interval& lng) {
   }
 }
 
+void MaybeThrowLatNotOrdered(const S2LatLng& lo, const S2LatLng& hi) {
+  if (lo.lat() > hi.lat()) {
+    throw py::value_error("lo.lat() must be <= hi.lat()");
+  }
+}
+
+void MaybeThrowIfEmpty(const S2LatLngRect& rect) {
+  if (rect.is_empty()) {
+    throw py::value_error("rectangle must be non-empty");
+  }
+}
+
+void MaybeThrowVertexOutOfRange(int k) {
+  if (k < 0 || k > 3) {
+    throw py::value_error("k must be in [0, 3]");
+  }
+}
+
+}  // namespace
+
 void bind_s2latlng_rect(py::module& m) {
   py::class_<S2LatLngRect>(m, "S2LatLngRect",
       "A closed latitude-longitude rectangle on the sphere.\n\n"
@@ -43,11 +65,15 @@ void bind_s2latlng_rect(py::module& m) {
       // Constructors
       .def(py::init<>(),
            "Construct an empty S2LatLngRect.")
-      .def(py::init<const S2LatLng&, const S2LatLng&>(),
+      .def(py::init([](const S2LatLng& lo, const S2LatLng& hi) {
+               MaybeThrowLatNotOrdered(lo, hi);
+               return S2LatLngRect(lo, hi);
+           }),
            py::arg("lo"), py::arg("hi"),
            "Construct a rectangle from lo and hi corner points.\n\n"
            "If lo.lng() > hi.lng() the rectangle spans the 180-degree line.\n"
-           "Both points must be normalized with lo.lat() <= hi.lat().")
+           "Both points must be normalized with lo.lat() <= hi.lat().\n\n"
+           "Raises ValueError if lo.lat() > hi.lat().")
       .def(py::init([](const R1Interval& lat, const S1Interval& lng) {
                MaybeThrowInvalidLatInterval(lat);
                MaybeThrowEmptyMismatch(lat, lng);
@@ -122,10 +148,13 @@ void bind_s2latlng_rect(py::module& m) {
            "Return true if the longitude interval crosses the 180-degree line.")
 
       // Geometric operations
-      .def("vertex", &S2LatLngRect::GetVertex, py::arg("k"),
+      .def("vertex", [](const S2LatLngRect& self, int k) {
+               MaybeThrowVertexOutOfRange(k);
+               return self.GetVertex(k);
+           }, py::arg("k"),
            "Return the k-th vertex in CCW order (k = 0,1,2,3).\n\n"
-           "Order: lower-left, lower-right, upper-right, upper-left.\n"
-           "The argument is reduced modulo 4.")
+           "Order: lower-left, lower-right, upper-right, upper-left.\n\n"
+           "Raises ValueError if k is not in [0, 3].")
       .def("center", &S2LatLngRect::GetCenter,
            "Return the center in latitude-longitude space.\n\n"
            "Note: this is not the center of the region on the sphere.")
@@ -216,16 +245,20 @@ void bind_s2latlng_rect(py::module& m) {
            "within the given spherical distance of its boundary.\n\n"
            "A negative distance shrinks the rectangle instead. Unlike\n"
            "expanded(), this method measures distances on the sphere.")
-      .def("distance", py::overload_cast<const S2LatLngRect&>(
-               &S2LatLngRect::GetDistance, py::const_),
-           py::arg("other"),
+      .def("distance", [](const S2LatLngRect& self, const S2LatLngRect& other) {
+               MaybeThrowIfEmpty(self);
+               MaybeThrowIfEmpty(other);
+               return self.GetDistance(other);
+           }, py::arg("other"),
            "Return the minimum spherical distance to the given rectangle.\n\n"
-           "Both rectangles must be non-empty.")
-      .def("distance_latlng", py::overload_cast<const S2LatLng&>(
-               &S2LatLngRect::GetDistance, py::const_),
-           py::arg("p"),
+           "Raises ValueError if either rectangle is empty.")
+      .def("distance_latlng", [](const S2LatLngRect& self, const S2LatLng& p) {
+               MaybeThrowIfEmpty(self);
+               return self.GetDistance(p);
+           }, py::arg("p"),
            "Return the minimum spherical distance from this rectangle to\n"
-           "the given point. The point must be valid.")
+           "the given point. The point must be valid.\n\n"
+           "Raises ValueError if the rectangle is empty.")
       .def("directed_hausdorff_distance",
            py::overload_cast<const S2LatLngRect&>(
                &S2LatLngRect::GetDirectedHausdorffDistance, py::const_),

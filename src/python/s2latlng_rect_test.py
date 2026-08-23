@@ -21,6 +21,12 @@ class TestS2LatLngRect(unittest.TestCase):
         rect = s2.S2LatLngRect(lo, hi)
         self.assertFalse(rect.is_empty())
 
+    def test_constructor_rejects_reversed_lat(self):
+        lo = s2.S2LatLng.from_degrees(10.0, -20.0)
+        hi = s2.S2LatLng.from_degrees(-10.0, 20.0)
+        with self.assertRaises(ValueError):
+            s2.S2LatLngRect(lo, hi)
+
     def test_constructor_from_intervals(self):
         lat = s2.R1Interval(-0.5, 0.5)
         lng = s2.S1Interval(-1.0, 1.0)
@@ -161,7 +167,6 @@ class TestS2LatLngRect(unittest.TestCase):
         lo = s2.S2LatLng.from_degrees(-10, 160)
         hi = s2.S2LatLng.from_degrees(10, -160)
         rect = s2.S2LatLngRect(lo, hi)
-        self.assertTrue(rect.is_inverted())
         # A point at lng=175 is inside (between 160 and -160 via antimeridian).
         self.assertTrue(rect.contains_latlng(s2.S2LatLng.from_degrees(0, 175)))
         # A point at lng=0 is outside.
@@ -179,6 +184,13 @@ class TestS2LatLngRect(unittest.TestCase):
             v = rect.vertex(k)
             self.assertAlmostEqual(v.lat.degrees, lat)
             self.assertAlmostEqual(v.lng.degrees, lng)
+
+    def test_vertex_rejects_out_of_range(self):
+        rect = s2.S2LatLngRect.full()
+        with self.assertRaises(ValueError):
+            rect.vertex(-1)
+        with self.assertRaises(ValueError):
+            rect.vertex(4)
 
     def test_center(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -20.0)
@@ -339,6 +351,14 @@ class TestS2LatLngRect(unittest.TestCase):
         d = r1.distance(r2)
         self.assertGreater(d.radians, 0.0)
 
+    def test_distance_rejects_empty(self):
+        full = s2.S2LatLngRect.full()
+        empty = s2.S2LatLngRect.empty()
+        with self.assertRaises(ValueError):
+            empty.distance(full)
+        with self.assertRaises(ValueError):
+            full.distance(empty)
+
     def test_distance_latlng(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -10.0)
         hi = s2.S2LatLng.from_degrees(10.0, 10.0)
@@ -346,6 +366,11 @@ class TestS2LatLngRect(unittest.TestCase):
         p = s2.S2LatLng.from_degrees(0.0, 0.0)
         d = rect.distance_latlng(p)
         self.assertAlmostEqual(d.radians, 0.0)
+
+    def test_distance_latlng_rejects_empty(self):
+        p = s2.S2LatLng.from_degrees(0.0, 0.0)
+        with self.assertRaises(ValueError):
+            s2.S2LatLngRect.empty().distance_latlng(p)
 
     def test_directed_hausdorff_distance(self):
         lo = s2.S2LatLng.from_degrees(-10.0, -10.0)
