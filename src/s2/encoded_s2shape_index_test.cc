@@ -327,8 +327,10 @@ class LazyDecodeTest : public s2testing::ReaderWriterTest {
     encoded_.assign(encoder.base(), encoder.length());
 
     Decoder decoder(encoded_.data(), encoded_.size());
+    S2Error error;
     ABSL_CHECK(
-        index_.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+        index_.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder, error)));
+    ABSL_CHECK(error.ok()) << error.message();
   }
 
   void WriteOp() override {
@@ -373,13 +375,17 @@ TEST(EncodedS2ShapeIndex, JavaByteCompatibility) {
   // bytes is the encoded data of an S2ShapeIndex with a null shape and a
   // polyline with one edge. It was derived by base-16 encoding the buffer of
   // an encoder to which expected was encoded.
-  string bytes = absl::HexStringToBytes(
+  string bytes;
+  ASSERT_TRUE(absl::HexStringToBytes(
       "100036020102000000B4825F3C81FDEF3F27DCF7C958DE913F1EDD892B0BDF913FFC7FB8"
-      "B805F6EF3F28516A6D8FDBA13F27DCF7C958DEA13F28C809010408020010");
+      "B805F6EF3F28516A6D8FDBA13F27DCF7C958DEA13F28C809010408020010",
+      &bytes));
   Decoder decoder(bytes.data(), bytes.length());
   MutableS2ShapeIndex actual;
+  S2Error decode_error;
   ASSERT_TRUE(
-      actual.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder)));
+      actual.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder, decode_error)));
+  ASSERT_TRUE(decode_error.ok()) << decode_error.message();
 
   s2testing::ExpectEqual(expected, actual);
 }
@@ -537,8 +543,10 @@ static void BM_MutableIndexDecodeDestruct(benchmark::State& state) {
   for (auto _ : state) {
     Decoder decoder(encoder.base(), encoder.length());
     MutableS2ShapeIndex index;
+    S2Error error;
     ABSL_CHECK(
-        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder, error)));
+    ABSL_CHECK(error.ok()) << error.message();
   }
 }
 BENCHMARK(BM_MutableIndexDecodeDestruct)->Apply(BenchmarkArgsSnapped<false>);
@@ -559,8 +567,10 @@ static void BM_EncodedIndexInitDestruct(benchmark::State& state) {
   for (auto _ : state) {
     Decoder decoder(encoder.base(), encoder.length());
     EncodedS2ShapeIndex index;
+    S2Error error;
     ABSL_CHECK(
-        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder, error)));
+    ABSL_CHECK(error.ok()) << error.message();
   }
 }
 BENCHMARK(BM_EncodedIndexInitDestruct)->Apply(BenchmarkArgsSnapped<false>);
@@ -679,8 +689,10 @@ static void BM_ContainsPointEncodedIndexPolygon(benchmark::State& state) {
   }
   Decoder decoder(encoder.base(), encoder.length());
   EncodedS2ShapeIndex index;
+  S2Error init_error;
   ABSL_CHECK(
-      index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+      index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder, init_error)));
+  ABSL_CHECK(init_error.ok()) << init_error.message();
   int i = 0, num_edges = index.shape(0)->num_edges();
   for (auto _ : state) {
     S2Point test_point = index.shape(0)->edge(i).v0;
@@ -728,8 +740,10 @@ static void BM_VertexDistanceEncodedIndexPolygon(benchmark::State& state) {
   }
   Decoder decoder(encoder.base(), encoder.length());
   EncodedS2ShapeIndex index;
+  S2Error init_error;
   ABSL_CHECK(
-      index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+      index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder, init_error)));
+  ABSL_CHECK(init_error.ok()) << init_error.message();
   int i = 0, num_edges = index.shape(0)->num_edges();
   for (auto _ : state) {
     S2ClosestEdgeQuery query(&index);
@@ -781,8 +795,10 @@ static void BM_DecodeIndexAndPolygonContainsPointSnapped(
   for (auto _ : state) {
     Decoder decoder(encoder.base(), encoder.length());
     MutableS2ShapeIndex index;
+    S2Error error;
     ABSL_CHECK(
-        index.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder)));
+        index.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder, error)));
+    ABSL_CHECK(error.ok()) << error.message();
     S2ContainsPointQuery query(&index);
     benchmark::DoNotOptimize(query.Contains(index.shape(0)->edge(0).v0));
   }
@@ -804,8 +820,10 @@ static void BM_EncodedIndexAndPolygonContainsPointSnapped(
   for (auto _ : state) {
     Decoder decoder(encoder.base(), encoder.length());
     EncodedS2ShapeIndex index;
+    S2Error error;
     ABSL_CHECK(
-        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+        index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder, error)));
+    ABSL_CHECK(error.ok()) << error.message();
     S2ContainsPointQuery query(&index);
     benchmark::DoNotOptimize(query.Contains(index.shape(0)->edge(0).v0));
   }

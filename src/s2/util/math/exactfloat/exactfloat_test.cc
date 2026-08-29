@@ -96,7 +96,7 @@ double logb(double a) {
   // If "a" is denormalized, logb() is supposed to return the exponent that
   // "a" would have if it were normalized.  (But it doesn't.)
   if (a != 0 && fabs(a) < std::numeric_limits<double>::min()) {
-    return ::logb(scalbn(a, 100)) - 100;
+    return ::logb(ldexp(a, 100)) - 100;
   }
   return ::logb(a);
 }
@@ -111,6 +111,7 @@ double ldexp(double a, int exp) {
   return r;
 }
 
+#if !defined(__APPLE__)
 double scalbn(double a, int exp) {
   return ldexp(a, exp);  // See ldexp().
 }
@@ -121,6 +122,7 @@ double scalbln(double a, long exp) {
                  std::min(static_cast<long>(INT_MAX), exp));
   return ldexp(a, exp);  // See ldexp().
 }
+#endif  // !defined(__APPLE__)
 
 // The C standard does not specify the result of converting a floating-point
 // number to an integer if the argument is NaN or out of range.  This applies
