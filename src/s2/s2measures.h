@@ -46,7 +46,7 @@ double Angle(const S2Point& a, const S2Point& b, const S2Point& c);
 // -Pi or Pi if (a == c).  All points should be normalized.
 double TurnAngle(const S2Point& a, const S2Point& b, const S2Point& c);
 
-// Return the area of triangle ABC.  This method combines two different
+// Return the area of triangle ABC.  This method selects among several
 // algorithms to get accurate results for both large and small triangles.
 // The maximum error is about 5e-15 (about 0.25 square meters on the Earth's
 // surface), the same as GirardArea() below, but unlike that method it is
@@ -61,13 +61,12 @@ double Area(const S2Point& a, const S2Point& b, const S2Point& c);
 // Return the area of the triangle computed using Girard's formula.  All
 // points should be unit length, and no two points should be antipodal.
 //
-// This method is about twice as fast as Area() but has poor relative
-// accuracy for small triangles.  The maximum error is about 5e-15 (about
-// 0.25 square meters on the Earth's surface) and the average error is about
-// 1e-15.  These bounds apply to triangles of any size, even as the maximum
-// edge length of the triangle approaches 180 degrees.  But note that for
-// such triangles, tiny perturbations of the input points can change the
-// true mathematical area dramatically.
+// This method has poor relative accuracy for small triangles.  The maximum
+// error is about 5e-15 (about 0.25 square meters on the Earth's surface) and
+// the average error is about 1e-15.  These bounds apply to triangles of any
+// size, even as the maximum edge length of the triangle approaches 180
+// degrees.  But note that for such triangles, tiny perturbations of the input
+// points can change the true mathematical area dramatically.
 double GirardArea(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Like Area(), but returns a positive value for counterclockwise triangles
