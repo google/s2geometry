@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <benchmark/benchmark.h>
 #include <gtest/gtest.h>
 #include "absl/log/absl_log.h"
 #include "absl/log/log_streamer.h"
@@ -143,10 +144,9 @@ TEST(S2, AreaMethods) {
                           S2LatLng::FromDegrees(0, -170).ToPoint()));
 }
 
-// Previously these three points shows catastrophic error in their cross product
-// which prevented Area() from falling back to the Girard method properly. They
-// returned an area on the order of 1e-14 and the real area is ~1e-21, 7 orders
-// of magnitude relative error. Check that they return zero now.
+// Previously these three points showed catastrophic error in their cross
+// product.  They returned an area on the order of 1e-14 even though the actual
+// area is about 2.75e-21.
 TEST(S2, GetAreaRegression_B229644268) {
   const S2Point a(-1.705424004316021258e-01, -8.242696197922716461e-01,
                   5.399026611737816062e-01);
@@ -154,5 +154,37 @@ TEST(S2, GetAreaRegression_B229644268) {
                   5.393669607095969987e-01);
   const S2Point c(-1.705800600596222294e-01, -8.244634596153025408e-01,
                   5.395947061167500891e-01);
-  EXPECT_EQ(S2::Area(a, b, c), 0);
+  // Computed with 100 decimal digits of precision.
+  constexpr double expected = 2.7505340276401654e-21;
+  EXPECT_NEAR(S2::Area(a, b, c), expected, 1e-3 * expected);
 }
+
+static void BM_AreaAcuteSmall(benchmark::State& state) {
+  const S2Point a(1, 0, 0);
+  const S2Point b = S2Point(1, 1e-6, 0).Normalize();
+  const S2Point c = S2Point(1, 0, 1e-6).Normalize();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(S2::Area(a, b, c));
+  }
+}
+BENCHMARK(BM_AreaAcuteSmall);
+
+static void BM_AreaAcuteLarge(benchmark::State& state) {
+  const S2Point a(1, 0, 0);
+  const S2Point b = S2Point(1, 1, 0).Normalize();
+  const S2Point c = S2Point(1, 0, 1).Normalize();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(S2::Area(a, b, c));
+  }
+}
+BENCHMARK(BM_AreaAcuteLarge);
+
+static void BM_AreaObtuse(benchmark::State& state) {
+  const S2Point a(1, 0, 0);
+  const S2Point b(0, 1, 0);
+  const S2Point c = S2Point(-1, 0, 1).Normalize();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(S2::Area(a, b, c));
+  }
+}
+BENCHMARK(BM_AreaObtuse);
