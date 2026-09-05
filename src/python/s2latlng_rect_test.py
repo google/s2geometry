@@ -297,6 +297,16 @@ class TestS2LatLngRect(unittest.TestCase):
         p_b = s2.S2LatLng.from_degrees(5, 10).to_point()
         self.assertFalse(rect2.boundary_intersects(p_a, p_b))
 
+    def test_boundary_intersects_rejects_non_unit_length(self):
+        rect = s2.S2LatLngRect(s2.S2LatLng.from_degrees(-10, -20),
+                               s2.S2LatLng.from_degrees(10, 20))
+        unit = s2.S2Point(1.0, 0.0, 0.0)
+        non_unit = s2.S2Point(2.0, 0.0, 0.0)
+        with self.assertRaises(ValueError):
+            rect.boundary_intersects(non_unit, unit)
+        with self.assertRaises(ValueError):
+            rect.boundary_intersects(unit, non_unit)
+
     def test_may_intersect(self):
         rect = s2.S2LatLngRect.full()
         cell = s2.S2Cell(s2.S2CellId.from_face(0))

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "absl/hash/hash.h"
+#include "absl/strings/str_cat.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -16,6 +17,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
+#include "s2/s2pointutil.h"
 
 namespace py = pybind11;
 
@@ -49,6 +51,14 @@ void MaybeThrowIfEmpty(const S2LatLngRect& rect) {
 void MaybeThrowVertexOutOfRange(int k) {
   if (k < 0 || k > 3) {
     throw py::value_error("k must be in [0, 3]");
+  }
+}
+
+void MaybeThrowNotUnitLength(const S2Point& p, const char* name) {
+  if (!S2::IsUnitLength(p)) {
+    throw py::value_error(
+        absl::StrCat(name, " must be a unit-length vector (norm=",
+                     p.Norm(), ")"));
   }
 }
 
@@ -214,10 +224,16 @@ void bind_s2latlng_rect(py::module& m) {
            py::arg("other"),
            "Return true if the interior of this rectangle intersects\n"
            "any point (including the boundary) of the given rectangle.")
-      .def("boundary_intersects", &S2LatLngRect::BoundaryIntersects,
+      .def("boundary_intersects",
+           [](const S2LatLngRect& self, const S2Point& v0, const S2Point& v1) {
+               MaybeThrowNotUnitLength(v0, "v0");
+               MaybeThrowNotUnitLength(v1, "v1");
+               return self.BoundaryIntersects(v0, v1);
+           },
            py::arg("v0"), py::arg("v1"),
            "Return true if the boundary of this rectangle intersects\n"
-           "the given geodesic edge (v0, v1).")
+           "the given geodesic edge (v0, v1).\n\n"
+           "Raises ValueError if v0 or v1 is not unit-length.")
       .def("may_intersect", &S2LatLngRect::MayIntersect, py::arg("cell"),
            "Return true if this rectangle may intersect the given cell.\n\n"
            "Cheap but not exact; use intersects_cell() for an exact test.")
