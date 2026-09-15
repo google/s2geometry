@@ -253,6 +253,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       uint32_t shape_id_count = 0;
       if (!decoder->get_varint32(&shape_id_count)) return false;
       shape_id += shape_id_count >> 4;
+      if (shape_id >= num_shape_ids) return false;
       int num_edges = (shape_id_count & 15) + 1;
       clipped->Init(shape_id, num_edges);
       clipped->set_contains_center((header & 2) != 0);
@@ -267,6 +268,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     } else if ((header & 7) == 7) {
       // The clipped shape has no edges.
       shape_id += header >> 4;
+      if (shape_id >= num_shape_ids) return false;
       clipped->Init(shape_id, 0);
       clipped->set_contains_center((header & 8) != 0);
     } else {
@@ -278,6 +280,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       uint32_t shape_delta = 0;
       if (!decoder->get_varint32(&shape_delta)) return false;
       shape_id += shape_delta;
+      if (shape_id >= num_shape_ids) return false;
       int num_edges = (header >> 3) + 1;
       clipped->Init(shape_id, num_edges);
       clipped->set_contains_center((header & 4) != 0);
