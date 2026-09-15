@@ -225,7 +225,11 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       return true;
     }
     // The cell contains some other combination of edges.
-    int num_edges = header >> 3;
+    const uint64_t num_edges64 = header >> 3;
+    // Guard against a huge edge count overflowing `int` (and, after sign
+    // extension, allocating ~16 GiB in `S2ClippedShape::Init`).
+    if (num_edges64 > std::numeric_limits<int32_t>::max()) return false;
+    const int num_edges = static_cast<int>(num_edges64);
     clipped->Init(0 /*shape_id*/, num_edges);
     clipped->set_contains_center((header & 4) != 0);
     return DecodeEdges(num_edges, clipped, decoder);
@@ -239,6 +243,10 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     num_clipped = header >> 3;
     if (!decoder->get_varint32(&header)) return false;
   }
+  // A cell cannot reference more clipped shapes than there are shapes in the
+  // index. Reject corrupt/malformed input before `add_shapes()` allocates
+  // memory proportional to this untrusted count.
+  if (num_clipped > num_shape_ids) return false;
   int64_t shape_id = 0;  // Shape id is 32-bit, but we guard against overflow.
   S2ClippedShape* clipped = add_shapes(num_clipped);
   for (int j = 0; j < num_clipped; ++j, ++clipped, ++shape_id) {
@@ -281,7 +289,11 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       if (!decoder->get_varint32(&shape_delta)) return false;
       shape_id += shape_delta;
       if (shape_id >= num_shape_ids) return false;
-      int num_edges = (header >> 3) + 1;
+      const int num_edges = (header >> 3) + 1;
+      // Each edge consumes at least one byte of the encoded stream, so the
+      // edge count cannot exceed the remaining input. Guard against a
+      // corrupt header causing a large allocation in S2ClippedShape::Init.
+      if (num_edges > decoder->avail()) return false;
       clipped->Init(shape_id, num_edges);
       clipped->set_contains_center((header & 4) != 0);
       if (!DecodeEdges(num_edges, clipped, decoder)) return false;
