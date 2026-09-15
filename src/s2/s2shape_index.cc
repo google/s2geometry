@@ -230,6 +230,10 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     // extension, allocating ~16 GiB in `S2ClippedShape::Init`).
     if (num_edges64 > std::numeric_limits<int32_t>::max()) return false;
     const int num_edges = static_cast<int>(num_edges64);
+    // Each edge consumes at least one byte of the encoded stream, so a cell
+    // cannot reference more edges than remain in the input. Reject a corrupt
+    // header before S2ClippedShape::Init allocates num_edges * 4 bytes.
+    if (num_edges > decoder->avail()) return false;
     clipped->Init(0 /*shape_id*/, num_edges);
     clipped->set_contains_center((header & 4) != 0);
     return DecodeEdges(num_edges, clipped, decoder);
