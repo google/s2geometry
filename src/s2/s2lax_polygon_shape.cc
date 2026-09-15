@@ -319,6 +319,21 @@ bool EncodedS2LaxPolygonShape::Init(Decoder* decoder) {
 
   if (num_loops_ > 1) {
     if (!loop_starts_.Init(decoder)) return false;
+    // Validate loop_starts: it must have num_loops_+1 entries, start at 0,
+    // be non-decreasing, and end exactly at the vertex count. Otherwise
+    // chain_edge() would index vertices_[loop_starts_[i] + j] out of bounds
+    // on malformed input.
+    if (loop_starts_.size() != static_cast<size_t>(num_loops_) + 1) {
+      return false;
+    }
+    if (loop_starts_[0] != 0) return false;
+    for (int i = 1; i <= num_loops_; ++i) {
+      if (loop_starts_[i] < loop_starts_[i - 1] ||
+          loop_starts_[i] > vertices_.size()) {
+        return false;
+      }
+    }
+    if (loop_starts_[num_loops_] != vertices_.size()) return false;
   }
   return true;
 }
