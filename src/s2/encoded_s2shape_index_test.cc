@@ -22,6 +22,7 @@
 #include <cstring>
 #include <memory>
 #include <random>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -811,3 +812,53 @@ static void BM_EncodedIndexAndPolygonContainsPointSnapped(
   }
 }
 BENCHMARK(BM_EncodedIndexAndPolygonContainsPointSnapped)->Apply(BenchmarkArgs);
+
+// Regression tests for malformed encoded indexes.  Each base64 input below was
+// produced by fuzzing and previously triggered a crash or unbounded allocation
+// in the decode path.  After the fix, the index must either reject the input or
+// traverse it safely (a crash here fails the test).
+TEST(EncodedS2ShapeIndex, MalformedInputRegression) {
+  const char* kMalformed[] = {
+      // A cell that fails to decode -> GetCell() returned nullptr and
+      // Iterator::cell() dereferenced it (null-deref / DoS).
+      "EDmHAykACDQQEAABDI5AxsXB7z+Jcwt+P8I6GgK2gbjWT7Y/l7YwB2iR7z9c3IQEEr/"
+      "BPwKBwrjWT7a/AgED/wIAYbRsOgOd7T/i3IKfho7VP4lzC34aOsY/CRFj46865T//hOpw"
+      "PtDhf////////98/KDCol30D7D//8r7xPSDaP5AGk8F9kNA/KOAIEAgFEwACALg=",
+      // Unvalidated loop_starts -> heap-buffer-overflow (24-byte OOB read) in
+      // EncodedS2LaxPolygonShape::edge().
+      "EDmHBQEDAJUAEAABDI5CxsXB7z+Jcwt+Gjq2PwKBl7YwB2iR7z/GPwkRY+OvOt8/KDO"
+      "ol30I7D//8r7xc9qTID+QPcF9W5DQPyjgCBAIBQt+GjrGPwkRY+OvIiIpIiIiIiJzk8F9"
+      "kNA/KOAIEHFycXCPbGwAAAAyM3wyMjIybGxsbGxsbG1sbHhtAHh4eHh4eHh4eHh4eHh4"
+      "eHh4eDh4eHgCbGxswrjWRbY/l7YwB2iR7z/GPwkRY+OvOt8/KDOol30I7D//8jq2PwKBwr"
+      "jsP//yvvFz2pMgP5A9wX1bkNA/KOAIEAgFC34aOsY/CRFj468iIiIiIiIiInOTwX2Q0D8"
+      "o4AgQeHh4eHh4eHh4eHh4eHg4eHh4bGxsbAcAAAAAAAAAco+Pj2xsAAAAMjJ8MjIyMmxs"
+      "bGxsbGxsbGxsbGxsAAE=",
+      // Unbounded single-shape num_edges -> ~2.4 GiB allocation (OOM) from a
+      // 28-byte input.
+      "CAgEAP7/6ggLCAgICHgICP////8R/7L3AP//6g==",
+  };
+  for (const char* b64 : kMalformed) {
+    std::string bytes;
+    ASSERT_TRUE(absl::Base64Unescape(b64, &bytes)) << b64;
+    Decoder decoder(bytes.data(), bytes.size());
+    EncodedS2ShapeIndex index;
+    if (!index.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder))) {
+      continue;  // Rejected outright: correct.
+    }
+    for (EncodedS2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+         !it.done(); it.Next()) {
+      const S2ShapeIndexCell& cell = it.cell();
+      for (int s = 0; s < cell.num_clipped(); ++s) {
+        const S2ClippedShape& clipped = cell.clipped(s);
+        const S2Shape* shape = index.shape(clipped.shape_id());
+        if (shape == nullptr) continue;
+        const int num_edges = shape->num_edges();
+        const int num_clipped_edges = clipped.num_edges();
+        for (int e = 0; e < num_clipped_edges; ++e) {
+          const int edge_id = clipped.edge(e);
+          if (edge_id >= 0 && edge_id < num_edges) (void)shape->edge(edge_id);
+        }
+      }
+    }
+  }
+}
