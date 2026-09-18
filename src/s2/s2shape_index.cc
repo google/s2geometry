@@ -230,10 +230,13 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     // extension, allocating ~16 GiB in `S2ClippedShape::Init`).
     if (num_edges64 > std::numeric_limits<int32_t>::max()) return false;
     const int num_edges = static_cast<int>(num_edges64);
-    // Each edge consumes at least one byte of the encoded stream, so a cell
-    // cannot reference more edges than remain in the input. Reject a corrupt
-    // header before S2ClippedShape::Init allocates num_edges * 4 bytes.
-    if (num_edges > decoder->avail()) return false;
+    // No bound against the remaining input is possible here.  Edges are
+    // run-length encoded (see EncodeEdges below): the low 3 bits hold a count
+    // of 1..7, and for a count of 8 or more the *next* varint carries the
+    // remainder -- an arbitrary run length, not a byte-sized one.  A cell with
+    // three bytes left can legitimately describe a hundred edges, so any
+    // "edges <= k * avail()" test rejects valid input.  DecodeEdges below
+    // fails cleanly when the input is actually exhausted.
     clipped->Init(0 /*shape_id*/, num_edges);
     clipped->set_contains_center((header & 4) != 0);
     return DecodeEdges(num_edges, clipped, decoder);
@@ -294,10 +297,8 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       shape_id += shape_delta;
       if (shape_id >= num_shape_ids) return false;
       const int num_edges = (header >> 3) + 1;
-      // Each edge consumes at least one byte of the encoded stream, so the
-      // edge count cannot exceed the remaining input. Guard against a
-      // corrupt header causing a large allocation in S2ClippedShape::Init.
-      if (num_edges > decoder->avail()) return false;
+      // As above: run-length encoding makes the edge count independent of the
+      // number of remaining bytes, so no avail()-derived bound is sound here.
       clipped->Init(shape_id, num_edges);
       clipped->set_contains_center((header & 4) != 0);
       if (!DecodeEdges(num_edges, clipped, decoder)) return false;
