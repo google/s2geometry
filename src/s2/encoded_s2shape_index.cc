@@ -77,7 +77,13 @@ const S2ShapeIndexCell* EncodedS2ShapeIndex::GetCell(int i) const {
   auto cell = make_unique<S2ShapeIndexCell>();
   Decoder decoder = encoded_cells_.GetDecoder(i);
   if (!cell->Decode(num_shape_ids(), &decoder)) {
-    return nullptr;
+    // The cell is corrupt (e.g. the encoded index was produced by a different
+    // or buggy version, or the input is malformed). Return a static empty cell
+    // instead of nullptr so that callers (Iterator::cell()) never dereference
+    // a null pointer. Decoding such input is undefined behavior; the important
+    // guarantee is that it does not crash.
+    static const S2ShapeIndexCell* const kEmptyCell = new S2ShapeIndexCell();
+    return kEmptyCell;
   }
   // Recheck cell_decoded(i) once we hold the lock in case another thread
   // has decoded this cell in the meantime.
