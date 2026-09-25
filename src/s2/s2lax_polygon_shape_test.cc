@@ -578,3 +578,47 @@ BENCHMARK(BM_DecodeS2LaxPolygonShape)
     ->ArgPair(0, 10000)
     ->ArgPair(1, 10)
     ->ArgPair(1, 10000);
+
+// A malformed encoding whose `loop_starts` do not partition the vertex array.
+//
+// `chain_edge()` indexes `vertices_[loop_starts_[i] + j]`, so offsets that are
+// inconsistent with the vertex count read outside the vertex array. Before
+// validation was added, `Init()` accepted these bytes and returned true, and
+// the out-of-bounds read happened later inside `edge()` -- which a normal build
+// does not fault on, so the bug is invisible outside a sanitizer. Asserting
+// that `Init()` rejects the bytes is what makes it testable in any build.
+TEST(S2LaxPolygonShape, RejectsInconsistentLoopStarts) {
+  vector<vector<S2Point>> loops;
+  loops.push_back(s2textformat::ParsePointsOrDie("0:0, 0:1, 1:0"));
+  loops.push_back(s2textformat::ParsePointsOrDie("5:5, 5:6, 6:6, 6:5"));
+  S2LaxPolygonShape shape(loops);
+  ASSERT_EQ(2, shape.num_loops());
+  ASSERT_EQ(7, shape.num_vertices());
+
+  Encoder encoder;
+  shape.Encode(&encoder, s2coding::CodingHint::COMPACT);
+  std::string encoded(encoder.base(), encoder.length());
+
+  // With more than one loop, `loop_starts` is encoded last. The offsets are
+  // {0, 3, 7}, and 7 fits in one byte, so the tail is the one-byte varint
+  // header 12 followed by those three bytes. Assert the layout rather than
+  // assuming it: if the encoding changes, this test should fail loudly instead
+  // of silently corrupting an unrelated byte.
+  ASSERT_GE(encoded.size(), 4u);
+  const size_t n = encoded.size();
+  ASSERT_EQ(12u, static_cast<unsigned char>(encoded[n - 4])) << "varint header";
+  ASSERT_EQ(0u, static_cast<unsigned char>(encoded[n - 3]));
+  ASSERT_EQ(3u, static_cast<unsigned char>(encoded[n - 2]));
+  ASSERT_EQ(7u, static_cast<unsigned char>(encoded[n - 1]));
+
+  // Make the offsets start at 1 instead of 0. They are still non-decreasing and
+  // still end at the vertex count, so only the "starts at 0" rule is violated,
+  // which is precisely the case a partial check would miss.
+  std::string malformed = encoded;
+  malformed[n - 3] = 1;
+
+  Decoder decoder(malformed.data(), malformed.size());
+  S2LaxPolygonShape decoded;
+  S2Error error;
+  EXPECT_FALSE(decoded.Init(&decoder, error));
+}
