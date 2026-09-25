@@ -12,7 +12,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   cmake:
@@ -61,7 +62,7 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           ..
         working-directory: build/
-      - run: cmake --build . --parallel ${{ env.NUM_CORES }}
+      - run: cmake --build . --parallel ${NUM_CORES}
         working-directory: build/
       - if: always()
         run: |
@@ -69,9 +70,9 @@ jobs:
           # Join one-regex-per-line list (same alternation as a single POSIX ERE).
           # macOS doesn't support long options.
           FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+          ctest --parallel ${NUM_CORES} --output-on-failure \
             --exclude-regex "${FLAKY}"
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+          ctest --parallel ${NUM_CORES} --output-on-failure \
             --tests-regex "${FLAKY}" \
             --repeat until-pass:3
         working-directory: build/
