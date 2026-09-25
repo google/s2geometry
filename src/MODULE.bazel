@@ -16,7 +16,7 @@ bazel_dep(name = "rules_cc", version = "0.2.22")
 bazel_dep(name = "boringssl", version = "0.20260813.0", dev_dependency = True)
 bazel_dep(name = "openssl", version = "3.5.5.bcr.3", dev_dependency = True)
 bazel_dep(name = "google_benchmark", version = "1.9.5", dev_dependency = True)
-bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
+bazel_dep(name = "googletest", version = "1.18.0.bcr.1", dev_dependency = True)
 
 # Python configuration
 # The platforms dependency is needed for pybind_extension rules. See:
