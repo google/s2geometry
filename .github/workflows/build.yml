@@ -12,7 +12,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   cmake:
@@ -34,7 +35,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set NUM_CORES
@@ -43,7 +44,7 @@ jobs:
           echo "NUM_CORES=$NUM_CORES" >> $GITHUB_ENV
           echo "Detected $NUM_CORES cores"
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+        uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           key: ${{ github.job }}-${{ matrix.runs-on }}
       - name: Install dependencies (macOS)
@@ -61,7 +62,7 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           ..
         working-directory: build/
-      - run: cmake --build . --parallel ${{ env.NUM_CORES }}
+      - run: cmake --build . --parallel ${NUM_CORES}
         working-directory: build/
       - if: always()
         run: |
@@ -69,9 +70,9 @@ jobs:
           # Join one-regex-per-line list (same alternation as a single POSIX ERE).
           # macOS doesn't support long options.
           FLAKY="$(paste -s -d '|' ../flaky_tests.txt)"
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+          ctest --parallel ${NUM_CORES} --output-on-failure \
             --exclude-regex "${FLAKY}"
-          ctest --parallel ${{ env.NUM_CORES }} --output-on-failure \
+          ctest --parallel ${NUM_CORES} --output-on-failure \
             --tests-regex "${FLAKY}" \
             --repeat until-pass:3
         working-directory: build/
@@ -81,7 +82,7 @@ jobs:
     env:
       ARM_TOOLCHAIN_VERSION: "13.3.rel1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set NUM_CORES
@@ -167,7 +168,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
         persist-credentials: false
 
@@ -206,11 +207,11 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-tags: true
           persist-credentials: false
-      - uses: pypa/cibuildwheel@294735312765b09d24a2fbec22660ce817587d55 # v4.1.0
+      - uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
         with:
           package-dir: ./
           output-dir: dist/
@@ -237,8 +238,8 @@ jobs:
           pattern: dist*
           path: dist/
           merge-multiple: true
-      - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: "dist/*"
       # To upload to PyPI without a token, add this workflow file as a Trusted Publisher in the project settings on the PyPI website
-      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
