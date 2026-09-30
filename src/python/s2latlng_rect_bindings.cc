@@ -2,8 +2,10 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
+#include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include "absl/hash/hash.h"
@@ -24,8 +26,11 @@ namespace py = pybind11;
 namespace {
 
 void MaybeThrowInvalidLatInterval(const R1Interval& lat) {
-  if (std::fabs(lat.lo()) > M_PI_2 || std::fabs(lat.hi()) > M_PI_2) {
-    throw py::value_error("lat interval must be within [-pi/2, pi/2]");
+  if (!std::isfinite(lat.lo()) || !std::isfinite(lat.hi()) ||
+      std::fabs(lat.lo()) > M_PI_2 || std::fabs(lat.hi()) > M_PI_2) {
+    throw py::value_error(absl::StrCat(
+        "lat interval must be within [-pi/2, pi/2], got [",
+        lat.lo(), ", ", lat.hi(), "]"));
   }
 }
 
@@ -38,7 +43,19 @@ void MaybeThrowEmptyMismatch(const R1Interval& lat, const S1Interval& lng) {
 
 void MaybeThrowLatNotOrdered(const S2LatLng& lo, const S2LatLng& hi) {
   if (lo.lat() > hi.lat()) {
-    throw py::value_error("lo.lat() must be <= hi.lat()");
+    throw py::value_error(absl::StrCat(
+        "lo.lat() must be <= hi.lat(), got lo.lat()=", lo.lat().degrees(),
+        "°, hi.lat()=", hi.lat().degrees(), "°"));
+  }
+}
+
+void MaybeThrowInvalidRect(const S2LatLngRect& rect,
+                           const S2LatLng& lo, const S2LatLng& hi) {
+  if (!rect.is_valid()) {
+    throw py::value_error(absl::StrCat(
+        "Resulting rectangle is invalid: lo=(", lo.lat().degrees(),
+        "°, ", lo.lng().degrees(), "°), hi=(", hi.lat().degrees(),
+        "°, ", hi.lng().degrees(), "°)"));
   }
 }
 
@@ -48,12 +65,13 @@ void MaybeThrowIfEmpty(const S2LatLngRect& rect) {
   }
 }
 
-void MaybeThrowVertexOutOfRange(int k) {
-  if (k < 0 || k > 3) {
-    throw py::value_error("k must be in [0, 3]");
+void MaybeThrowNaN(S1Angle angle, const char* name) {
+  if (std::isnan(angle.radians())) {
+    throw py::value_error(absl::StrCat(name, " must not be NaN"));
   }
 }
 
+// Duplicated from s1chord_angle_bindings.cc (see also s2cell_bindings.cc).
 void MaybeThrowNotUnitLength(const S2Point& p, const char* name) {
   if (!S2::IsUnitLength(p)) {
     throw py::value_error(
@@ -77,14 +95,22 @@ void bind_s2latlng_rect(py::module& m) {
            "Construct an empty S2LatLngRect.")
       .def(py::init([](const S2LatLng& lo, const S2LatLng& hi) {
                MaybeThrowLatNotOrdered(lo, hi);
-               return S2LatLngRect(lo, hi);
+               S2LatLngRect rect(lo, hi);
+               MaybeThrowInvalidRect(rect, lo, hi);
+               return rect;
            }),
            py::arg("lo"), py::arg("hi"),
            "Construct a rectangle from lo and hi corner points.\n\n"
            "If lo.lng() > hi.lng() the rectangle spans the 180-degree line.\n"
-           "Both points must be normalized with lo.lat() <= hi.lat().\n\n"
-           "Raises ValueError if lo.lat() > hi.lat().")
+           "lo.lat() must be <= hi.lat().\n\n"
+           "Raises ValueError if lo.lat() > hi.lat() or the resulting\n"
+           "rectangle is invalid (e.g. lo.lng == 180° and hi.lng == -180°).")
       .def(py::init([](const R1Interval& lat, const S1Interval& lng) {
+               // Return canonical Empty() before checking bounds so that
+               // non-canonical empty R1Intervals (e.g. [0.5, -0.5]) don't
+               // produce a rect whose lo/hi differ from Empty() and break
+               // the == / __hash__ contract.
+               if (lat.is_empty() && lng.is_empty()) return S2LatLngRect::Empty();
                MaybeThrowInvalidLatInterval(lat);
                MaybeThrowEmptyMismatch(lat, lng);
                return S2LatLngRect(lat, lng);
@@ -96,20 +122,30 @@ void bind_s2latlng_rect(py::module& m) {
            "Raises ValueError if either condition is violated.")
 
       // Factory methods
-      .def_static("from_center_size", &S2LatLngRect::FromCenterSize,
-           py::arg("center"), py::arg("size"),
+      .def_static("from_center_size",
+           [](const S2LatLng& center, S1Angle lat_size, S1Angle lng_size) {
+               MaybeThrowNaN(lat_size, "lat_size");
+               MaybeThrowNaN(lng_size, "lng_size");
+               // Sizes may exceed S2LatLng's valid range (e.g. 210°, 400°), so
+               // they are taken as separate angles and packed into an
+               // unvalidated C++ S2LatLng.
+               return S2LatLngRect::FromCenterSize(
+                   center, S2LatLng(lat_size, lng_size));
+           },
+           py::arg("center"), py::arg("lat_size"), py::arg("lng_size"),
            "Construct a rectangle of the given size centered around center.\n\n"
-           "center must be normalized; size does not need to be. The latitude\n"
-           "interval is clamped to [-90, 90] degrees, and the longitude\n"
-           "interval is Full() if the longitude size is 360 degrees or more.")
+           "The latitude interval is clamped to [-90, 90] degrees, and the\n"
+           "longitude interval is full if lng_size is 360 degrees or more.\n"
+           "from_center_size(r.center(), *r.size()) reconstructs r.\n\n"
+           "Raises ValueError if either size is NaN.")
       .def_static("from_point", &S2LatLngRect::FromPoint,
-           py::arg("p"),
-           "Construct a rectangle containing a single normalized point.")
+           py::arg("latlng"),
+           "Construct a rectangle containing a single point.")
       .def_static("from_point_pair", &S2LatLngRect::FromPointPair,
            py::arg("p1"), py::arg("p2"),
            "Construct the minimal bounding rectangle containing two points.\n\n"
-           "Equivalent to starting with an empty rectangle and calling\n"
-           "add_point() twice. Both points must be normalized.")
+           "Unlike the (lo, hi) constructor, the points may be given in\n"
+           "either order.")
       .def_static("empty", &S2LatLngRect::Empty,
            "Return an empty rectangle (contains no points).")
       .def_static("full", &S2LatLngRect::Full,
@@ -119,11 +155,11 @@ void bind_s2latlng_rect(py::module& m) {
       .def_static("full_lng", &S2LatLngRect::FullLng,
            "Return the full allowable longitude range as an S1Interval.")
       .def_static("from_latlngs", [](const std::vector<S2LatLng>& latlngs) {
-               // Replaces the mutable AddPoint pattern: the Python interface is
-               // immutable, so callers pass a list and get back a new rectangle.
-               if (latlngs.empty()) return S2LatLngRect::Empty();
-               S2LatLngRect result = S2LatLngRect::FromPoint(latlngs[0]);
-               for (size_t i = 1; i < latlngs.size(); ++i) result.AddPoint(latlngs[i]);
+               // Replaces the mutable AddPoint pattern: callers pass a list and
+               // get back a new rectangle. S2LatLngRect() is Empty(), and
+               // AddPoint on an empty rect initializes it to that point.
+               S2LatLngRect result;
+               for (const S2LatLng& ll : latlngs) result.AddPoint(ll);
                return result;
            }, py::arg("latlngs"),
            "Return the smallest rectangle containing all given S2LatLng points.\n\n"
@@ -158,19 +194,25 @@ void bind_s2latlng_rect(py::module& m) {
            "Return true if the longitude interval crosses the 180-degree line.")
 
       // Geometric operations
-      .def("vertex", [](const S2LatLngRect& self, int k) {
-               MaybeThrowVertexOutOfRange(k);
-               return self.GetVertex(k);
-           }, py::arg("k"),
-           "Return the k-th vertex in CCW order (k = 0,1,2,3).\n\n"
-           "Order: lower-left, lower-right, upper-right, upper-left.\n\n"
-           "Raises ValueError if k is not in [0, 3].")
+      .def("vertex", &S2LatLngRect::GetVertex, py::arg("k"),
+           "Return the k-th vertex in CCW order.\n\n"
+           "Order: lower-left, lower-right, upper-right, upper-left.\n"
+           "k is reduced modulo 4, so vertex(4) == vertex(0).")
       .def("center", &S2LatLngRect::GetCenter,
            "Return the center in latitude-longitude space.\n\n"
            "Note: this is not the center of the region on the sphere.")
-      .def("size", &S2LatLngRect::GetSize,
-           "Return the width and height of this rectangle as an S2LatLng.\n\n"
-           "Empty rectangles have a negative width and height.")
+      .def("size", [](const S2LatLngRect& self) {
+               S2LatLng s = self.GetSize();
+               // GetSize() returns extents that can exceed S2LatLng validity
+               // bounds (e.g. full().size() yields lat=180°, lng=360°), so
+               // expose as a pair of S1Angles rather than an S2LatLng.
+               return std::make_pair(s.lat(), s.lng());
+           },
+           "Return the (lat, lng) extents of this rectangle as a pair of S1Angles.\n\n"
+           "Both values are non-negative for non-empty rectangles. The values\n"
+           "can exceed 90° / 180° (e.g. full().size() returns (180°, 360°)),\n"
+           "so the result is a pair of S1Angles rather than an S2LatLng.\n"
+           "Empty rectangles have negative extents.")
       .def("area", &S2LatLngRect::Area,
            "Return the surface area of this rectangle on the unit sphere.")
       .def("centroid", &S2LatLngRect::GetCentroid,
@@ -183,12 +225,11 @@ void bind_s2latlng_rect(py::module& m) {
            "Return true if this rectangle contains the given rectangle.")
       .def("contains_latlng", py::overload_cast<const S2LatLng&>(
                &S2LatLngRect::Contains, py::const_),
-           py::arg("ll"),
-           "Return true if this rectangle contains the given S2LatLng.\n\n"
-           "The argument must be normalized.")
+           py::arg("latlng"),
+           "Return true if this rectangle contains the given S2LatLng.")
       .def("contains_point", py::overload_cast<const S2Point&>(
                &S2LatLngRect::Contains, py::const_),
-           py::arg("p"),
+           py::arg("point"),
            "Return true if this rectangle contains the given S2Point.\n\n"
            "The point does not need to be normalized.")
       .def("contains_cell", py::overload_cast<const S2Cell&>(
@@ -197,14 +238,13 @@ void bind_s2latlng_rect(py::module& m) {
            "Return true if this rectangle contains the given cell.")
       .def("interior_contains_point", py::overload_cast<const S2Point&>(
                &S2LatLngRect::InteriorContains, py::const_),
-           py::arg("p"),
-           "Return true if the interior contains the given point.\n\n"
+           py::arg("point"),
+           "Return true if the interior contains the given S2Point.\n\n"
            "The point does not need to be normalized.")
       .def("interior_contains_latlng", py::overload_cast<const S2LatLng&>(
                &S2LatLngRect::InteriorContains, py::const_),
-           py::arg("ll"),
-           "Return true if the interior contains the given S2LatLng.\n\n"
-           "The argument must be normalized.")
+           py::arg("latlng"),
+           "Return true if the interior contains the given S2LatLng.")
       .def("interior_contains", py::overload_cast<const S2LatLngRect&>(
                &S2LatLngRect::InteriorContains, py::const_),
            py::arg("other"),
@@ -237,12 +277,21 @@ void bind_s2latlng_rect(py::module& m) {
       .def("may_intersect", &S2LatLngRect::MayIntersect, py::arg("cell"),
            "Return true if this rectangle may intersect the given cell.\n\n"
            "Cheap but not exact; use intersects_cell() for an exact test.")
-      .def("expanded", &S2LatLngRect::Expanded, py::arg("margin"),
-           "Return this rectangle expanded by margin.lat() on each latitude\n"
-           "side and margin.lng() on each longitude side.\n\n"
+      .def("expanded",
+           [](const S2LatLngRect& self, S1Angle lat_margin, S1Angle lng_margin) {
+               MaybeThrowNaN(lat_margin, "lat_margin");
+               MaybeThrowNaN(lng_margin, "lng_margin");
+               // Margins may exceed S2LatLng's valid range (e.g. a 180° lat
+               // margin), so pack them into an unvalidated C++ S2LatLng.
+               return self.Expanded(S2LatLng(lat_margin, lng_margin));
+           },
+           py::arg("lat_margin"), py::arg("lng_margin"),
+           "Return this rectangle expanded by lat_margin on each latitude\n"
+           "side and lng_margin on each longitude side.\n\n"
            "A negative margin shrinks the rectangle. Uses lat/lng space\n"
            "topology (cylindrical). Use expanded_by_distance() to expand by\n"
-           "a spherical distance.")
+           "a spherical distance.\n\n"
+           "Raises ValueError if either margin is NaN.")
       .def("polar_closure", &S2LatLngRect::PolarClosure,
            "Return this rectangle with longitude range expanded to Full()\n"
            "if it contains a pole, so that all representations of any\n"
@@ -255,12 +304,22 @@ void bind_s2latlng_rect(py::module& m) {
            "this rectangle and other.\n\n"
            "If the intersection consists of two disjoint rectangles, returns\n"
            "a single rectangle spanning both.")
-      .def("expanded_by_distance", &S2LatLngRect::ExpandedByDistance,
+      .def("expanded_by_distance",
+           [](const S2LatLngRect& self, S1Angle distance) {
+               MaybeThrowNaN(distance, "distance");
+               // Clamp so S1ChordAngle(distance) never becomes Infinity(),
+               // which S2Cap's constructor rejects via DCHECK.
+               return self.ExpandedByDistance(
+                   std::min(distance, S1Angle::Radians(M_PI)));
+           },
            py::arg("distance"),
            "Return this rectangle expanded so that it contains all points\n"
            "within the given spherical distance of its boundary.\n\n"
            "A negative distance shrinks the rectangle instead. Unlike\n"
-           "expanded(), this method measures distances on the sphere.")
+           "expanded(), this method measures distances on the sphere.\n"
+           "Distances of 180 degrees or more (including infinity) expand a\n"
+           "non-empty rectangle to full.\n\n"
+           "Raises ValueError if distance is NaN.")
       .def("distance", [](const S2LatLngRect& self, const S2LatLngRect& other) {
                MaybeThrowIfEmpty(self);
                MaybeThrowIfEmpty(other);
@@ -268,12 +327,13 @@ void bind_s2latlng_rect(py::module& m) {
            }, py::arg("other"),
            "Return the minimum spherical distance to the given rectangle.\n\n"
            "Raises ValueError if either rectangle is empty.")
-      .def("distance_latlng", [](const S2LatLngRect& self, const S2LatLng& p) {
+      .def("distance_latlng",
+           [](const S2LatLngRect& self, const S2LatLng& latlng) {
                MaybeThrowIfEmpty(self);
-               return self.GetDistance(p);
-           }, py::arg("p"),
+               return self.GetDistance(latlng);
+           }, py::arg("latlng"),
            "Return the minimum spherical distance from this rectangle to\n"
-           "the given point. The point must be valid.\n\n"
+           "the given S2LatLng.\n\n"
            "Raises ValueError if the rectangle is empty.")
       .def("directed_hausdorff_distance",
            py::overload_cast<const S2LatLngRect&>(
@@ -296,16 +356,17 @@ void bind_s2latlng_rect(py::module& m) {
                return cell_ids;
            },
            "Return a list of S2CellIds whose union covers this rectangle.")
-
-      // Operators
-      .def(py::self == py::self, "Return true if rectangles are equal.")
-      .def(py::self != py::self, "Return true if rectangles are not equal.")
+      // Note: default value must match C++ signature in s2latlng_rect.h.
       .def("approx_equals", py::overload_cast<const S2LatLngRect&, S1Angle>(
                &S2LatLngRect::ApproxEquals, py::const_),
            py::arg("other"),
            py::arg("max_error") = S1Angle::Radians(1e-15),
            "Return true if this rectangle is approximately equal to other.\n\n"
            "Uses a uniform tolerance for both lat and lng.")
+
+      // Operators
+      .def(py::self == py::self, "Return true if rectangles are equal.")
+      .def(py::self != py::self, "Return true if rectangles are not equal.")
       .def("__hash__", [](const S2LatLngRect& self) {
            return absl::HashOf(self);
       })
