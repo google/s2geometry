@@ -30,6 +30,7 @@
 //#include "util/geometry/s2predicates.h"
 
 using std::atan;
+using std::fabs;
 using std::max;
 using std::sqrt;
 using std::tan;
@@ -88,6 +89,24 @@ double Area(const S2Point& a, const S2Point& b, const S2Point& c) {
   ABSL_DCHECK(IsUnitLength(a));
   ABSL_DCHECK(IsUnitLength(b));
   ABSL_DCHECK(IsUnitLength(c));
+  // Eriksson's formula computes the spherical excess using one atan2:
+  //
+  //   E = 2 atan2(|A . ((B - A) x (C - A))|, (B + A) . (C + A))
+  //
+  // Computing the differences before the cross product preserves relative
+  // accuracy for small triangles.  The formula becomes ill-conditioned when
+  // an edge approaches 180 degrees, so only use it when every edge is at most
+  // 90 degrees.  In that case all pairwise dot products are non-negative and
+  // the denominator is bounded away from zero.
+  //
+  // Reference: Eriksson, F. (1990). "On the Measure of Solid Angles."
+  // Mathematics Magazine, 63(3), 184-187.
+  if (a.DotProd(b) >= 0 && b.DotProd(c) >= 0 && c.DotProd(a) >= 0) {
+    double numerator = fabs(a.DotProd((b - a).CrossProd(c - a)));
+    double denominator = (b + a).DotProd(c + a);
+    return 2 * atan2(numerator, denominator);
+  }
+
   // This method is based on l'Huilier's theorem,
   //
   //   tan(E/4) = sqrt(tan(s/2) tan((s-a)/2) tan((s-b)/2) tan((s-c)/2))
