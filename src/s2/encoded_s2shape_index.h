@@ -145,6 +145,18 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   //
   // Note that the encoded shape vector must *precede* the encoded S2ShapeIndex
   // in the Decoder's data buffer in this example.
+  //
+  // As with the other encoded types, decoding is lazy: Init() reads only what
+  // it needs in order to begin decoding, so a true return status does -not-
+  // mean that the byte stream is sound.  A malformed cell is not discovered
+  // until it is reached, and Init() has no way to report it.
+  //
+  // This interface therefore assumes a trusted byte stream.  Reading a
+  // malformed encoding through the unchecked accessors is outside the
+  // contract, and the failure is not a clean error: when
+  // S2ShapeIndexCell::Decode() returns false, GetCell() returns nullptr, and
+  // Iterator::cell() dereferences it without a check.  Callers that cannot
+  // assume a trusted stream must validate it before calling Init().
   bool Init(Decoder* decoder, const ShapeFactory& shape_factory);
 
   // Copies the encoded byte stream into a new encoder.
