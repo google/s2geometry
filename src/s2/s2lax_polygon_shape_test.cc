@@ -36,8 +36,11 @@
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
 #include "s2/base/casts.h"
+#include "s2/encoded_s2point_vector.h"
+#include "s2/encoded_uint_vector.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -540,6 +543,31 @@ TEST(S2LaxPolygonShapeTest, BadVertices) {
 TEST(S2LaxPolygonShapeTest, BadLoopOffsets) {
   EXPECT_THAT(DecodeS2LaxPolygonShape(std::string("\001\225\243C\000\373", 6)),
               HasSubstr("Failed to decode loop offsets"));
+}
+
+TEST(S2LaxPolygonShapeTest, LoopOffsetsOutOfRange) {
+  // A valid loop-offset count (num_loops + 1) but with offset values that fall
+  // outside the decoded vertex array.  Reading a vertex of the second loop
+  // would otherwise index past the three decoded vertices.
+  Encoder encoder;
+  encoder.Ensure(256);
+  encoder.put8(1);          // version
+  encoder.put_varint32(2);  // num_loops
+  std::vector<S2Point> vertices = {
+      S2LatLng::FromDegrees(0, 0).ToPoint(),
+      S2LatLng::FromDegrees(0, 1).ToPoint(),
+      S2LatLng::FromDegrees(1, 0).ToPoint(),
+  };
+  s2coding::EncodeS2PointVector(absl::MakeSpan(vertices), CodingHint::FAST,
+                                &encoder);
+  std::vector<uint32_t> loop_starts = {0, 5, 100};
+  s2coding::EncodeUintVector<uint32_t>(absl::MakeSpan(loop_starts), &encoder);
+
+  Decoder decoder(encoder.base(), encoder.length());
+  S2LaxPolygonShape shape;
+  S2Error error;
+  EXPECT_FALSE(shape.Init(&decoder, error));
+  EXPECT_THAT(error.message(), HasSubstr("Invalid loop offsets"));
 }
 
 static S2LaxPolygonShape MakePolygon(int num_points) {

@@ -242,8 +242,19 @@ bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error* absl_nullable error) {
         return Error("Failed to decode loop offsets");
       }
 
+      // The offsets must start at zero, be non-decreasing, and end at
+      // num_vertices_.  Otherwise loop_vertex() and chain() index the vertex
+      // array using offsets that fall outside it.
+      if (loop_starts[0] != 0 ||
+          loop_starts[num_loops_] != static_cast<uint32_t>(num_vertices_)) {
+        return Error("Invalid loop offsets");
+      }
       loop_starts_ = make_unique_for_overwrite<uint32_t[]>(loop_starts.size());
-      for (size_t i = 0; i < loop_starts.size(); ++i) {
+      loop_starts_[0] = 0;
+      for (size_t i = 1; i < loop_starts.size(); ++i) {
+        if (loop_starts[i] < loop_starts[i - 1]) {
+          return Error("Invalid loop offsets");
+        }
         loop_starts_[i] = loop_starts[i];
       }
     }
