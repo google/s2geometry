@@ -170,6 +170,26 @@ TEST(S2Cap, Basic) {
       S2Cap::FromCenterHeight(-concave.center(), 0.1)));
 }
 
+TEST(S2Cap, InteriorIntersectsRadiiSumExceedsPi) {
+  // S1ChordAngle addition is clamped to Pi, so caps whose radii sum to more
+  // than Pi need special handling when their centers are antipodal.
+  S2Cap a(S2Point(1, 0, 0), S1ChordAngle::FromLength2(3));  // 120 degrees
+  S2Cap b(S2Point(-1, 0, 0), S1ChordAngle::FromLength2(3));
+  EXPECT_TRUE(a.InteriorIntersects(b));
+  EXPECT_TRUE(b.InteriorIntersects(a));
+
+  // The interior of a full cap is the entire sphere.
+  S2Cap full = S2Cap::Full();
+  EXPECT_TRUE(full.InteriorIntersects(S2Cap::FromPoint(-full.center())));
+  EXPECT_TRUE(full.InteriorIntersects(
+      S2Cap(-full.center(), S1ChordAngle::FromLength2(1))));
+
+  // Antipodal hemispheres only share their boundary.
+  S2Cap hemi(S2Point(1, 0, 0), S1ChordAngle::Right());
+  EXPECT_FALSE(
+      hemi.InteriorIntersects(S2Cap(S2Point(-1, 0, 0), S1ChordAngle::Right())));
+}
+
 TEST(S2Cap, AddEmptyCapToNonEmptyCap) {
   S2Cap non_empty_cap(S2Point(1, 0, 0), S1Angle::Degrees(10));
   double initial_area = non_empty_cap.GetArea();
