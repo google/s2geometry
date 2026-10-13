@@ -83,6 +83,15 @@ bool S2Cap::Intersects(const S2Cap& other) const {
 bool S2Cap::InteriorIntersects(const S2Cap& other) const {
   // Make sure this cap has an interior and the other cap is non-empty.
   if (radius_.length2() <= 0 || other.is_empty()) return false;
+
+  // The interior of a full cap is the entire sphere.  Otherwise, since
+  // S1ChordAngle addition is clamped to Pi, we check separately whether the
+  // radii sum to more than Pi, in which case the caps always intersect.  Two
+  // angles sum to more than Pi exactly when their squared chord lengths sum
+  // to more than 4.
+  if (is_full() || radius_.length2() + other.radius_.length2() > 4) {
+    return true;
+  }
   return radius_ + other.radius_ > S1ChordAngle(center_, other.center_);
 }
 
