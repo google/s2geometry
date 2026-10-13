@@ -290,6 +290,17 @@ target_link_libraries(
     absl::vlog_is_on
     ${CMAKE_THREAD_LIBS_INIT})
 
+  option(BUILD_FUZZERS "Build fuzzing targets." OFF)
+  if (BUILD_FUZZERS)
+    set(FUZZING_ENGINE "$ENV{LIB_FUZZING_ENGINE}" CACHE STRING
+      "Linker flags or library for the fuzzing engine.")
+    add_executable(s2fuzzer tests/fuzz/s2_fuzzer.cc)
+    set_target_properties(s2fuzzer PROPERTIES LINK_FLAGS "${FUZZING_ENGINE}")
+    target_link_libraries(s2fuzzer
+      s2
+      ${OPENSSL_LIBRARIES})
+  endif ()
+
 # Allow other CMake projects to use this one with:
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
 # add_subdirectory(<path_to_s2geometry_dir> s2geometry)
