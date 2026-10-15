@@ -283,6 +283,11 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       clipped->set_contains_center((header & 4) != 0);
       if (!DecodeEdges(num_edges, clipped, decoder)) return false;
     }
+
+    // Shape ids come from the encoded data, so reject any that are out of
+    // range.  Otherwise a caller that indexes S2ShapeIndex::shape() with a
+    // decoded shape id reads out of bounds.
+    if (shape_id >= num_shape_ids) return false;
   }
   return true;
 }

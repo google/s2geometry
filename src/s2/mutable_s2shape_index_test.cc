@@ -44,6 +44,8 @@
 #include "absl/types/span.h"
 
 #include "s2/base/log_severity.h"
+#include "s2/encoded_s2cell_id_vector.h"
+#include "s2/encoded_string_vector.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -819,6 +821,32 @@ TEST_F(MutableS2ShapeIndexTest, DecoderCatchesInvalidIndex) {
 
   bool ok = index.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder));
   EXPECT_FALSE(ok);
+}
+
+TEST_F(MutableS2ShapeIndexTest, DecoderCatchesOutOfRangeShapeId) {
+  // An encoded index whose single cell references a shape id (5000) far beyond
+  // the number of shapes in the index (2).  Without validation, Init() accepts
+  // this and a later shape(clipped.shape_id()) lookup reads out of bounds.
+  MutableS2ShapeIndex shapes;
+  shapes.Add(
+      make_unique<S2PointVectorShape>(vector<S2Point>{S2Point(1, 0, 0)}));
+  shapes.Add(
+      make_unique<S2PointVectorShape>(vector<S2Point>{S2Point(0, 1, 0)}));
+
+  Encoder encoder;
+  encoder.Ensure(64);
+  encoder.put_varint64(10 << 2 | 0);  // max_edges_per_cell = 10, version = 0
+  s2coding::EncodeS2CellIdVector({S2CellId::FromFace(0)}, &encoder);
+  s2coding::StringVectorEncoder cells;
+  Encoder* cell = cells.AddViaEncoder();
+  cell->Ensure(8);
+  cell->put8(0x00);               // contiguous range of edges, edge id 0
+  cell->put_varint32(5000 << 4);  // shape id delta 5000, num_edges 1
+  cells.Encode(&encoder);
+
+  Decoder decoder(encoder.base(), encoder.length());
+  MutableS2ShapeIndex index;
+  EXPECT_FALSE(index.Init(&decoder, s2shapeutil::WrappedShapeFactory(&shapes)));
 }
 
 TEST(S2Shape, user_data) {
