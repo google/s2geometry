@@ -804,44 +804,19 @@ int TriageIntersectionOrdering(const Vector3<T>& a, const Vector3<T>& b,
   // Given an edge AB, and the normal of a great circle M, the intersection of
   // the edge with the great circle is given by the triple product (A×B)×M.
   //
-  // Its distance relative to the reference circle N is then proportional to the
-  // dot product with N: d0 = ((A×B)×M)•N
+  // The sine of its distance from N is proportional to
+  // d0 = ((A×B)×M)•N / |(A×B)×M|.
   //
-  // Edge CD is similar, we want to compute d1 = ((C×D)×M)•N and compare d0 to
-  // d1.  If they're further than some error from each other, we can rely on the
-  // comparison, otherwise we fall back to more exact arithmetic.
+  // We expand the numerator using Lagrange's formula:
+  // d0 * |(A×B)×M| = (M•A)(N•B) - (M•B)(N•A).
+  // Edge CD is similar.  Compare the ratios by multiplying each numerator by
+  // the length of the other intersection vector.
   //
-  // ((A×B)×M)•N is a quadruple product.  We can expand this out using
-  // Lagrange's formula for a vector triple product and then distribute the dot
-  // product, which eliminates all the cross products:
-  //
-  // d0 = ((A×B)×M)•N
-  // d0 = ((M•A)B - (M•B)A)•N
-  // d0 = (M•A)(N•B) - (M•B)(N•A)
-  //
-  // Similarly:
-  //
-  // d1 = (M•C)(N•D) - (M•D)(N•C)
-  //
-  // We can compute this difference with a maximum absolute error of 32ε (see
-  // the gappa proof at end of the file).
-  //
-  // NOTE: If we want to push this error bound down as far as possible, we could
-  // use the dot product algorithm created by Ogita et al:
-  //
-  //   Accurate Sum and Dot Product, Ogita, Rump, Oishi 2005.
-  //
-  // Along with the 2x2 determinant algorithm by Kahan (which is useful for any
-  // bilinear form):
-  //
-  //   Further Analysis of Kahan's Algorithm for the Accurate Computation of
-  //   2x2 Determinants, Jeannerod, Louvet, and Muller, 2013.
-  //
-  // Both algorithms allow us to have bounded relative error, and since we're
-  // only interested in the sign of this operation, as long as the relative
-  // error is < 1 we can never get a sign flip, which would make this exact for
-  // our purposes.
-  constexpr T kMaxError = 32 * std::numeric_limits<T>::epsilon();
+  // For unit endpoints and circle normals of length at most sqrt(2), each
+  // numerator has absolute error at most 16ε (see the gappa proof below), and
+  // each intersection length has error at most 10ε.  Including the final
+  // products, subtraction, and second-order terms gives the bound below.
+  constexpr T kMaxError = 40 * std::numeric_limits<T>::epsilon();
 
   T mdota = m.DotProd(a);
   T mdotb = m.DotProd(b);
@@ -856,10 +831,11 @@ int TriageIntersectionOrdering(const Vector3<T>& a, const Vector3<T>& b,
   T prodab = mdota * ndotb - mdotb * ndota;
   T prodcd = mdotc * ndotd - mdotd * ndotc;
 
-  if (std::fabs(prodab - prodcd) > kMaxError) {
-    return prodab < prodcd ? -1 : +1;
-  }
-  return 0;
+  T ab_len = (mdota * b - mdotb * a).Norm();
+  T cd_len = (mdotc * d - mdotd * c).Norm();
+  T diff = prodab * cd_len - prodcd * ab_len;
+  T error = kMaxError * (ab_len + cd_len + kMaxError);
+  return (diff > error) ? +1 : (diff < -error) ? -1 : 0;
 }
 
 int ExactIntersectionOrdering(const Vector3_xf& a, const Vector3_xf& b,
@@ -885,9 +861,13 @@ int ExactIntersectionOrdering(const Vector3_xf& a, const Vector3_xf& b,
   ExactFloat prodab = mdota * ndotb - mdotb * ndota;
   ExactFloat prodcd = mdotc * ndotd - mdotd * ndotc;
 
-  if (prodab < prodcd) return -1;
-  if (prodab > prodcd) return +1;
-  return 0;
+  // Compare squared normalized dot products to avoid square roots.  Both
+  // intersections are on the positive side of N, and N's length cancels.
+  Vector3_xf ab = mdota * b - mdotb * a;
+  Vector3_xf cd = mdotc * d - mdotd * c;
+  ExactFloat cmp = prodab * prodab * cd.Norm2() -
+                   prodcd * prodcd * ab.Norm2();
+  return cmp.sgn();
 }
 
 int CircleEdgeIntersectionOrdering(const S2Point& a, const S2Point& b,
@@ -1787,7 +1767,8 @@ template Excluded TriageVoronoiSiteExclusion(
 
 }  // namespace s2pred
 
-// Gappa proof for TriageIntersectionOrdering
+// Gappa proof for the unnormalized numerator difference in
+// TriageIntersectionOrdering
 //
 // # Use IEEE754 double precision, round-to-nearest by default.
 // @rnd = float<ieee_64, ne>;
