@@ -251,8 +251,8 @@ int CircleEdgeIntersectionSign(const S2Point& a, const S2Point& b,
 // REQUIRES: CD crosses M (vertices have opposite dot product signs with M)
 // REQUIRES: A and C are on the positive side of M
 // REQUIRES: B and D are on the negative side of M
-// REQUIRES: Intersection of AB and N is on the positive side of N
-// REQUIRES: Intersection of CD and N is on the positive side of N
+// REQUIRES: Intersection of AB and M is on the positive side of N
+// REQUIRES: Intersection of CD and M is on the positive side of N
 //
 // Returns:
 //   -1 if crossing AB is closer to N than crossing CD

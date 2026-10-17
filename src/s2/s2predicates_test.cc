@@ -1206,6 +1206,9 @@ void TestIntersectionOrdering(S2Point a, S2Point b, S2Point c, S2Point d,
                               Precision expected_prec) {
   int actual = CircleEdgeIntersectionOrdering(a, b, c, d, m, n);
   EXPECT_THAT(actual, Eq(expected));
+  int exact = ExactIntersectionOrdering(
+      ToExact(a), ToExact(b), ToExact(c), ToExact(d), ToExact(m), ToExact(n));
+  EXPECT_THAT(exact, Eq(expected));
 
   // We triage in double precision and then fall back to long double and exact
   // for 0.
@@ -1275,6 +1278,31 @@ TEST(CircleEdgeIntersectionOrdering, Works) {
   TestIntersectionOrdering(c1, cb - yeps, c1, cb, e2, e1, +1, LD_OR_EXACT);
   TestIntersectionOrdering(c1, cb, c1, cb + yeps, e2, e1, +1, LD_OR_EXACT);
   TestIntersectionOrdering(c1, cb, c1, cb - yeps, e2, e1, -1, LD_OR_EXACT);
+}
+
+TEST(CircleEdgeIntersectionOrdering, DifferentEdgeLengths) {
+  const S2Point m(0, 1, 0), n(0.8, 0, -0.6);
+  const S2Point a(0.6, 0.8, 0), b(0.6, -0.8, 0);
+  const S2Point c(5.0 / 13, 12.0 / 13, 0), d(5.0 / 13, -12.0 / 13, 0);
+
+  // Both edges cross M at (1, 0, 0), despite having different lengths.
+  TestIntersectionOrdering(a, b, c, d, m, n, 0, EXACT);
+  TestIntersectionOrdering(c, d, a, b, m, n, 0, EXACT);
+
+  const S2Point e(399.0 / 401, 40.0 / 401, 0);
+  const S2Point f(399.0 / 401, -40.0 / 401, 0);
+  const S2Point g(0.48, 0.8, 0.36), h(0.48, -0.8, 0.36);
+
+  // EF crosses at (1, 0, 0), while GH crosses in direction (0.48, 0, 0.36).
+  // Their normalized dot products with N are 0.8 and 0.28 respectively.
+  TestIntersectionOrdering(e, f, g, h, m, n, +1, DOUBLE);
+  TestIntersectionOrdering(g, h, e, f, m, n, -1, DOUBLE);
+
+  // Very short edges require exact arithmetic even for distinct crossings.
+  const S2Point i(1, 1e-100, 0), j(1, -1e-100, 0);
+  const S2Point k(0.8, 1e-100, 0.6), l(0.8, -1e-100, 0.6);
+  TestIntersectionOrdering(i, j, k, l, m, n, +1, EXACT);
+  TestIntersectionOrdering(k, l, i, j, m, n, -1, EXACT);
 }
 
 // Verifies that CircleEdgeIntersectionSign(a, b, n, x) == expected, and
