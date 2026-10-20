@@ -46,6 +46,88 @@ class TestS2Point(unittest.TestCase):
         with self.assertRaises(ValueError):
             s2.S2Point((1.0, 2.0, 3.0, 4.0))
 
+    def test_constructor_from_sequence(self):
+        # List of floats
+        p1 = s2.S2Point([1.0, 2.0, 3.0])
+        self.assertEqual(p1.x, 1.0)
+        self.assertEqual(p1.y, 2.0)
+        self.assertEqual(p1.z, 3.0)
+
+        # List of ints
+        p2 = s2.S2Point([1, 2, 3])
+        self.assertEqual(p2.x, 1.0)
+        self.assertEqual(p2.y, 2.0)
+        self.assertEqual(p2.z, 3.0)
+
+    def test_constructor_from_sequence_wrong_length(self):
+        with self.assertRaises(ValueError):
+            s2.S2Point([])
+        with self.assertRaises(ValueError):
+            s2.S2Point([1.0, 2.0])
+        with self.assertRaises(ValueError):
+            s2.S2Point([1.0, 2.0, 3.0, 4.0])
+        with self.assertRaises(ValueError):
+            s2.S2Point(["a", "b"])
+
+    def test_constructor_from_sequence_wrong_types(self):
+        # Strings and bytes of any length consistently raise TypeError.
+        with self.assertRaises(TypeError):
+            s2.S2Point("")
+        with self.assertRaises(TypeError):
+            s2.S2Point("ab")
+        with self.assertRaises(TypeError):
+            s2.S2Point("abc")
+        with self.assertRaises(TypeError):
+            s2.S2Point(b"12")
+        with self.assertRaises(TypeError):
+            s2.S2Point(b"123")
+        with self.assertRaises(TypeError):
+            s2.S2Point([1.0, 2.0, "three"])
+
+    # Sequence protocol
+
+    def test_len(self):
+        p = s2.S2Point(1.0, 2.0, 3.0)
+        self.assertEqual(len(p), 3)
+
+    def test_getitem(self):
+        p = s2.S2Point(1.0, 2.0, 3.0)
+        self.assertEqual(p[0], 1.0)
+        self.assertEqual(p[1], 2.0)
+        self.assertEqual(p[2], 3.0)
+        self.assertEqual(p[-1], 3.0)
+        self.assertEqual(p[-2], 2.0)
+        self.assertEqual(p[-3], 1.0)
+
+        with self.assertRaises(IndexError):
+            _ = p[3]
+        with self.assertRaises(IndexError):
+            _ = p[-4]
+        # Large indices raise IndexError rather than overflow TypeError.
+        with self.assertRaises(IndexError):
+            _ = p[10**18]
+        with self.assertRaises(IndexError):
+            _ = p[-10**18]
+        # Slicing is not supported on S2Point and raises TypeError.
+        with self.assertRaises(TypeError):
+            _ = p[0:2]
+
+    def test_unpacking(self):
+        p = s2.S2Point(1.0, 2.0, 3.0)
+        x, y, z = p
+        self.assertEqual((x, y, z), (1.0, 2.0, 3.0))
+
+        with self.assertRaises(ValueError):
+            a, b = p
+        with self.assertRaises(ValueError):
+            a, b, c, d = p
+
+    def test_iter(self):
+        p = s2.S2Point(1.0, 2.0, 3.0)
+        self.assertEqual(list(p), [1.0, 2.0, 3.0])
+        self.assertEqual(tuple(p), (1.0, 2.0, 3.0))
+        self.assertEqual([c for c in p], [1.0, 2.0, 3.0])
+
     # Properties
 
     def test_data(self):
