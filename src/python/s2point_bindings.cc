@@ -15,12 +15,19 @@ void bind_s2point(py::module& m) {
       .def(py::init<double, double, double>(),
            py::arg("x"), py::arg("y"), py::arg("z"),
            "Constructor that accepts x, y, z coordinates")
-      .def(py::init([](py::tuple t) {
-        if (t.size() != 3) {
-          throw py::value_error("Tuple must have exactly 3 elements");
+      .def(py::init([](py::sequence s) {
+        if (py::isinstance<py::str>(s) || py::isinstance<py::bytes>(s)) {
+          throw py::type_error("Sequence elements must be numbers");
         }
-        return S2Point(t[0].cast<double>(), t[1].cast<double>(), t[2].cast<double>());
-      }), py::arg("coords"), "Constructor that accepts a tuple of (x, y, z) coordinates")
+        if (py::len(s) != 3) {
+          throw py::value_error("Sequence must have exactly 3 elements");
+        }
+        try {
+          return S2Point(s[0].cast<double>(), s[1].cast<double>(), s[2].cast<double>());
+        } catch (const py::cast_error&) {
+          throw py::type_error("Sequence elements must be numbers");
+        }
+      }), py::arg("coords"), "Constructor that accepts a sequence of (x, y, z) coordinates")
 
       // Properties
       .def_property_readonly("x", py::overload_cast<>(&S2Point::x, py::const_),
@@ -32,6 +39,23 @@ void bind_s2point(py::module& m) {
       .def("data", [](const S2Point& self) {
         return py::make_tuple(self.x(), self.y(), self.z());
       }, "Return coordinates as a tuple (x, y, z)")
+
+      // Sequence protocol (indexing, unpacking, iteration)
+      .def("__len__", [](const S2Point&) { return 3; })
+      .def(
+          "__getitem__",
+          [](const S2Point& self, py::ssize_t index) -> double {
+            if (index < 0) index += 3;
+            if (index < 0 || index >= 3) {
+              throw py::index_error("index out of range");
+            }
+            return self[static_cast<int>(index)];
+          },
+          py::arg("index"),
+          "Return coordinate by index (0 for x, 1 for y, 2 for z)")
+      .def("__iter__", [](const S2Point& self) {
+        return py::iter(py::make_tuple(self.x(), self.y(), self.z()));
+      })
 
       // Vector operations
       .def("norm", &S2Point::Norm, "Return the Euclidean norm (length)")
