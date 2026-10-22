@@ -20,6 +20,8 @@
 
 #include "absl/base/thread_annotations.h"
 
+namespace s2internal {
+
 class ABSL_LOCKABLE ABSL_ATTRIBUTE_WARN_UNUSED SpinLock {
  public:
   SpinLock() = default;
@@ -60,5 +62,10 @@ class [[nodiscard]] ABSL_SCOPED_LOCKABLE SpinLockHolder {
  private:
   SpinLock& lock_;
 };
+
+}  // namespace s2internal
+
+using s2internal::SpinLock;
+using s2internal::SpinLockHolder;
 
 #endif  // S2_BASE_SPINLOCK_H_
