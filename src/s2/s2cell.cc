@@ -325,7 +325,7 @@ void S2Cell::Encode(Encoder* const encoder) const {
 
 bool S2Cell::Decode(Decoder* const decoder) {
   S2CellId id;
-  if (!id.Decode(decoder)) return false;
+  if (!id.Decode(decoder) || !id.is_valid()) return false;
   this->~S2Cell();
   new (this) S2Cell(id);
   return true;
