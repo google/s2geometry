@@ -1011,6 +1011,17 @@ TEST(S2Cell, EncodeDecode) {
   EXPECT_EQ(orig_cell.GetBoundUV(), decoded_cell.GetBoundUV());
 }
 
+TEST(S2Cell, DecodeRejectsInvalidCellId) {
+  // Face 7 is out of range and 0 has no level marker bit.
+  for (S2CellId id : {S2CellId(~uint64_t{0}), S2CellId::None()}) {
+    Encoder encoder;
+    id.Encode(&encoder);
+    S2Cell cell;
+    Decoder decoder(encoder.base(), encoder.length());
+    EXPECT_FALSE(cell.Decode(&decoder));
+  }
+}
+
 TEST(S2Cell, GetUVCoordOfEdge) {
   // Four cells on face 0 with two boundaries each on 0/0.
   S2Cell kCell0[4] = {

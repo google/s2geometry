@@ -787,6 +787,19 @@ TEST(S2CellUnion, RefuseToDecode) {
   EXPECT_FALSE(decoded_cell_union.Decode(&decoder));
 }
 
+TEST(S2CellUnion, DecodeRejectsInvalidCellId) {
+  // Same layout as S2CellUnion::Encode(), with an id on face 7.
+  Encoder encoder;
+  encoder.Ensure(sizeof(uint8_t) + 3 * sizeof(uint64_t));
+  encoder.put8(1);
+  encoder.put64(2);
+  encoder.put64(S2CellId::FromFace(1).id());
+  encoder.put64(~uint64_t{0});
+  Decoder decoder(encoder.base(), encoder.length());
+  S2CellUnion decoded_cell_union;
+  EXPECT_FALSE(decoded_cell_union.Decode(&decoder));
+}
+
 TEST(S2CellUnion, Release) {
   S2CellId face1_id = S2CellId::FromFace(1);
   S2CellUnion face1_union({face1_id});
