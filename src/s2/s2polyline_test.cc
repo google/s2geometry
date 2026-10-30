@@ -630,6 +630,20 @@ TEST(S2Polyline, DecodeCompressedCellLevelTooHigh) {
   EXPECT_FALSE(polyline.Decode(&decoder));
 }
 
+TEST(S2Polyline, DecodeUncompressedTruncatedLeavesPolylineUnchanged) {
+  unique_ptr<S2Polyline> polyline(MakePolyline("0:0, 0:10, 10:20, 20:30"));
+  Encoder encoder;
+  polyline->EncodeUncompressed(&encoder);
+  // Keep the version and vertex count, but drop the bytes of the last vertex.
+  Decoder decoder(encoder.base(), encoder.length() - sizeof(S2Point));
+
+  unique_ptr<S2Polyline> decoded_polyline(MakePolyline("1:1, 2:2"));
+  EXPECT_FALSE(decoded_polyline->Decode(&decoder));
+  EXPECT_EQ(decoded_polyline->num_vertices(), 2);
+  EXPECT_TRUE(decoded_polyline->ApproxEquals(*MakePolyline("1:1, 2:2"),
+                                             S1Angle::Zero()));
+}
+
 TEST(S2PolylineShape, Basic) {
   unique_ptr<S2Polyline> polyline(MakePolyline("0:0, 1:0, 1:1, 2:1"));
   S2Polyline::Shape shape(polyline.get());
