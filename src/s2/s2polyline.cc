@@ -460,11 +460,15 @@ bool S2Polyline::DecodeUncompressed(Decoder* const decoder) {
   if (decoder->avail() < sizeof(uint32_t)) {
     return false;
   }
-  num_vertices_ = decoder->get32();
+  // Perform all checks before modifying vertex state, so that a failed decode
+  // leaves the polyline unchanged (see S2Loop::DecodeInternal).
+  const uint32_t num_vertices = decoder->get32();
 
   // Check the bytes available before allocating memory in case of
-  // corrupt/malicious input.
-  if (decoder->avail() < num_vertices_ * sizeof(S2Point)) return false;
+  // corrupt/malicious input.  Dividing avoids overflowing size_t where it is
+  // only 32 bits wide.
+  if (num_vertices > decoder->avail() / sizeof(S2Point)) return false;
+  num_vertices_ = num_vertices;
   vertices_ = MakeS2PointArrayForOverwrite(num_vertices_);
   decoder->getn(&vertices_[0], num_vertices_ * sizeof(vertices_[0]));
 
