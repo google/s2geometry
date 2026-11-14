@@ -511,6 +511,18 @@ TEST(ExpandedByDistance, NegativeDistanceLngResultEmpty) {
   EXPECT_TRUE(rect.is_empty()) << rect;
 }
 
+TEST(ExpandedByDistance, EmptyAndFullAreUnchanged) {
+  // The empty and full rectangles have no boundary, so any expansion
+  // (positive, zero, or negative) leaves them unchanged.
+  for (double degrees : {-5.0, 0.0, 5.0}) {
+    S1Angle distance = S1Angle::Degrees(degrees);
+    EXPECT_TRUE(S2LatLngRect::Empty().ExpandedByDistance(distance).is_empty())
+        << distance;
+    EXPECT_TRUE(S2LatLngRect::Full().ExpandedByDistance(distance).is_full())
+        << distance;
+  }
+}
+
 TEST(S2LatLngRect, GetCapBound) {
   // Bounding cap at center is smaller:
   EXPECT_TRUE(RectFromDegrees(-45, -45, 45, 45).GetCapBound().

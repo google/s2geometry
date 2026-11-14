@@ -250,6 +250,10 @@ S2LatLngRect S2LatLngRect::Intersection(const S2LatLngRect& other) const {
 
 S2LatLngRect S2LatLngRect::ExpandedByDistance(S1Angle distance) const {
   if (distance >= S1Angle::Zero()) {
+    // The empty rectangle has no boundary, so it remains empty.  (Its
+    // vertices are not points of the rectangle.)
+    if (is_empty()) return *this;
+
     // The most straightforward approach is to build a cap centered on each
     // vertex and take the union of all the bounding rectangles (including the
     // original rectangle; this is necessary for very large rectangles).
