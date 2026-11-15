@@ -829,6 +829,7 @@ bool S2Polygon::DecodeUncompressed(Decoder* const decoder) {
     return false;
   loops_.reserve(num_loops);
   num_vertices_ = 0;
+  int last_depth = -1;
   for (size_t i = 0; i < num_loops; ++i) {
     loops_.push_back(make_unique<S2Loop>());
     loops_.back()->set_s2debug_override(s2debug_override());
@@ -839,6 +840,12 @@ bool S2Polygon::DecodeUncompressed(Decoder* const decoder) {
       loops_.pop_back();
       continue;
     }
+
+    // GetParent() relies on the loop depths to index loops_, so reject the
+    // same depths that FindValidationError() does.
+    const int depth = loops_.back()->depth();
+    if (depth < 0 || depth > last_depth + 1) return false;
+    last_depth = depth;
 
     num_vertices_ += loops_.back()->num_vertices();
   }
@@ -1515,6 +1522,7 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
                       absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
     return false;
   loops_.reserve(num_loops);
+  int last_depth = -1;
   for (size_t i = 0; i < num_loops; ++i) {
     auto loop = make_unique<S2Loop>();
     loop->set_s2debug_override(s2debug_override());
@@ -1524,6 +1532,11 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
 
     // Ignore any empty loops that were previously encoded.
     if (!loop->is_empty() && loop->num_vertices() != 0) {
+      // GetParent() relies on the loop depths to index loops_, so reject the
+      // same depths that FindValidationError() does.
+      const int depth = loop->depth();
+      if (depth < 0 || depth > last_depth + 1) return false;
+      last_depth = depth;
       loops_.push_back(std::move(loop));
     }
   }

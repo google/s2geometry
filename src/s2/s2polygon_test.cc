@@ -2276,6 +2276,38 @@ TEST_F(S2PolygonTestBase, CompressedEncodedPolygonDecodesApproxEqual) {
   EXPECT_EQ(1, decoded_polygon.loop(1)->depth());
 }
 
+TEST(S2Polygon, DecodeRejectsInvalidLoopDepth) {
+  // Loop depths are read from the encoding and used by GetParent() and
+  // IsNormalized() to index the loops, so they must be validated on decode.
+  struct BadDepth {
+    int loop;
+    int depth;
+  };
+  for (const BadDepth& bad :
+       {BadDepth{0, 1}, BadDepth{0, -1}, BadDepth{1, 2}, BadDepth{1, -5}}) {
+    for (bool compressed : {false, true}) {
+      unique_ptr<S2Polygon> polygon(s2textformat::MakePolygonOrDie(
+          "0:0, 0:2, 2:0; 0:0, 0:-2, -2:-2, -2:0"));
+      S2Polygon snapped;
+      snapped.InitToSnapped(*polygon);
+      snapped.loop(bad.loop)->set_depth(bad.depth);
+
+      Encoder encoder;
+      if (compressed) {
+        snapped.Encode(&encoder);
+      } else {
+        snapped.EncodeUncompressed(&encoder);
+      }
+      Decoder decoder(encoder.base(), encoder.length());
+      S2Polygon decoded_polygon;
+      decoded_polygon.set_s2debug_override(S2Debug::DISABLE);
+      EXPECT_FALSE(decoded_polygon.Decode(&decoder))
+          << "loop " << bad.loop << " depth " << bad.depth << " compressed "
+          << compressed;
+    }
+  }
+}
+
 // This test checks that S2Polygons created directly from S2Cells behave
 // identically to S2Polygons created from the vertices of those cells; this
 // previously was not the case, because S2Cells calculate their bounding
