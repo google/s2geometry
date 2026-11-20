@@ -304,7 +304,9 @@ bool EncodedS2LaxPolygonShape::Init(Decoder* decoder) {
   if (!vertices_.Init(decoder)) return false;
 
   if (num_loops_ > 1) {
-    if (!loop_starts_.Init(decoder)) return false;
+    if (!loop_starts_.Init(decoder) || loop_starts_.size() != num_loops_ + 1) {
+      return false;
+    }
   }
   return true;
 }
