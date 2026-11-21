@@ -542,6 +542,23 @@ TEST(S2LaxPolygonShapeTest, BadLoopOffsets) {
               HasSubstr("Failed to decode loop offsets"));
 }
 
+TEST(EncodedS2LaxPolygonShape, BadLoopOffsetsCount) {
+  // Claims three loops but encodes only three loop offsets (four are needed).
+  // num_vertices() would otherwise read loop_starts_[3], past the end of the
+  // encoded offsets.
+  Encoder encoder;
+  S2LaxPolygonShape shape(vector<S2LaxPolygonShape::Loop>{
+      s2textformat::ParsePointsOrDie("0:0, 0:1, 1:0"),
+      s2textformat::ParsePointsOrDie("2:2, 2:3, 3:2")});
+  shape.Encode(&encoder, CodingHint::FAST);
+  std::string data(encoder.base(), encoder.length());
+  data[1] = 3;  // num_loops
+
+  Decoder decoder(data.data(), data.size());
+  EncodedS2LaxPolygonShape encoded;
+  EXPECT_FALSE(encoded.Init(&decoder));
+}
+
 static S2LaxPolygonShape MakePolygon(int num_points) {
   const S2Point center = MakePointOrDie("23:16");
   const S1Angle radius = S2Testing::KmToAngle(10);
